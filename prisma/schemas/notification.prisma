@@ -1,0 +1,46 @@
+// prisma/schemas/notification.prisma
+// ===== NOTIFICATION SYSTEM SCHEMA - InvenStock V1.0 =====
+
+// Real-time Notifications
+model Notification {
+  id             String             @id @default(cuid())
+  organizationId String
+  userId         String
+  
+  // Notification Details
+  type           NotificationType
+  title          String             // Notification title
+  message        String             // Notification content
+  
+  // Related Records
+  relatedId      String?            // ID of related record (transfer, product, etc.)
+  relatedType    String?            // Type of related record
+  relatedData    String?            // JSON data for the notification
+  
+  // Action
+  actionUrl      String?            // URL to navigate when clicked
+  actionLabel    String?            // Button text for action
+  
+  // Status
+  status         NotificationStatus @default(UNREAD)
+  priority       String             @default("NORMAL") // HIGH, NORMAL, LOW
+  
+  // Scheduling
+  scheduledFor   DateTime?          // For scheduled notifications
+  expiresAt      DateTime?          // Auto-archive date
+  
+  // Timestamps
+  readAt         DateTime?          // When marked as read
+  archivedAt     DateTime?          // When archived
+  createdAt      DateTime           @default(now())
+  
+  // Relations
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([organizationId])
+  @@map("notifications")
+}

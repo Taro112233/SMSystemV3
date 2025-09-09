@@ -1,0 +1,93 @@
+// prisma/schemas/stock.prisma
+// ===== STOCK MANAGEMENT SCHEMA - InvenStock V1.0 =====
+
+// Stock Tracking per Department
+model Stock {
+  id             String       @id @default(cuid())
+  organizationId String
+  productId      String
+  departmentId   String?      // null = organization-wide stock
+  
+  // Stock Quantities
+  totalQuantity  Int          @default(0)  // Total available
+  reservedQty    Int          @default(0)  // Reserved for transfers
+  
+  // Stock Levels
+  minStockLevel  Int          @default(0)  // Department-specific minimum
+  maxStockLevel  Int?         // Department-specific maximum
+  reorderPoint   Int          @default(0)  // Auto-reorder trigger
+  reorderQty     Int?         // Auto-reorder quantity
+  
+  // Audit Fields
+  createdBy      String       // User who created
+  updatedBy      String?      // User who last updated
+  
+  // Timestamps
+  lastCountDate  DateTime?    // Last physical count
+  lastMovement   DateTime?    // Last stock movement
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  department     Department?  @relation(fields: [departmentId], references: [id])
+  transactions   StockTransaction[]
+  
+  @@unique([organizationId, productId, departmentId])
+  @@index([minStockLevel])
+  @@index([totalQuantity])
+  @@map("stocks")
+}
+
+// Stock Movement Transactions
+model StockTransaction {
+  id             String          @id @default(cuid())
+  organizationId String
+  stockId        String
+  batchId        String?         // Link to specific batch
+  userId         String
+  
+  // Transaction Details
+  type           TransactionType
+  reference      String?         // Reference number/document
+  note           String?         // Transaction note
+  
+  // Quantities
+  quantity       Int             // Change in quantity (+/-)
+  beforeQty      Int             // Stock before transaction
+  afterQty       Int             // Stock after transaction
+  
+  // Financial
+  unitCost       Float           @default(0)
+  totalCost      Float           @default(0)
+  
+  // Related Records
+  transferId     String?         // If part of transfer
+  transferItemId String?         // Specific transfer item
+  
+  // Location
+  fromLocation   String?         // Source location
+  toLocation     String?         // Destination location
+  
+  // Approval
+  approvedBy     String?         // Approver user ID
+  approvedAt     DateTime?       // Approval timestamp
+  
+  // Timestamps
+  transactionDate DateTime       @default(now())
+  createdAt      DateTime        @default(now())
+  
+  // Relations
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stock          Stock           @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  batch          ProductBatch?   @relation(fields: [batchId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
+  transfer       Transfer?       @relation(fields: [transferId], references: [id])
+  
+  @@index([type])
+  @@index([transactionDate])
+  @@index([transferId])
+  @@index([stockId])
+  @@map("stock_transactions")
+}

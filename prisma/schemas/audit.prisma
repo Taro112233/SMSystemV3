@@ -1,0 +1,89 @@
+// prisma/schemas/audit.prisma
+// ===== STREAMLINED AUDIT SYSTEM - InvenStock V2.0 =====
+
+// Single Audit Model - Hybrid Approach
+model AuditLog {
+  id             String @id @default(cuid())
+  organizationId String
+  userId         String?
+  
+  // Action Tracking (Dot Notation)
+  action         String      // "products.create", "transfers.approve", "users.login"
+  resourceId     String?     // ID of affected record
+  
+  // Smart Payload Storage
+  payload        Json?       // Context-aware data based on action type
+  
+  // Timestamp
+  createdAt      DateTime @default(now())
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User? @relation(fields: [userId], references: [id])
+  
+  // Optimized Indexes
+  @@index([organizationId, createdAt])
+  @@index([action])
+  @@index([resourceId])
+  @@map("audit_logs")
+}
+
+// ===== PAYLOAD STANDARDS BY ACTION TYPE =====
+/*
+🔐 AUTHENTICATION ACTIONS
+"users.login" -> { "ip": "x.x.x.x", "success": true }
+"users.logout" -> { "sessionDuration": 3600 }
+"users.failed_login" -> { "ip": "x.x.x.x", "reason": "invalid_password" }
+
+📦 PRODUCT ACTIONS  
+"products.create" -> { "name": "Paracetamol", "code": "PRD001", "category": "Pain Relief" }
+"products.update" -> { "changes": {"price": [100, 150], "name": ["old", "new"]} }
+"products.delete" -> { "name": "Paracetamol", "code": "PRD001", "hasStock": false }
+
+📊 STOCK ACTIONS
+"stock.adjust" -> { "product": "Paracetamol", "from": 100, "to": 150, "reason": "count_correction" }
+"stock.receive" -> { "product": "Paracetamol", "qty": 50, "supplier": "ABC Pharma" }
+"stock.dispense" -> { "product": "Paracetamol", "qty": 10, "department": "ICU" }
+
+🚚 TRANSFER ACTIONS
+"transfers.create" -> { "fromDept": "Pharmacy", "toDept": "ICU", "itemCount": 5 }
+"transfers.approve" -> { "transferNumber": "TRF-001", "totalValue": 15000 }
+"transfers.reject" -> { "transferNumber": "TRF-001", "reason": "insufficient_stock" }
+"transfers.receive" -> { "transferNumber": "TRF-001", "receivedItems": 5 }
+
+👥 USER MANAGEMENT
+"users.invite" -> { "email": "user@example.com", "role": "Pharmacist" }
+"users.role_change" -> { "from": "Staff", "to": "Manager", "reason": "promotion" }
+"users.deactivate" -> { "reason": "resignation" }
+
+⚙️ SYSTEM ACTIONS
+"system.backup" -> { "tables": ["products", "stocks"], "size": "15MB" }
+"system.settings_update" -> { "key": "low_stock_threshold", "from": 10, "to": 5 }
+"system.bulk_import" -> { "type": "products", "count": 150, "source": "excel" }
+*/
+
+// ===== TYPESCRIPT HELPER TYPES =====
+/*
+// Action definitions
+type AuditAction = 
+  | `users.${UserAction}`
+  | `products.${ProductAction}` 
+  | `stock.${StockAction}`
+  | `transfers.${TransferAction}`
+  | `system.${SystemAction}`;
+
+type UserAction = 'login' | 'logout' | 'failed_login' | 'invite' | 'role_change' | 'deactivate';
+type ProductAction = 'create' | 'update' | 'delete' | 'bulk_import';
+type StockAction = 'adjust' | 'receive' | 'dispense' | 'count' | 'reserve';
+type TransferAction = 'create' | 'approve' | 'reject' | 'dispatch' | 'receive' | 'cancel';
+type SystemAction = 'backup' | 'settings_update' | 'bulk_import' | 'cleanup';
+
+// Payload types for type safety
+interface AuditPayload {
+  'users.login': { ip: string; success: boolean; userAgent?: string };
+  'products.create': { name: string; code: string; category?: string };
+  'stock.adjust': { product: string; from: number; to: number; reason: string };
+  'transfers.approve': { transferNumber: string; totalValue: number; itemCount: number };
+  // ... add more as needed
+}
+*/

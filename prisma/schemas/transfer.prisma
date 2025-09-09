@@ -1,0 +1,120 @@
+// prisma/schemas/transfer.prisma
+// ===== TRANSFER SYSTEM SCHEMA - InvenStock V1.0 =====
+
+// Transfer Requests between Departments/Organizations
+model Transfer {
+  id                String         @id @default(cuid())
+  organizationId    String
+  transferNumber    String         // Auto-generated transfer number
+  
+  // Transfer Type & Direction
+  type              TransferType   @default(INTERNAL)
+  
+  // Source & Destination
+  fromDeptId        String?        // Source department
+  toDeptId          String?        // Destination department
+  fromOrgId         String?        // For external transfers
+  toOrgId           String?        // For external transfers
+  
+  // Transfer Details
+  title             String         // Transfer title/purpose
+  description       String?        // Detailed description
+  priority          String         @default("NORMAL") // HIGH, NORMAL, LOW
+  
+  // User Workflow
+  requesterId       String         // Who requested
+  approverId        String?        // Who approved
+  dispatcherId      String?        // Who prepared/dispatched
+  receiverId        String?        // Who received
+  
+  // Status & Workflow
+  status            TransferStatus @default(DRAFT)
+  
+  // Quantities & Values
+  totalItems        Int            @default(0)
+  totalQuantity     Int            @default(0)
+  totalValue        Float          @default(0)
+  
+  // Dates & Times
+  requestedDate     DateTime       @default(now())
+  requiredDate      DateTime?      // When needed
+  approvedDate      DateTime?
+  dispatchedDate    DateTime?
+  deliveredDate     DateTime?
+  receivedDate      DateTime?
+  
+  // Shipping Info
+  shippingMethod    String?        // Delivery method
+  trackingNumber    String?        // Tracking reference
+  carrier           String?        // Shipping carrier
+  
+  // Audit Fields
+  createdBy         String         // User who created
+  updatedBy         String?        // User who last updated
+  
+  // Timestamps
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  // Relations
+  organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fromDept          Department?    @relation("FromDepartment", fields: [fromDeptId], references: [id])
+  toDept            Department?    @relation("ToDepartment", fields: [toDeptId], references: [id])
+  requester         User           @relation("RequesterUser", fields: [requesterId], references: [id])
+  approver          User?          @relation("ApproverUser", fields: [approverId], references: [id])
+  dispatcher        User?          @relation("DispatcherUser", fields: [dispatcherId], references: [id])
+  receiver          User?          @relation("ReceiverUser", fields: [receiverId], references: [id])
+  items             TransferItem[]
+  stockTransactions StockTransaction[]
+  
+  @@unique([organizationId, transferNumber])
+  @@index([status])
+  @@index([type])
+  @@index([requestedDate])
+  @@index([fromDeptId])
+  @@index([toDeptId])
+  @@map("transfers")
+}
+
+// Transfer Items - Products in each transfer
+model TransferItem {
+  id              String       @id @default(cuid())
+  transferId      String
+  productId       String
+  batchId         String?      // Specific batch if tracked
+  
+  // Quantities at different stages
+  requestedQty    Int          // Initially requested
+  approvedQty     Int?         // Approved quantity
+  dispatchedQty   Int?         // Actually dispatched
+  receivedQty     Int?         // Actually received
+  
+  // Batch Information
+  lotNumber       String?      // Lot/batch number
+  expiryDate      DateTime?    // Expiry date
+  
+  // Pricing (from batch)
+  unitPrice       Float        @default(0)
+  totalValue      Float        @default(0)
+  
+  // Item Status
+  status          TransferItemStatus @default(PENDING)
+  
+  // Audit Fields
+  createdBy       String       // User who created
+  updatedBy       String?      // User who last updated
+  
+  // Timestamps
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relations
+  transfer        Transfer     @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  product         Product      @relation(fields: [productId], references: [id])
+  batch           ProductBatch? @relation(fields: [batchId], references: [id])
+  
+  @@index([transferId])
+  @@index([productId])
+  @@index([status])
+  @@map("transfer_items")
+}

@@ -1,0 +1,1006 @@
+// This file is auto-generated. Do not edit manually.
+// Edit files in prisma/schemas/ directory instead.
+// Last generated: 2025-09-09T14:36:47.154Z
+// InvenStock - Multi-Tenant Inventory Management System V1.0
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["multiSchema", "relationJoins"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // For connection pooling
+}
+
+
+// ==========================================
+// BASE SCHEMA - V1.0
+// ==========================================
+
+// prisma/schemas/base.prisma
+// ===== CORE ENUMS & BASE TYPES - InvenStock V1.0 =====
+
+// ===== USER & ORGANIZATION ENUMS =====
+enum UserStatus {
+  PENDING    // รอการยืนยัน email
+  ACTIVE     // ใช้งานได้
+  SUSPENDED  // ระงับการใช้งาน
+  INACTIVE   // ไม่ใช้งาน
+}
+
+enum InvitationStatus {
+  PENDING    // รอตอบรับ
+  ACCEPTED   // ตอบรับแล้ว
+  DECLINED   // ปฏิเสธ
+  EXPIRED    // หมดอายุ
+}
+
+enum OrganizationStatus {
+  ACTIVE     // ใช้งานได้
+  SUSPENDED  // ระงับ
+  TRIAL      // ทดลองใช้
+}
+
+// ===== PRODUCT ENUMS =====
+enum UnitType {
+  PIECE      // ชิ้น
+  BOX        // กล่อง
+  BOTTLE     // ขวด
+  PACK       // แพ็ค
+  STRIP      // แผง
+  TUBE       // หลอด
+  VIAL       // ไวอัล
+  AMPOULE    // แอมพูล
+  KG         // กิโลกรัม
+  GRAM       // กรัม
+  LITER      // ลิตร
+  ML         // มิลลิลิตร
+  TABLET     // เม็ด
+  CAPSULE    // แคปซูล
+  CUSTOM     // กำหนดเอง
+}
+
+enum ProductStatus {
+  ACTIVE     // ใช้งานได้
+  INACTIVE   // ไม่ใช้งาน
+  DISCONTINUED // เลิกผลิต
+  RESTRICTED   // จำกัดการใช้
+}
+
+// ===== ROLE SYSTEM ENUMS =====
+enum OrganizationRole {
+  MEMBER  // ทำงานทั่วไป เบิก จ่าย แก้สต็อก
+  ADMIN   // Member + CRUD สต็อกการ์ด + สร้าง category + เชิญผู้ใช้
+  OWNER   // Admin + CRUD department + จัดการองค์กร
+}
+
+// ===== STOCK TRANSACTION ENUMS =====
+enum TransactionType {
+  // การรับสินค้า
+  RECEIVE_PURCHASE     // รับซื้อ
+  RECEIVE_DONATION     // รับบริจาค
+  RECEIVE_RETURN       // รับคืน
+  RECEIVE_TRANSFER     // รับโอน
+  
+  // การจ่ายสินค้า
+  DISPENSE_SALE        // จ่ายขาย
+  DISPENSE_USE         // จ่ายใช้งาน
+  DISPENSE_TRANSFER    // จ่ายโอน
+  DISPENSE_WASTE       // ทิ้ง/เสียหาย
+  
+  // การปรับปรุงสต็อก
+  ADJUST_INCREASE      // ปรับเพิ่ม
+  ADJUST_DECREASE      // ปรับลด
+  ADJUST_COUNT         // นับสต็อก
+  
+  // การจอง
+  RESERVE              // จองสินค้า
+  UNRESERVE           // ยกเลิกการจอง
+}
+
+// ===== TRANSFER SYSTEM ENUMS =====
+enum TransferStatus {
+  DRAFT      // ร่าง
+  PENDING    // รอการอนุมัติ
+  APPROVED   // อนุมัติแล้ว
+  PREPARING  // กำลังเตรียม
+  READY      // พร้อมส่ง
+  SHIPPED    // จัดส่งแล้ว
+  DELIVERED  // ส่งถึงแล้ว
+  RECEIVED   // รับแล้ว
+  CANCELLED  // ยกเลิก
+  REJECTED   // ปฏิเสธ
+}
+
+enum TransferItemStatus {
+  PENDING
+  APPROVED  
+  DISPATCHED
+  RECEIVED
+  CANCELLED
+}
+
+enum TransferType {
+  INTERNAL   // โอนภายในองค์กร
+  EXTERNAL   // โอนภายนอก
+  RETURN     // คืนสินค้า
+  LOAN       // ยืม
+  BORROW     // ให้ยืม
+}
+
+// ===== NOTIFICATION ENUMS =====
+enum NotificationType {
+  TRANSFER_REQUEST     // คำขอโอนสินค้า
+  TRANSFER_APPROVED    // อนุมัติการโอน
+  TRANSFER_REJECTED    // ปฏิเสธการโอน
+  STOCK_LOW           // สต็อกต่ำ
+  STOCK_EXPIRED       // สินค้าหมดอายุ
+  USER_INVITED        // เชิญผู้ใช้
+  ROLE_ASSIGNED       // มอบหมาย Role
+  SYSTEM_ALERT        // แจ้งเตือนระบบ
+}
+
+enum NotificationStatus {
+  UNREAD     // ยังไม่อ่าน
+  READ       // อ่านแล้ว
+  ARCHIVED   // เก็บถาวร
+}
+
+// ===== AUDIT LOG ENUMS =====
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  APPROVE
+  REJECT
+  TRANSFER
+  EXPORT
+  IMPORT
+}
+
+// ===== UI ENUMS FOR COLORS & ICONS =====
+enum ColorTheme {
+  BLUE         // #3B82F6 - สีน้ำเงิน
+  GREEN        // #10B981 - สีเขียว
+  RED          // #EF4444 - สีแดง
+  YELLOW       // #F59E0B - สีเหลือง
+  PURPLE       // #8B5CF6 - สีม่วง
+  PINK         // #EC4899 - สีชมพู
+  INDIGO       // #6366F1 - สีน้ำเงินเข้ม
+  TEAL         // #14B8A6 - สีเขียวฟ้า
+  ORANGE       // #F97316 - สีส้ม
+  GRAY         // #6B7280 - สีเทา
+  SLATE        // #475569 - สีเทาเข้ม
+  EMERALD      // #059669 - สีเขียวมรกต
+}
+
+enum IconType {
+  // Department Icons
+  BUILDING     // 🏢 สำนักงาน
+  HOSPITAL     // 🏥 โรงพยาบาล
+  PHARMACY     // 💊 ร้านยา
+  WAREHOUSE    // 📦 คลังสินค้า
+  LABORATORY   // 🧪 ห้องแล็บ
+  
+  // Product Category Icons
+  PILL         // 💊 ยาเม็ด
+  BOTTLE       // 🍼 ยาน้ำ
+  SYRINGE      // 💉 ยาฉีด
+  BANDAGE      // 🩹 อุปกรณ์การแพทย์
+  STETHOSCOPE  // 🩺 เครื่องมือแพทย์
+  
+  // Role Icons
+  CROWN        // 👑 เจ้าของ
+  SHIELD       // 🛡️ ผู้จัดการ
+  PERSON       // 👤 พนักงาน
+  EYE          // 👁️ ผู้ตรวจสอบ
+  GEAR         // ⚙️ ระบบ
+  
+  // General Icons
+  BOX          // 📦 กล่อง
+  FOLDER       // 📁 โฟลเดอร์
+  TAG          // 🏷️ ป้ายกำกับ
+  STAR         // ⭐ ดาว
+  HEART        // ❤️ หัวใจ
+  CIRCLE       // ⚪ วงกลม
+  SQUARE       // ⬜ สี่เหลี่ยม
+  TRIANGLE     // 🔺 สามเหลี่ยม
+}
+
+// ==========================================
+// USER SCHEMA - V1.0
+// ==========================================
+
+// prisma/schemas/user.prisma
+// ===== USER MANAGEMENT SCHEMA - InvenStock V1.0 (CORRECTED) =====
+
+model User {
+  id          String     @id @default(cuid())
+  email       String?             // ✅ Optional for notifications/recovery
+  username    String     @unique  // ✅ Primary login credential
+  password    String              // bcrypt hashed
+  
+  // Personal Information
+  firstName   String
+  lastName    String
+  phone       String?
+  
+  // Account Status
+  status      UserStatus @default(PENDING)
+  isActive    Boolean    @default(true)
+  emailVerified Boolean  @default(false)
+  
+  // Security
+  lastLogin   DateTime?
+  
+  // Timestamps
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  // Relations
+  organizationUsers     OrganizationUser[]
+  sentInvitations       UserInvitation[] @relation("InviterUser")
+  receivedInvitations   UserInvitation[] @relation("InviteeUser")
+  stockTransactions     StockTransaction[]
+  transfersRequested    Transfer[] @relation("RequesterUser")
+  transfersApproved     Transfer[] @relation("ApproverUser") 
+  transfersDispatched   Transfer[] @relation("DispatcherUser")
+  transfersReceived     Transfer[] @relation("ReceiverUser")
+  notifications         Notification[]
+  auditLogs            AuditLog[]
+  
+  @@index([email])
+  @@index([username])  // ✅ เพิ่ม index สำหรับ primary login
+  @@index([status])
+  @@index([isActive])
+  @@map("users")
+}
+
+// User Invitations for joining organizations
+model UserInvitation {
+  id             String           @id @default(cuid())
+  organizationId String
+  inviterId      String
+  inviteeId      String?          // null if inviting by username/email
+  
+  // ✅ รองรับทั้ง email และ username invitation
+  inviteeEmail   String?          // Can invite by email
+  inviteeUsername String?         // Can invite by username
+  
+  // Invitation Details
+  roleId         String?          // Role to assign upon acceptance
+  message        String?          // Personal invitation message
+  
+  // Status
+  status         InvitationStatus @default(PENDING)
+  expiresAt      DateTime         // Invitation expiry
+  
+  // Response
+  respondedAt    DateTime?
+  response       String?          // Reason for decline
+  
+  // Timestamps
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  // Relations
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inviter        User             @relation("InviterUser", fields: [inviterId], references: [id])
+  invitee        User?            @relation("InviteeUser", fields: [inviteeId], references: [id])
+  
+  // ✅ ต้องมีอย่างน้อย 1 ใน 2: email หรือ username
+  // และ unique constraint แยกกัน
+  @@unique([organizationId, inviteeEmail])
+  @@unique([organizationId, inviteeUsername])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("user_invitations")
+}
+
+// ==========================================
+// ORGANIZATION SCHEMA - V1.0
+// ==========================================
+
+// prisma/schemas/organization.prisma
+// ===== MULTI-TENANT ORGANIZATION SCHEMA - InvenStock V1.0 =====
+
+model Organization {
+  id          String             @id @default(cuid())
+  name        String
+  slug        String             @unique // URL-friendly identifier
+  description String?
+  
+  // Branding & Appearance
+  logo        String?            // URL to logo
+  primaryColor String?           // Hex color code
+  
+  // Contact Information
+  email       String?
+  phone       String?
+  website     String?
+  address     String?
+  
+  // Settings
+  status      OrganizationStatus @default(ACTIVE)
+  timezone    String             @default("Asia/Bangkok")
+  currency    String             @default("THB")
+  
+  // Feature Settings
+  allowDepartments    Boolean    @default(true)
+  
+  // Timestamps
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  
+  // Relations
+  users               OrganizationUser[]
+  departments         Department[]
+  productCategories   ProductCategory[]
+  productTypes        ProductType[]     // Added for custom product types
+  productForms        ProductForm[]     // Added for custom product forms
+  products            Product[]
+  stocks              Stock[]
+  stockTransactions   StockTransaction[] // 🔥 ADDED MISSING RELATION
+  transfers           Transfer[]
+  invitations         UserInvitation[]
+  notifications       Notification[]
+  settings            OrganizationSetting[]
+  auditLogs          AuditLog[]
+  
+  @@index([slug])
+  @@index([status])
+  @@map("organizations")
+}
+
+// User-Organization Relationship (Many-to-Many)
+model OrganizationUser {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  
+  // Membership Details
+  isOwner        Boolean      @default(false)
+  joinedAt       DateTime     @default(now())
+  lastActiveAt   DateTime?
+  
+  // Status
+  isActive       Boolean      @default(true)
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles          OrganizationRole @default(MEMBER)
+  
+  @@unique([organizationId, userId])
+  @@index([isActive])
+  @@map("organization_users")
+}
+
+// Hierarchical Departments
+model Department {
+  id             String       @id @default(cuid())
+  organizationId String
+  parentId       String?      // For hierarchical structure
+  
+  // Department Details
+  name           String
+  code           String       // Short code (e.g., "IT", "HR")
+  description    String?
+  color          ColorTheme?    // แทน String?
+  icon           IconType?      // แทน String?
+  
+  // Settings
+  isActive       Boolean      @default(true)
+  
+  // Audit Fields
+  createdBy      String       // User who created
+  updatedBy      String?      // User who last updated
+  
+  // Timestamps
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children       Department[] @relation("DepartmentHierarchy")
+  stocks         Stock[]
+  transfersFrom  Transfer[]   @relation("FromDepartment")
+  transfersTo    Transfer[]   @relation("ToDepartment")
+  
+  @@unique([organizationId, code])
+  @@index([parentId])
+  @@index([isActive])
+  @@map("departments")
+}
+
+// Organization Settings (Key-Value Store)
+model OrganizationSetting {
+  id             String       @id @default(cuid())
+  organizationId String
+  key            String       // Setting key (e.g., "stock.low_threshold")
+  value          String       // JSON string value
+  type           String       @default("string") // string, number, boolean, json
+  
+  // Metadata
+  description    String?
+  isEditable     Boolean      @default(true)
+  
+  // Audit Fields
+  createdBy      String       // User who created
+  updatedBy      String?      // User who last updated
+  
+  // Timestamps
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, key])
+  @@index([key])
+  @@map("organization_settings")
+}
+
+// ==========================================
+// PRODUCT SCHEMA - V1.0
+// ==========================================
+
+// prisma/schemas/product.prisma
+// ===== PRODUCT MANAGEMENT SCHEMA - InvenStock V1.0 =====
+
+// Custom Product Categories per Organization
+model ProductCategory {
+  id             String       @id @default(cuid())
+  organizationId String
+  parentId       String?      // For hierarchical structure
+  
+  // Category Details
+  name           String
+  code           String?      // Category code
+  description    String?
+  color          ColorTheme?    // แทน String?
+  icon           IconType?      // แทน String?
+  
+  // Settings
+  isActive       Boolean      @default(true)
+  sortOrder      Int          @default(0)
+  
+  // Timestamps
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Relations
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent         ProductCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children       ProductCategory[] @relation("CategoryHierarchy")
+  products       Product[]
+  
+  @@unique([organizationId, name])
+  @@index([parentId])
+  @@index([sortOrder])
+  @@map("product_categories")
+}
+
+// Custom Product Types per Organization
+model ProductType {
+  id             String       @id @default(cuid())
+  organizationId String
+  
+  // Type Details
+  name           String       // เช่น "ยาเม็ด", "ยาน้ำ", "อุปกรณ์การแพทย์"
+  code           String?      // รหัสประเภท
+  description    String?
+  color          ColorTheme?    // แทน String?
+  icon           IconType?      // แทน String?
+  
+  // Settings
+  isActive       Boolean      @default(true)
+  sortOrder      Int          @default(0)
+  
+  // Timestamps
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  products       Product[]
+  
+  @@unique([organizationId, name])
+  @@index([isActive])
+  @@map("product_types")
+}
+
+// Custom Product Forms per Organization  
+model ProductForm {
+  id             String       @id @default(cuid())
+  organizationId String
+  
+  // Form Details
+  name           String       // เช่น "เม็ด", "แคปซูล", "น้ำ", "ครีม"
+  code           String?      // รหัสรูปแบบ
+  description    String?
+  
+  // Settings
+  isActive       Boolean      @default(true)
+  sortOrder      Int          @default(0)
+  
+  // Timestamps
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  products       Product[]
+  
+  @@unique([organizationId, name])
+  @@index([isActive])
+  @@map("product_forms")
+}
+
+// Products with Custom Organization Fields
+model Product {
+  id             String          @id @default(cuid())
+  organizationId String
+  categoryId     String?         // หมวดหมู่สินค้า
+  typeId         String?         // ประเภทสินค้า (custom per org)
+  formId         String?         // รูปแบบสินค้า (custom per org)
+  
+  // Product Identification - ตามความต้องการ
+  orgProductCode String          // รหัสสินค้าขององค์กร (required)
+  barcode        String?         // Barcode/QR code
+  
+  // Product Details - ตามความต้องการ
+  name           String          // ชื่อสินค้า (required)
+  description    String?         // รายละเอียดสินค้า (optional)
+  supplier       String?         // ชื่อผู้จัดจำหน่าย (optional)
+  
+  // Product Specifications - ตามความต้องการ
+  strength       String?         // ความแรงสินค้า (เช่น "500mg")
+  volume         String?         // ปริมาตรสินค้า (เช่น "100ml")
+  qtyPerBox      Int             @default(1) // ปริมาณต่อกล่อง (required, default 1)
+  unit           UnitType        @default(PIECE)
+  
+  // Inventory Settings
+  minStockLevel  Int             @default(0)     // Minimum stock alert
+  maxStockLevel  Int?            // Maximum stock limit
+  
+  // Status & Settings - ตามความต้องการ
+  isActive       Boolean         @default(true)  // สถานะการใช้งาน (required)
+  
+  // Audit Fields
+  createdBy      String          // User who created
+  updatedBy      String?         // User who last updated
+  
+  // Timestamps
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  // Relations
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category       ProductCategory? @relation(fields: [categoryId], references: [id])
+  productType    ProductType?    @relation(fields: [typeId], references: [id])
+  productForm    ProductForm?    @relation(fields: [formId], references: [id])
+  batches        ProductBatch[]
+  stocks         Stock[]
+  transferItems  TransferItem[]
+  
+  @@unique([organizationId, orgProductCode]) // องค์กรต้องมีรหัสสินค้าไม่ซ้ำ
+  @@index([isActive])
+  @@index([categoryId])
+  @@index([typeId])
+  @@index([formId])
+  @@index([barcode])
+  @@map("products")
+}
+
+// Product Batches for Lot/Expiry/Price Tracking - ตามความต้องการ
+model ProductBatch {
+  id             String       @id @default(cuid())
+  productId      String
+  
+  // Batch Details - ตามความต้องการ
+  batchNumber    String       // Lot/Batch number (required)
+  expiryDate     DateTime?    // วันหมดอายุ (optional)
+  
+  // Pricing - ตามความต้องการ (แต่ละ lot ราคาต่างกัน)
+  costPrice      Float        @default(0) // ราคาต้นทุนต่อกล่อง (required)
+  sellingPrice   Float        @default(0) // ราคาขายต่อกล่อง (required)
+  
+  // Quantity Tracking
+  currentQty     Int          @default(0) // จำนวนปัจจุบัน
+  
+  // Status
+  isActive       Boolean      @default(true)
+  
+  // Audit Fields
+  createdBy      String       // User who created
+  updatedBy      String?      // User who last updated
+  
+  // Timestamps
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Relations
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockTransactions StockTransaction[]
+  transferItems  TransferItem[]
+  
+  @@unique([productId, batchNumber]) // สินค้าแต่ละตัวต้องมี batch number ไม่ซ้ำ
+  @@index([expiryDate])
+  @@index([isActive])
+  @@index([costPrice])
+  @@map("product_batches")
+}
+
+// ==========================================
+// STOCK SCHEMA - V1.0
+// ==========================================
+
+// prisma/schemas/stock.prisma
+// ===== STOCK MANAGEMENT SCHEMA - InvenStock V1.0 =====
+
+// Stock Tracking per Department
+model Stock {
+  id             String       @id @default(cuid())
+  organizationId String
+  productId      String
+  departmentId   String?      // null = organization-wide stock
+  
+  // Stock Quantities
+  totalQuantity  Int          @default(0)  // Total available
+  reservedQty    Int          @default(0)  // Reserved for transfers
+  
+  // Stock Levels
+  minStockLevel  Int          @default(0)  // Department-specific minimum
+  maxStockLevel  Int?         // Department-specific maximum
+  reorderPoint   Int          @default(0)  // Auto-reorder trigger
+  reorderQty     Int?         // Auto-reorder quantity
+  
+  // Audit Fields
+  createdBy      String       // User who created
+  updatedBy      String?      // User who last updated
+  
+  // Timestamps
+  lastCountDate  DateTime?    // Last physical count
+  lastMovement   DateTime?    // Last stock movement
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  department     Department?  @relation(fields: [departmentId], references: [id])
+  transactions   StockTransaction[]
+  
+  @@unique([organizationId, productId, departmentId])
+  @@index([minStockLevel])
+  @@index([totalQuantity])
+  @@map("stocks")
+}
+
+// Stock Movement Transactions
+model StockTransaction {
+  id             String          @id @default(cuid())
+  organizationId String
+  stockId        String
+  batchId        String?         // Link to specific batch
+  userId         String
+  
+  // Transaction Details
+  type           TransactionType
+  reference      String?         // Reference number/document
+  note           String?         // Transaction note
+  
+  // Quantities
+  quantity       Int             // Change in quantity (+/-)
+  beforeQty      Int             // Stock before transaction
+  afterQty       Int             // Stock after transaction
+  
+  // Financial
+  unitCost       Float           @default(0)
+  totalCost      Float           @default(0)
+  
+  // Related Records
+  transferId     String?         // If part of transfer
+  transferItemId String?         // Specific transfer item
+  
+  // Location
+  fromLocation   String?         // Source location
+  toLocation     String?         // Destination location
+  
+  // Approval
+  approvedBy     String?         // Approver user ID
+  approvedAt     DateTime?       // Approval timestamp
+  
+  // Timestamps
+  transactionDate DateTime       @default(now())
+  createdAt      DateTime        @default(now())
+  
+  // Relations
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stock          Stock           @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  batch          ProductBatch?   @relation(fields: [batchId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
+  transfer       Transfer?       @relation(fields: [transferId], references: [id])
+  
+  @@index([type])
+  @@index([transactionDate])
+  @@index([transferId])
+  @@index([stockId])
+  @@map("stock_transactions")
+}
+
+// ==========================================
+// TRANSFER SCHEMA - V1.0
+// ==========================================
+
+// prisma/schemas/transfer.prisma
+// ===== TRANSFER SYSTEM SCHEMA - InvenStock V1.0 =====
+
+// Transfer Requests between Departments/Organizations
+model Transfer {
+  id                String         @id @default(cuid())
+  organizationId    String
+  transferNumber    String         // Auto-generated transfer number
+  
+  // Transfer Type & Direction
+  type              TransferType   @default(INTERNAL)
+  
+  // Source & Destination
+  fromDeptId        String?        // Source department
+  toDeptId          String?        // Destination department
+  fromOrgId         String?        // For external transfers
+  toOrgId           String?        // For external transfers
+  
+  // Transfer Details
+  title             String         // Transfer title/purpose
+  description       String?        // Detailed description
+  priority          String         @default("NORMAL") // HIGH, NORMAL, LOW
+  
+  // User Workflow
+  requesterId       String         // Who requested
+  approverId        String?        // Who approved
+  dispatcherId      String?        // Who prepared/dispatched
+  receiverId        String?        // Who received
+  
+  // Status & Workflow
+  status            TransferStatus @default(DRAFT)
+  
+  // Quantities & Values
+  totalItems        Int            @default(0)
+  totalQuantity     Int            @default(0)
+  totalValue        Float          @default(0)
+  
+  // Dates & Times
+  requestedDate     DateTime       @default(now())
+  requiredDate      DateTime?      // When needed
+  approvedDate      DateTime?
+  dispatchedDate    DateTime?
+  deliveredDate     DateTime?
+  receivedDate      DateTime?
+  
+  // Shipping Info
+  shippingMethod    String?        // Delivery method
+  trackingNumber    String?        // Tracking reference
+  carrier           String?        // Shipping carrier
+  
+  // Audit Fields
+  createdBy         String         // User who created
+  updatedBy         String?        // User who last updated
+  
+  // Timestamps
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  // Relations
+  organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fromDept          Department?    @relation("FromDepartment", fields: [fromDeptId], references: [id])
+  toDept            Department?    @relation("ToDepartment", fields: [toDeptId], references: [id])
+  requester         User           @relation("RequesterUser", fields: [requesterId], references: [id])
+  approver          User?          @relation("ApproverUser", fields: [approverId], references: [id])
+  dispatcher        User?          @relation("DispatcherUser", fields: [dispatcherId], references: [id])
+  receiver          User?          @relation("ReceiverUser", fields: [receiverId], references: [id])
+  items             TransferItem[]
+  stockTransactions StockTransaction[]
+  
+  @@unique([organizationId, transferNumber])
+  @@index([status])
+  @@index([type])
+  @@index([requestedDate])
+  @@index([fromDeptId])
+  @@index([toDeptId])
+  @@map("transfers")
+}
+
+// Transfer Items - Products in each transfer
+model TransferItem {
+  id              String       @id @default(cuid())
+  transferId      String
+  productId       String
+  batchId         String?      // Specific batch if tracked
+  
+  // Quantities at different stages
+  requestedQty    Int          // Initially requested
+  approvedQty     Int?         // Approved quantity
+  dispatchedQty   Int?         // Actually dispatched
+  receivedQty     Int?         // Actually received
+  
+  // Batch Information
+  lotNumber       String?      // Lot/batch number
+  expiryDate      DateTime?    // Expiry date
+  
+  // Pricing (from batch)
+  unitPrice       Float        @default(0)
+  totalValue      Float        @default(0)
+  
+  // Item Status
+  status          TransferItemStatus @default(PENDING)
+  
+  // Audit Fields
+  createdBy       String       // User who created
+  updatedBy       String?      // User who last updated
+  
+  // Timestamps
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relations
+  transfer        Transfer     @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  product         Product      @relation(fields: [productId], references: [id])
+  batch           ProductBatch? @relation(fields: [batchId], references: [id])
+  
+  @@index([transferId])
+  @@index([productId])
+  @@index([status])
+  @@map("transfer_items")
+}
+
+// ==========================================
+// NOTIFICATION SCHEMA - V1.0
+// ==========================================
+
+// prisma/schemas/notification.prisma
+// ===== NOTIFICATION SYSTEM SCHEMA - InvenStock V1.0 =====
+
+// Real-time Notifications
+model Notification {
+  id             String             @id @default(cuid())
+  organizationId String
+  userId         String
+  
+  // Notification Details
+  type           NotificationType
+  title          String             // Notification title
+  message        String             // Notification content
+  
+  // Related Records
+  relatedId      String?            // ID of related record (transfer, product, etc.)
+  relatedType    String?            // Type of related record
+  relatedData    String?            // JSON data for the notification
+  
+  // Action
+  actionUrl      String?            // URL to navigate when clicked
+  actionLabel    String?            // Button text for action
+  
+  // Status
+  status         NotificationStatus @default(UNREAD)
+  priority       String             @default("NORMAL") // HIGH, NORMAL, LOW
+  
+  // Scheduling
+  scheduledFor   DateTime?          // For scheduled notifications
+  expiresAt      DateTime?          // Auto-archive date
+  
+  // Timestamps
+  readAt         DateTime?          // When marked as read
+  archivedAt     DateTime?          // When archived
+  createdAt      DateTime           @default(now())
+  
+  // Relations
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([organizationId])
+  @@map("notifications")
+}
+
+// ==========================================
+// AUDIT SCHEMA - V1.0
+// ==========================================
+
+// prisma/schemas/audit.prisma
+// ===== STREAMLINED AUDIT SYSTEM - InvenStock V2.0 =====
+
+// Single Audit Model - Hybrid Approach
+model AuditLog {
+  id             String @id @default(cuid())
+  organizationId String
+  userId         String?
+  
+  // Action Tracking (Dot Notation)
+  action         String      // "products.create", "transfers.approve", "users.login"
+  resourceId     String?     // ID of affected record
+  
+  // Smart Payload Storage
+  payload        Json?       // Context-aware data based on action type
+  
+  // Timestamp
+  createdAt      DateTime @default(now())
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User? @relation(fields: [userId], references: [id])
+  
+  // Optimized Indexes
+  @@index([organizationId, createdAt])
+  @@index([action])
+  @@index([resourceId])
+  @@map("audit_logs")
+}
+
+// ===== PAYLOAD STANDARDS BY ACTION TYPE =====
+/*
+🔐 AUTHENTICATION ACTIONS
+"users.login" -> { "ip": "x.x.x.x", "success": true }
+"users.logout" -> { "sessionDuration": 3600 }
+"users.failed_login" -> { "ip": "x.x.x.x", "reason": "invalid_password" }
+
+📦 PRODUCT ACTIONS  
+"products.create" -> { "name": "Paracetamol", "code": "PRD001", "category": "Pain Relief" }
+"products.update" -> { "changes": {"price": [100, 150], "name": ["old", "new"]} }
+"products.delete" -> { "name": "Paracetamol", "code": "PRD001", "hasStock": false }
+
+📊 STOCK ACTIONS
+"stock.adjust" -> { "product": "Paracetamol", "from": 100, "to": 150, "reason": "count_correction" }
+"stock.receive" -> { "product": "Paracetamol", "qty": 50, "supplier": "ABC Pharma" }
+"stock.dispense" -> { "product": "Paracetamol", "qty": 10, "department": "ICU" }
+
+🚚 TRANSFER ACTIONS
+"transfers.create" -> { "fromDept": "Pharmacy", "toDept": "ICU", "itemCount": 5 }
+"transfers.approve" -> { "transferNumber": "TRF-001", "totalValue": 15000 }
+"transfers.reject" -> { "transferNumber": "TRF-001", "reason": "insufficient_stock" }
+"transfers.receive" -> { "transferNumber": "TRF-001", "receivedItems": 5 }
+
+👥 USER MANAGEMENT
+"users.invite" -> { "email": "user@example.com", "role": "Pharmacist" }
+"users.role_change" -> { "from": "Staff", "to": "Manager", "reason": "promotion" }
+"users.deactivate" -> { "reason": "resignation" }
+
+⚙️ SYSTEM ACTIONS
+"system.backup" -> { "tables": ["products", "stocks"], "size": "15MB" }
+"system.settings_update" -> { "key": "low_stock_threshold", "from": 10, "to": 5 }
+"system.bulk_import" -> { "type": "products", "count": 150, "source": "excel" }
+*/
+
+// ===== TYPESCRIPT HELPER TYPES =====
+/*
+// Action definitions
+type AuditAction = 
+  | `users.${UserAction}`
+  | `products.${ProductAction}` 
+  | `stock.${StockAction}`
+  | `transfers.${TransferAction}`
+  | `system.${SystemAction}`;
+
+type UserAction = 'login' | 'logout' | 'failed_login' | 'invite' | 'role_change' | 'deactivate';
+type ProductAction = 'create' | 'update' | 'delete' | 'bulk_import';
+type StockAction = 'adjust' | 'receive' | 'dispense' | 'count' | 'reserve';
+type TransferAction = 'create' | 'approve' | 'reject' | 'dispatch' | 'receive' | 'cancel';
+type SystemAction = 'backup' | 'settings_update' | 'bulk_import' | 'cleanup';
+
+// Payload types for type safety
+interface AuditPayload {
+  'users.login': { ip: string; success: boolean; userAgent?: string };
+  'products.create': { name: string; code: string; category?: string };
+  'stock.adjust': { product: string; from: number; to: number; reason: string };
+  'transfers.approve': { transferNumber: string; totalValue: number; itemCount: number };
+  // ... add more as needed
+}
+*/
