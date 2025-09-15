@@ -1,8 +1,35 @@
-// app/api/auth/register/route.ts - FIXED FOR 3-ROLE SYSTEM
+// app/api/auth/register/route.ts - FIXED ARCJET PROPERTIES
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, createToken, getCookieOptions, userToPayload } from '@/lib/auth';
 import { z } from 'zod';
+import arcjet, { shield, tokenBucket, slidingWindow } from "@arcjet/next";
+
+// ===== ARCJET CONFIGURATION FOR REGISTER ENDPOINT =====
+const aj = arcjet({
+  key: process.env.ARCJET_KEY!,
+  rules: [
+    // Enhanced protection for registration endpoint
+    shield({ mode: "LIVE" }),
+    
+    // Rate limiting for registration (prevent spam accounts)
+    tokenBucket({
+      mode: "LIVE",
+      characteristics: ["ip.src"], // Track by IP
+      refillRate: 2,        // Only 2 registrations per interval
+      interval: "10m",      // 10 minute intervals
+      capacity: 3,          // Max 3 registrations in bucket
+    }),
+    
+    // Additional sliding window protection
+    slidingWindow({
+      mode: "LIVE",
+      characteristics: ["ip.src"],
+      interval: "1h",       // 1 hour window
+      max: 5,               // Max 5 registrations per hour per IP
+    }),
+  ],
+});
 
 const RegisterSchema = z.object({
   username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9._-]+$/),
@@ -16,6 +43,47 @@ const RegisterSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // ===== ARCJET PROTECTION CHECK =====
+    const decision = await aj.protect(request, { requested: 1 });
+    
+    // Get IP from request headers as fallback
+    const clientIp = request.headers.get('x-forwarded-for') || 
+                    request.headers.get('x-real-ip') || 
+                    'unknown';
+    
+    if (decision.isDenied()) {
+      if (decision.reason.isRateLimit()) {
+        console.log(`🚨 Registration rate limit exceeded from IP: ${clientIp}`);
+        return NextResponse.json(
+          { 
+            success: false,
+            error: "Too many registration attempts", 
+            message: "Please wait 10 minutes before trying again",
+            retryAfter: 600 // 10 minutes in seconds
+          },
+          { 
+            status: 429,
+            headers: { 'Retry-After': '600' }
+          }
+        );
+      }
+      
+      if (decision.reason.isShield()) {
+        console.log(`🛡️ Registration attempt blocked by shield from IP: ${clientIp}`);
+        return NextResponse.json(
+          { success: false, error: "Request blocked by security filter" },
+          { status: 403 }
+        );
+      }
+
+      // General denial
+      return NextResponse.json(
+        { success: false, error: "Access denied" },
+        { status: 403 }
+      );
+    }
+
+    // ===== STANDARD REGISTRATION LOGIC =====
     const body = await request.json();
     const validation = RegisterSchema.safeParse(body);
     
@@ -36,11 +104,15 @@ export async function POST(request: NextRequest) {
     const cleanPhone = phone?.trim() || null;
     const cleanOrgName = organizationName?.trim() || null;
 
+    // Log registration attempt
+    console.log(`📝 Registration attempt: ${username} from IP: ${clientIp}`);
+
     const existingUser = await prisma.user.findUnique({
       where: { username: username.toLowerCase() }
     });
 
     if (existingUser) {
+      console.log(`❌ Registration failed - username exists: ${username} from IP: ${clientIp}`);
       return NextResponse.json({ success: false, error: 'Username already exists' }, { status: 409 });
     }
 
@@ -49,6 +121,7 @@ export async function POST(request: NextRequest) {
         where: { email: cleanEmail.toLowerCase() }
       });
       if (existingEmailUser) {
+        console.log(`❌ Registration failed - email exists: ${cleanEmail} from IP: ${clientIp}`);
         return NextResponse.json({ success: false, error: 'Email already exists' }, { status: 409 });
       }
     }
@@ -86,21 +159,22 @@ export async function POST(request: NextRequest) {
           data: {
             name: cleanOrgName, slug, 
             description: `Organization created by ${newUser.firstName} ${newUser.lastName}`,
-            status: 'ACTIVE', timezone: 'Asia/Bangkok', currency: 'THB',
-            allowDepartments: true, // Remove allowCustomRoles
+            status: 'ACTIVE', timezone: 'Asia/Bangkok',
+            allowDepartments: true,
+            email: cleanEmail?.toLowerCase(),
+            phone: cleanPhone,
           },
           select: {
-            id: true, name: true, slug: true, description: true, logo: true,
-            status: true, timezone: true, currency: true,
+            id: true, name: true, slug: true, description: true,
+            status: true, timezone: true, email: true, phone: true, allowDepartments: true,
           }
         });
 
-        // Create OrganizationUser with simple role instead of complex role system
+        // Create OrganizationUser with simple role
         await tx.organizationUser.create({
           data: {
             organizationId: organization.id, userId: newUser.id,
-            roles: 'OWNER', // Simple role assignment
-            isOwner: true, isActive: true, joinedAt: new Date(),
+            roles: 'OWNER', isOwner: true, isActive: true, joinedAt: new Date(),
           }
         });
 
@@ -111,7 +185,7 @@ export async function POST(request: NextRequest) {
             payload: {
               username: newUser.username, organizationCreated: true,
               organizationName: organization.name, timestamp: new Date().toISOString(),
-              ip: request.headers.get('x-forwarded-for') || 'unknown'
+              ip: request.headers.get('x-forwarded-for') || clientIp
             }
           }
         });
@@ -119,6 +193,9 @@ export async function POST(request: NextRequest) {
 
       return { newUser, organization };
     });
+
+    // ===== SUCCESSFUL REGISTRATION =====
+    console.log(`✅ Registration successful: ${username} from IP: ${clientIp}`);
 
     const userPayload = userToPayload(result.newUser);
     const token = result.organization ? 
@@ -130,7 +207,8 @@ export async function POST(request: NextRequest) {
       firstName: result.newUser.firstName, lastName: result.newUser.lastName,
       fullName: `${result.newUser.firstName} ${result.newUser.lastName}`,
       phone: result.newUser.phone, status: result.newUser.status, isActive: result.newUser.isActive,
-      emailVerified: result.newUser.emailVerified, createdAt: result.newUser.createdAt, updatedAt: result.newUser.updatedAt,
+      emailVerified: result.newUser.emailVerified, createdAt: result.newUser.createdAt, 
+      updatedAt: result.newUser.updatedAt,
     };
 
     const response = NextResponse.json({

@@ -1,4 +1,4 @@
-// app/api/auth/me/route.ts - FIXED FOR 3-ROLE SYSTEM
+// app/api/auth/me/route.ts - FIXED FOR CURRENT SCHEMA
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerUser, getUserFromHeaders } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
@@ -28,25 +28,32 @@ export async function GET(request: NextRequest) {
 
       user = {
         userId: dbUser.id, 
-        email: dbUser.email || '', // Fix: Handle null -> string conversion
-        username: dbUser.username || undefined, // Fix: Handle null -> undefined conversion
+        email: dbUser.email || '',
+        username: dbUser.username || undefined,
         firstName: dbUser.firstName, 
         lastName: dbUser.lastName,
       };
     }
 
-    // Fix: Add null check for user
     if (!user) {
       return NextResponse.json({ success: false, error: 'Authentication failed', data: null }, { status: 401 });
     }
 
+    // ✅ FIXED: Remove fields that don't exist in current schema
     const userOrganizations = await prisma.organizationUser.findMany({
       where: { userId: user.userId, isActive: true },
       include: {
         organization: {
           select: {
-            id: true, name: true, slug: true, description: true, logo: true,
-            status: true, timezone: true, currency: true, allowDepartments: true,
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            status: true,
+            timezone: true,
+            email: true,           // ✅ These exist in current schema
+            phone: true,           // ✅ These exist in current schema
+            allowDepartments: true // ✅ These exist in current schema
           }
         }
       },
@@ -59,12 +66,12 @@ export async function GET(request: NextRequest) {
       const firstOrg = userOrganizations[0];
       currentOrganization = firstOrg.organization;
       
-      // Use simple role from OrganizationUser instead of complex role system
+      // Use simple role from OrganizationUser
       userRole = firstOrg.roles; // This is 'MEMBER' | 'ADMIN' | 'OWNER'
     }
 
     const dbUser = await prisma.user.findUnique({
-      where: { id: user.userId }, // Fix: user is now guaranteed to be non-null
+      where: { id: user.userId },
       select: {
         id: true, username: true, email: true, firstName: true, lastName: true,
         phone: true, status: true, isActive: true, emailVerified: true,
@@ -96,7 +103,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Handle other HTTP methods
 export async function POST() {
   return NextResponse.json({ success: false, error: 'Method not allowed. Use GET to fetch user info.' }, { status: 405 });
 }

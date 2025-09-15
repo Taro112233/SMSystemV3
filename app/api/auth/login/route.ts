@@ -1,8 +1,35 @@
-// app/api/auth/login/route.ts - FIXED FOR 3-ROLE SYSTEM
+// app/api/auth/login/route.ts - FIXED ARCJET PROPERTIES
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, createToken, getCookieOptions, userToPayload } from '@/lib/auth';
 import { z } from 'zod';
+import arcjet, { shield, tokenBucket, slidingWindow } from "@arcjet/next";
+
+// ===== ARCJET CONFIGURATION FOR LOGIN ENDPOINT =====
+const aj = arcjet({
+  key: process.env.ARCJET_KEY!,
+  rules: [
+    // Enhanced protection for login endpoint
+    shield({ mode: "LIVE" }),
+    
+    // Strict rate limiting for login attempts (prevent brute force)
+    tokenBucket({
+      mode: "LIVE",
+      characteristics: ["ip.src"], // Track by IP
+      refillRate: 3,        // Only 3 login attempts per interval
+      interval: "5m",       // 5 minute intervals
+      capacity: 5,          // Max 5 attempts in bucket
+    }),
+    
+    // Additional sliding window protection
+    slidingWindow({
+      mode: "LIVE",
+      characteristics: ["ip.src"],
+      interval: "1h",       // 1 hour window
+      max: 10,              // Max 10 login attempts per hour
+    }),
+  ],
+});
 
 const LoginSchema = z.object({
   username: z.string().min(3).max(50),
@@ -11,6 +38,47 @@ const LoginSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // ===== ARCJET PROTECTION CHECK =====
+    const decision = await aj.protect(request, { requested: 1 });
+    
+    // Get IP from request headers as fallback
+    const clientIp = request.headers.get('x-forwarded-for') || 
+                    request.headers.get('x-real-ip') || 
+                    'unknown';
+    
+    if (decision.isDenied()) {
+      if (decision.reason.isRateLimit()) {
+        console.log(`🚨 Login rate limit exceeded from IP: ${clientIp}`);
+        return NextResponse.json(
+          { 
+            success: false,
+            error: "Too many login attempts", 
+            message: "Please wait 5 minutes before trying again",
+            retryAfter: 300 // 5 minutes in seconds
+          },
+          { 
+            status: 429,
+            headers: { 'Retry-After': '300' }
+          }
+        );
+      }
+      
+      if (decision.reason.isShield()) {
+        console.log(`🛡️ Login attempt blocked by shield from IP: ${clientIp}`);
+        return NextResponse.json(
+          { success: false, error: "Request blocked by security filter" },
+          { status: 403 }
+        );
+      }
+
+      // General denial
+      return NextResponse.json(
+        { success: false, error: "Access denied" },
+        { status: 403 }
+      );
+    }
+
+    // ===== STANDARD LOGIN LOGIC =====
     const body = await request.json();
     const validation = LoginSchema.safeParse(body);
     
@@ -40,25 +108,33 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
+      // Log failed attempt for monitoring
+      console.log(`❌ Login failed - user not found: ${username} from IP: ${clientIp}`);
       return NextResponse.json({ success: false, error: 'Username not found' }, { status: 401 });
     }
 
     const isPasswordValid = await verifyPassword(password, user.password);
     if (!isPasswordValid) {
+      // Log failed attempt for monitoring
+      console.log(`❌ Login failed - invalid password: ${username} from IP: ${clientIp}`);
       return NextResponse.json({ success: false, error: 'Invalid password' }, { status: 401 });
     }
 
     if (user.status !== 'ACTIVE' || !user.isActive) {
+      console.log(`❌ Login failed - inactive account: ${username} from IP: ${clientIp}`);
       return NextResponse.json({ success: false, error: 'User account not active' }, { status: 403 });
     }
+
+    // ===== SUCCESSFUL LOGIN =====
+    console.log(`✅ Login successful: ${username} from IP: ${clientIp}`);
 
     const userOrganizations = await prisma.organizationUser.findMany({
       where: { userId: user.id, isActive: true },
       include: {
         organization: {
           select: {
-            id: true, name: true, slug: true, description: true, logo: true,
-            status: true, timezone: true, currency: true,
+            id: true, name: true, slug: true, description: true,
+            status: true, timezone: true, email: true, phone: true, allowDepartments: true
           }
         }
       },
@@ -70,8 +146,7 @@ export async function POST(request: NextRequest) {
 
     if (userOrganizations.length > 0) {
       const defaultOrg = userOrganizations[0];
-      // Use simple role from OrganizationUser instead of complex role system
-      const userRole = defaultOrg.roles; // This is the simple 'MEMBER' | 'ADMIN' | 'OWNER'
+      const userRole = defaultOrg.roles;
 
       token = await createToken({
         ...userPayload,
