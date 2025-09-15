@@ -1,13 +1,11 @@
 // app/api/auth/logout/route.ts - WORKING VERSION  
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { getUserFromHeaders } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
     const userInfo = getUserFromHeaders(request.headers);
-    const cookieStore = await cookies();
 
     if (userInfo) {
       try {

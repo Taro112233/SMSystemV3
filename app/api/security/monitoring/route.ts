@@ -1,4 +1,4 @@
-// app/api/security/monitoring/route.ts - ARCJET MONITORING DASHBOARD
+// app/api/security/monitoring/route.ts - FIXED TYPESCRIPT ERRORS
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerUser } from '@/lib/auth-server';
 import arcjet, { shield } from "@arcjet/next";
@@ -9,24 +9,38 @@ const aj = arcjet({
   rules: [shield({ mode: "LIVE" })],
 });
 
-// Simple in-memory storage for security events (in production, use Redis/Database)
-const securityEvents: Array<{
+// Define proper interfaces for security events
+interface SecurityEventBase {
   timestamp: Date;
-  type: 'rate_limit' | 'bot_blocked' | 'shield_blocked' | 'hosting_ip';
   ip: string;
   path: string;
   userAgent?: string;
-  details?: any;
-}> = [];
+  details?: Record<string, unknown>;
+}
+
+interface RateLimitEvent extends SecurityEventBase {
+  type: 'rate_limit';
+}
+
+interface BotBlockedEvent extends SecurityEventBase {
+  type: 'bot_blocked';
+}
+
+interface ShieldBlockedEvent extends SecurityEventBase {
+  type: 'shield_blocked';
+}
+
+interface HostingIPEvent extends SecurityEventBase {
+  type: 'hosting_ip';
+}
+
+type SecurityEvent = RateLimitEvent | BotBlockedEvent | ShieldBlockedEvent | HostingIPEvent;
+
+// Simple in-memory storage for security events (in production, use Redis/Database)
+const securityEvents: SecurityEvent[] = [];
 
 // Function to add security event (call this from middleware/API routes)
-export function logSecurityEvent(event: {
-  type: 'rate_limit' | 'bot_blocked' | 'shield_blocked' | 'hosting_ip';
-  ip: string;
-  path: string;
-  userAgent?: string;
-  details?: any;
-}) {
+export function logSecurityEvent(event: Omit<SecurityEvent, 'timestamp'>): void {
   securityEvents.push({
     timestamp: new Date(),
     ...event
@@ -36,6 +50,44 @@ export function logSecurityEvent(event: {
   if (securityEvents.length > 1000) {
     securityEvents.splice(0, securityEvents.length - 1000);
   }
+}
+
+interface SecurityStats {
+  total24h: number;
+  totalLastHour: number;
+  rateLimitBlocks: number;
+  botBlocks: number;
+  shieldBlocks: number;
+  uniqueIPs: number;
+  mostActiveIP: string | null;
+  mostActiveIPCount: number;
+}
+
+interface TimelineEntry {
+  hour: string;
+  count: number;
+  types: Record<string, number>;
+}
+
+interface TopItem {
+  ip?: string;
+  path?: string;
+  count: number;
+}
+
+interface SecurityData {
+  stats: SecurityStats;
+  timeline: TimelineEntry[];
+  topBlockedIPs: TopItem[];
+  topTargetedPaths: TopItem[];
+  eventsByType: Record<string, number>;
+  recentEvents: Array<{
+    timestamp: string;
+    type: string;
+    ip: string;
+    path: string;
+    userAgent?: string;
+  }>;
 }
 
 export async function GET(request: NextRequest) {
@@ -75,7 +127,7 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, number>);
 
-    const topBlockedIPs = Object.entries(ipCounts)
+    const topBlockedIPs: TopItem[] = Object.entries(ipCounts)
       .sort(([,a], [,b]) => b - a)
       .slice(0, 10)
       .map(([ip, count]) => ({ ip, count }));
@@ -86,13 +138,13 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, number>);
 
-    const topTargetedPaths = Object.entries(pathCounts)
+    const topTargetedPaths: TopItem[] = Object.entries(pathCounts)
       .sort(([,a], [,b]) => b - a)
       .slice(0, 10)
       .map(([path, count]) => ({ path, count }));
 
     // Recent events timeline (last 24 hours, grouped by hour)
-    const timeline = Array.from({ length: 24 }, (_, i) => {
+    const timeline: TimelineEntry[] = Array.from({ length: 24 }, (_, i) => {
       const hourStart = new Date(now.getTime() - (i + 1) * 60 * 60 * 1000);
       const hourEnd = new Date(now.getTime() - i * 60 * 60 * 1000);
       
@@ -111,7 +163,7 @@ export async function GET(request: NextRequest) {
     }).reverse(); // Most recent first
 
     // Security stats
-    const stats = {
+    const stats: SecurityStats = {
       total24h: recentEvents.length,
       totalLastHour: lastHourEvents.length,
       rateLimitBlocks: eventsByType.rate_limit || 0,
@@ -134,16 +186,18 @@ export async function GET(request: NextRequest) {
         userAgent: event.userAgent?.substring(0, 100) // Truncate long user agents
       }));
 
+    const responseData: SecurityData = {
+      stats,
+      timeline,
+      topBlockedIPs,
+      topTargetedPaths,
+      eventsByType,
+      recentEvents: recentEventsList
+    };
+
     return NextResponse.json({
       success: true,
-      data: {
-        stats,
-        timeline,
-        topBlockedIPs,
-        topTargetedPaths,
-        eventsByType,
-        recentEvents: recentEventsList
-      },
+      data: responseData,
       generatedAt: now.toISOString()
     });
 
@@ -155,6 +209,22 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
+// Define interfaces for POST request body
+interface LogEventAction {
+  action: 'log_event';
+  type: SecurityEvent['type'];
+  ip: string;
+  path: string;
+  userAgent?: string;
+  details?: Record<string, unknown>;
+}
+
+interface GetLiveStatsAction {
+  action: 'get_live_stats';
+}
+
+type SecurityAction = LogEventAction | GetLiveStatsAction;
 
 // Endpoint to get real-time security status
 export async function POST(request: NextRequest) {
@@ -169,15 +239,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    const { action, ...eventData } = await request.json();
+    const body: SecurityAction = await request.json();
 
-    if (action === 'log_event') {
+    if (body.action === 'log_event') {
       // Log a security event
+      const { action, ...eventData } = body;
       logSecurityEvent(eventData);
       return NextResponse.json({ success: true, message: 'Event logged' });
     }
 
-    if (action === 'get_live_stats') {
+    if (body.action === 'get_live_stats') {
       const now = new Date();
       const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
       

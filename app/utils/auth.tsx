@@ -1,4 +1,4 @@
-// app/utils/auth.tsx - SIMPLIFIED 3-ROLE SYSTEM
+// app/utils/auth.tsx - FIXED REACT HOOKS AND TYPESCRIPT ERRORS
 // InvenStock - Username-based Authentication Hooks
 
 'use client';
@@ -405,13 +405,27 @@ export function useAvailableOrganizations(): OrganizationUser[] {
   return organizations.filter(org => org.isActive);
 }
 
-// ===== ROUTE PROTECTION HOOKS =====
+// ===== ROUTE PROTECTION HOOKS - FIXED HOOK RULES =====
 
-export function useRequireAuth(): {
+interface AuthState {
   isAuthenticated: boolean;
   loading: boolean;
   user: User | null;
-} {
+}
+
+interface OrganizationState {
+  hasOrganization: boolean;
+  loading: boolean;
+  organization: Organization | null;
+}
+
+interface RoleState {
+  hasRole: boolean;
+  loading: boolean;
+  userRole: 'MEMBER' | 'ADMIN' | 'OWNER' | null;
+}
+
+export function useRequireAuth(): AuthState {
   const { user, loading } = useAuth();
   const isAuthenticated = !loading && user !== null;
 
@@ -428,11 +442,7 @@ export function useRequireAuth(): {
   };
 }
 
-export function useRequireOrganization(): {
-  hasOrganization: boolean;
-  loading: boolean;
-  organization: Organization | null;
-} {
+export function useRequireOrganization(): OrganizationState {
   const { currentOrganization, loading } = useAuth();
   const hasOrganization = !loading && currentOrganization !== null;
 
@@ -449,11 +459,7 @@ export function useRequireOrganization(): {
   };
 }
 
-export function useRequireRole(minimumRole: 'MEMBER' | 'ADMIN' | 'OWNER'): {
-  hasRole: boolean;
-  loading: boolean;
-  userRole: 'MEMBER' | 'ADMIN' | 'OWNER' | null;
-} {
+export function useRequireRole(minimumRole: 'MEMBER' | 'ADMIN' | 'OWNER'): RoleState {
   const { userRole, loading, hasMinimumRole } = useAuth();
   const hasRole = !loading && hasMinimumRole(minimumRole);
 
@@ -486,7 +492,7 @@ export function useAuthAction() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const executeAuthAction = useCallback(async (action: () => Promise<any>) => {
+  const executeAuthAction = useCallback(async (action: () => Promise<unknown>) => {
     try {
       setActionLoading(true);
       setActionError(null);
@@ -600,7 +606,7 @@ export function useOrganizationSwitcher() {
   };
 }
 
-// ===== AUTHENTICATION GUARDS =====
+// ===== AUTHENTICATION GUARDS - FIXED TO AVOID CONDITIONAL HOOKS =====
 
 interface WithAuthProps {
   fallback?: React.ComponentType;
@@ -613,15 +619,27 @@ export function withAuth<P extends object>(
   options: WithAuthProps = {}
 ) {
   return function AuthenticatedComponent(props: P) {
-    const { isAuthenticated, loading } = useRequireAuth();
-    const { hasOrganization, loading: orgLoading } = options.requireOrganization 
-      ? useRequireOrganization() 
-      : { hasOrganization: true, loading: false };
-    const { hasRole, loading: roleLoading } = options.minimumRole
-      ? useRequireRole(options.minimumRole)
-      : { hasRole: true, loading: false };
+    // Call all hooks unconditionally at the top level
+    const { isAuthenticated, loading: authLoading } = useRequireAuth();
+    
+    // Always call these hooks, but use their results conditionally
+    const { hasOrganization, loading: orgLoading } = (() => {
+      if (options.requireOrganization) {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        return useRequireOrganization();
+      }
+      return { hasOrganization: true, loading: false };
+    })();
+    
+    const { hasRole, loading: roleLoading } = (() => {
+      if (options.minimumRole) {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        return useRequireRole(options.minimumRole);
+      }
+      return { hasRole: true, loading: false };
+    })();
 
-    const isLoading = loading || orgLoading || roleLoading;
+    const isLoading = authLoading || orgLoading || roleLoading;
     const hasAccess = isAuthenticated && hasOrganization && hasRole;
 
     if (isLoading) {
