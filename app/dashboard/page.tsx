@@ -1,4 +1,4 @@
-// app/dashboard/page.tsx
+// app/dashboard/page.tsx - FIXED TYPESCRIPT ERRORS
 
 'use client';
 
@@ -21,7 +21,8 @@ import {
   Calendar,
   FileText,
   Menu,
-  X
+  X,
+  LucideIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,8 +30,47 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-// Mock Data
-const userOrganizations = [
+// ===== TYPE DEFINITIONS =====
+
+interface OrganizationStats {
+  products: number;
+  lowStock: number;
+  pendingTransfers: number;
+}
+
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  logo: string | null;
+  memberCount: number;
+  departmentCount: number;
+  status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
+  isOwner: boolean;
+  role: string;
+  lastActivity: string;
+  stats: OrganizationStats;
+}
+
+type DepartmentColor = 'blue' | 'red' | 'green' | 'purple' | 'orange';
+type DepartmentIcon = 'Warehouse' | 'Hospital' | 'Building2' | 'Users' | 'ShoppingCart' | 'Package';
+
+interface Department {
+  id: string;
+  name: string;
+  code: string;
+  icon: DepartmentIcon;
+  color: DepartmentColor;
+  description: string;
+  memberCount: number;
+  isActive: boolean;
+  notifications: number;
+}
+
+// ===== MOCK DATA =====
+
+const userOrganizations: Organization[] = [
   {
     id: '1',
     name: 'โรงพยาบาลศิริราช',
@@ -87,7 +127,7 @@ const userOrganizations = [
   }
 ];
 
-const mockDepartments = [
+const mockDepartments: Department[] = [
   {
     id: '1',
     name: 'คลังยาหลัก',
@@ -145,15 +185,22 @@ const mockDepartments = [
   }
 ];
 
-const getIconComponent = (iconName) => {
-  const icons = {
-    Warehouse, Hospital, Building2, Users, ShoppingCart, Package
+// ===== UTILITY FUNCTIONS =====
+
+const getIconComponent = (iconName: DepartmentIcon): LucideIcon => {
+  const icons: Record<DepartmentIcon, LucideIcon> = {
+    Warehouse,
+    Hospital,
+    Building2,
+    Users,
+    ShoppingCart,
+    Package
   };
   return icons[iconName] || Package;
 };
 
-const getColorClass = (color) => {
-  const colors = {
+const getColorClass = (color: DepartmentColor): string => {
+  const colors: Record<DepartmentColor, string> = {
     blue: 'bg-blue-500',
     red: 'bg-red-500', 
     green: 'bg-green-500',
@@ -163,7 +210,22 @@ const getColorClass = (color) => {
   return colors[color] || 'bg-gray-500';
 };
 
-function OrganizationSelector({ organizations, onSelectOrganization }) {
+// ===== COMPONENT INTERFACES =====
+
+interface OrganizationSelectorProps {
+  organizations: Organization[];
+  onSelectOrganization: (organization: Organization) => void;
+}
+
+interface OrganizationDashboardProps {
+  organization: Organization;
+  departments: Department[];
+  onBack: () => void;
+}
+
+// ===== ORGANIZATION SELECTOR COMPONENT =====
+
+function OrganizationSelector({ organizations, onSelectOrganization }: OrganizationSelectorProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
@@ -210,7 +272,7 @@ function OrganizationSelector({ organizations, onSelectOrganization }) {
 
         {/* Organization Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {organizations.map((org) => (
+          {organizations.map((org: Organization) => (
             <Card 
               key={org.id}
               className="hover:shadow-lg transition-all duration-200 cursor-pointer group border-0 bg-white/80 backdrop-blur-sm"
@@ -302,9 +364,11 @@ function OrganizationSelector({ organizations, onSelectOrganization }) {
   );
 }
 
-function OrganizationDashboard({ organization, departments, onBack }) {
-  const [activeDepartment, setActiveDepartment] = useState(departments[0]);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+// ===== ORGANIZATION DASHBOARD COMPONENT =====
+
+function OrganizationDashboard({ organization, departments, onBack }: OrganizationDashboardProps) {
+  const [activeDepartment, setActiveDepartment] = useState<Department>(departments[0]);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -377,7 +441,7 @@ function OrganizationDashboard({ organization, departments, onBack }) {
               {sidebarOpen ? 'แผนกทั้งหมด' : '••'}
             </div>
             
-            {departments.map((dept) => {
+            {departments.map((dept: Department) => {
               const IconComponent = getIconComponent(dept.icon);
               const isActive = activeDepartment?.id === dept.id;
               
@@ -388,7 +452,7 @@ function OrganizationDashboard({ organization, departments, onBack }) {
                   className={`${sidebarOpen ? 'w-full justify-start' : 'w-full justify-center'} h-9 relative`}
                   onClick={() => setActiveDepartment(dept)}
                 >
-                  <div className={`w-6 h-6 ${getColorClass(dept.color)} rounded flex items-center justify-center mr-${sidebarOpen ? '2' : '0'}`}>
+                  <div className={`w-6 h-6 ${getColorClass(dept.color)} rounded flex items-center justify-center ${sidebarOpen ? 'mr-2' : 'mr-0'}`}>
                     <IconComponent className="w-3 h-3 text-white" />
                   </div>
                   {sidebarOpen && (
@@ -557,8 +621,10 @@ function OrganizationDashboard({ organization, departments, onBack }) {
   );
 }
 
+// ===== MAIN DASHBOARD COMPONENT =====
+
 export default function InvenStockDashboard() {
-  const [selectedOrganization, setSelectedOrganization] = useState(null);
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
 
   return (
     <div>

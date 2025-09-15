@@ -1,4 +1,4 @@
-// app/api/auth/login/route.ts - FIXED ARCJET PROPERTIES
+// app/api/auth/login/route.ts - FIXED TYPESCRIPT ERRORS
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, createToken, getCookieOptions, userToPayload } from '@/lib/auth';
@@ -9,24 +9,19 @@ import arcjet, { shield, tokenBucket, slidingWindow } from "@arcjet/next";
 const aj = arcjet({
   key: process.env.ARCJET_KEY!,
   rules: [
-    // Enhanced protection for login endpoint
     shield({ mode: "LIVE" }),
-    
-    // Strict rate limiting for login attempts (prevent brute force)
     tokenBucket({
       mode: "LIVE",
-      characteristics: ["ip.src"], // Track by IP
-      refillRate: 3,        // Only 3 login attempts per interval
-      interval: "5m",       // 5 minute intervals
-      capacity: 5,          // Max 5 attempts in bucket
+      characteristics: ["ip.src"],
+      refillRate: 3,
+      interval: "5m",
+      capacity: 5,
     }),
-    
-    // Additional sliding window protection
     slidingWindow({
       mode: "LIVE",
       characteristics: ["ip.src"],
-      interval: "1h",       // 1 hour window
-      max: 10,              // Max 10 login attempts per hour
+      interval: "1h",
+      max: 10,
     }),
   ],
 });
@@ -36,12 +31,15 @@ const LoginSchema = z.object({
   password: z.string().min(6).max(100),
 });
 
+// ✅ FIXED: Define proper interface for validation errors
+interface ValidationError {
+  field: string;
+  message: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // ===== ARCJET PROTECTION CHECK =====
     const decision = await aj.protect(request, { requested: 1 });
-    
-    // Get IP from request headers as fallback
     const clientIp = request.headers.get('x-forwarded-for') || 
                     request.headers.get('x-real-ip') || 
                     'unknown';
@@ -54,7 +52,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "Too many login attempts", 
             message: "Please wait 5 minutes before trying again",
-            retryAfter: 300 // 5 minutes in seconds
+            retryAfter: 300
           },
           { 
             status: 429,
@@ -71,26 +69,27 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // General denial
       return NextResponse.json(
         { success: false, error: "Access denied" },
         { status: 403 }
       );
     }
 
-    // ===== STANDARD LOGIN LOGIC =====
     const body = await request.json();
     const validation = LoginSchema.safeParse(body);
     
     if (!validation.success) {
+      // ✅ FIXED: Properly type the validation errors
+      const details: ValidationError[] = validation.error.issues.map((err) => ({
+        field: err.path.join('.'),
+        message: err.message
+      }));
+
       return NextResponse.json(
         { 
           success: false,
           error: 'Invalid input data',
-          details: validation.error.issues.map((err: any) => ({
-            field: err.path.join('.'),
-            message: err.message
-          }))
+          details
         },
         { status: 400 }
       );
@@ -108,14 +107,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      // Log failed attempt for monitoring
       console.log(`❌ Login failed - user not found: ${username} from IP: ${clientIp}`);
       return NextResponse.json({ success: false, error: 'Username not found' }, { status: 401 });
     }
 
     const isPasswordValid = await verifyPassword(password, user.password);
     if (!isPasswordValid) {
-      // Log failed attempt for monitoring
       console.log(`❌ Login failed - invalid password: ${username} from IP: ${clientIp}`);
       return NextResponse.json({ success: false, error: 'Invalid password' }, { status: 401 });
     }
@@ -125,7 +122,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User account not active' }, { status: 403 });
     }
 
-    // ===== SUCCESSFUL LOGIN =====
     console.log(`✅ Login successful: ${username} from IP: ${clientIp}`);
 
     const userOrganizations = await prisma.organizationUser.findMany({

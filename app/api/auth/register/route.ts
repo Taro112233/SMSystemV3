@@ -1,32 +1,26 @@
-// app/api/auth/register/route.ts - FIXED ARCJET PROPERTIES
+// app/api/auth/register/route.ts - FIXED TYPESCRIPT ERRORS
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, createToken, getCookieOptions, userToPayload } from '@/lib/auth';
 import { z } from 'zod';
 import arcjet, { shield, tokenBucket, slidingWindow } from "@arcjet/next";
 
-// ===== ARCJET CONFIGURATION FOR REGISTER ENDPOINT =====
 const aj = arcjet({
   key: process.env.ARCJET_KEY!,
   rules: [
-    // Enhanced protection for registration endpoint
     shield({ mode: "LIVE" }),
-    
-    // Rate limiting for registration (prevent spam accounts)
     tokenBucket({
       mode: "LIVE",
-      characteristics: ["ip.src"], // Track by IP
-      refillRate: 2,        // Only 2 registrations per interval
-      interval: "10m",      // 10 minute intervals
-      capacity: 3,          // Max 3 registrations in bucket
+      characteristics: ["ip.src"],
+      refillRate: 2,
+      interval: "10m",
+      capacity: 3,
     }),
-    
-    // Additional sliding window protection
     slidingWindow({
       mode: "LIVE",
       characteristics: ["ip.src"],
-      interval: "1h",       // 1 hour window
-      max: 5,               // Max 5 registrations per hour per IP
+      interval: "1h",
+      max: 5,
     }),
   ],
 });
@@ -41,12 +35,22 @@ const RegisterSchema = z.object({
   organizationName: z.string().max(100).optional().or(z.literal('')),
 });
 
+// ✅ FIXED: Define proper interfaces for all types
+interface ValidationError {
+  field: string;
+  message: string;
+}
+
+interface PrismaError {
+  code?: string;
+  meta?: {
+    target?: string[];
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // ===== ARCJET PROTECTION CHECK =====
     const decision = await aj.protect(request, { requested: 1 });
-    
-    // Get IP from request headers as fallback
     const clientIp = request.headers.get('x-forwarded-for') || 
                     request.headers.get('x-real-ip') || 
                     'unknown';
@@ -59,7 +63,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "Too many registration attempts", 
             message: "Please wait 10 minutes before trying again",
-            retryAfter: 600 // 10 minutes in seconds
+            retryAfter: 600
           },
           { 
             status: 429,
@@ -76,24 +80,27 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // General denial
       return NextResponse.json(
         { success: false, error: "Access denied" },
         { status: 403 }
       );
     }
 
-    // ===== STANDARD REGISTRATION LOGIC =====
     const body = await request.json();
     const validation = RegisterSchema.safeParse(body);
     
     if (!validation.success) {
+      // ✅ FIXED: Properly type the validation errors
+      const details: ValidationError[] = validation.error.issues.map((err) => ({
+        field: err.path.join('.'),
+        message: err.message
+      }));
+
       return NextResponse.json(
         { 
-          success: false, error: 'Invalid input data',
-          details: validation.error.issues.map((err: any) => ({
-            field: err.path.join('.'), message: err.message
-          }))
+          success: false, 
+          error: 'Invalid input data',
+          details
         },
         { status: 400 }
       );
@@ -104,7 +111,6 @@ export async function POST(request: NextRequest) {
     const cleanPhone = phone?.trim() || null;
     const cleanOrgName = organizationName?.trim() || null;
 
-    // Log registration attempt
     console.log(`📝 Registration attempt: ${username} from IP: ${clientIp}`);
 
     const existingUser = await prisma.user.findUnique({
@@ -170,7 +176,6 @@ export async function POST(request: NextRequest) {
           }
         });
 
-        // Create OrganizationUser with simple role
         await tx.organizationUser.create({
           data: {
             organizationId: organization.id, userId: newUser.id,
@@ -178,7 +183,6 @@ export async function POST(request: NextRequest) {
           }
         });
 
-        // Create audit log
         await tx.auditLog.create({
           data: {
             organizationId: organization.id, userId: newUser.id, action: 'users.register',
@@ -194,7 +198,6 @@ export async function POST(request: NextRequest) {
       return { newUser, organization };
     });
 
-    // ===== SUCCESSFUL REGISTRATION =====
     console.log(`✅ Registration successful: ${username} from IP: ${clientIp}`);
 
     const userPayload = userToPayload(result.newUser);
@@ -221,8 +224,12 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Registration error:', error);
-    if ((error as any)?.code === 'P2002') {
-      const target = (error as any)?.meta?.target;
+    
+    // ✅ FIXED: Properly type Prisma errors
+    const prismaError = error as PrismaError;
+    
+    if (prismaError?.code === 'P2002') {
+      const target = prismaError?.meta?.target;
       if (target?.includes('username')) {
         return NextResponse.json({ success: false, error: 'Username already exists' }, { status: 409 });
       }
