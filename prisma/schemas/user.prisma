@@ -1,11 +1,11 @@
 // prisma/schemas/user.prisma
-// ===== USER MANAGEMENT SCHEMA - InvenStock V1.0 (CORRECTED) =====
+// ===== USER MANAGEMENT SCHEMA - Authentication Only =====
 
 model User {
   id          String     @id @default(cuid())
-  email       String?             // ✅ Optional for notifications/recovery
-  username    String     @unique  // ✅ Primary login credential
-  password    String              // bcrypt hashed
+  email       String?    // Optional for notifications/recovery
+  username    String     @unique  // Primary login credential
+  password    String     // bcrypt hashed
   
   // Personal Information
   firstName   String
@@ -24,23 +24,54 @@ model User {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   
-  // Relations
+  // Relations (Authentication Only)
   organizationUsers     OrganizationUser[]
+  departmentUsers       DepartmentUser[]                        // Department access
+  departmentAssignments DepartmentUser[] @relation("DepartmentAssigner") // Assignments made by this user
   sentInvitations       UserInvitation[] @relation("InviterUser")
   receivedInvitations   UserInvitation[] @relation("InviteeUser")
-  stockTransactions     StockTransaction[]
-  transfersRequested    Transfer[] @relation("RequesterUser")
-  transfersApproved     Transfer[] @relation("ApproverUser") 
-  transfersDispatched   Transfer[] @relation("DispatcherUser")
-  transfersReceived     Transfer[] @relation("ReceiverUser")
-  notifications         Notification[]
   auditLogs            AuditLog[]
   
   @@index([email])
-  @@index([username])  // ✅ เพิ่ม index สำหรับ primary login
+  @@index([username])
   @@index([status])
   @@index([isActive])
   @@map("users")
+}
+
+// Department Access Control
+model DepartmentUser {
+  id           String         @id @default(cuid())
+  departmentId String
+  userId       String
+  
+  // Department-Level Role
+  role         DepartmentRole @default(USER)
+  
+  // Granular Permissions
+  canView      Boolean        @default(true)   // View department data
+  canEdit      Boolean        @default(false)  // Edit department data
+  canApprove   Boolean        @default(false)  // Approve department actions
+  canManage    Boolean        @default(false)  // Manage department users
+  
+  // Assignment Details
+  assignedBy   String?        // Who assigned this access
+  assignedAt   DateTime       @default(now())
+  isActive     Boolean        @default(true)
+  
+  // Timestamps
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  // Relations
+  department   Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assigner     User?          @relation("DepartmentAssigner", fields: [assignedBy], references: [id])
+  
+  @@unique([departmentId, userId])
+  @@index([isActive])
+  @@index([role])
+  @@map("department_users")
 }
 
 // User Invitations for joining organizations
@@ -50,12 +81,16 @@ model UserInvitation {
   inviterId      String
   inviteeId      String?          // null if inviting by username/email
   
-  // ✅ รองรับทั้ง email และ username invitation
+  // Invitation Methods
   inviteeEmail   String?          // Can invite by email
   inviteeUsername String?         // Can invite by username
   
+  // Role Assignment
+  organizationRole OrganizationRole @default(MEMBER) // Organization-level role
+  departmentIds    String?         // JSON array of department IDs (optional)
+  departmentRole   DepartmentRole? // Role in departments (if assigned)
+  
   // Invitation Details
-  roleId         String?          // Role to assign upon acceptance
   message        String?          // Personal invitation message
   
   // Status
@@ -75,8 +110,6 @@ model UserInvitation {
   inviter        User             @relation("InviterUser", fields: [inviterId], references: [id])
   invitee        User?            @relation("InviteeUser", fields: [inviteeId], references: [id])
   
-  // ✅ ต้องมีอย่างน้อย 1 ใน 2: email หรือ username
-  // และ unique constraint แยกกัน
   @@unique([organizationId, inviteeEmail])
   @@unique([organizationId, inviteeUsername])
   @@index([status])

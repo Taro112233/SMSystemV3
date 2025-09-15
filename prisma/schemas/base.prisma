@@ -1,5 +1,5 @@
 // prisma/schemas/base.prisma
-// ===== CORE ENUMS & BASE TYPES - InvenStock V1.0 =====
+// ===== CORE ENUMS & BASE TYPES - Authentication Only =====
 
 // ===== USER & ORGANIZATION ENUMS =====
 enum UserStatus {
@@ -22,32 +22,6 @@ enum OrganizationStatus {
   TRIAL      // ทดลองใช้
 }
 
-// ===== PRODUCT ENUMS =====
-enum UnitType {
-  PIECE      // ชิ้น
-  BOX        // กล่อง
-  BOTTLE     // ขวด
-  PACK       // แพ็ค
-  STRIP      // แผง
-  TUBE       // หลอด
-  VIAL       // ไวอัล
-  AMPOULE    // แอมพูล
-  KG         // กิโลกรัม
-  GRAM       // กรัม
-  LITER      // ลิตร
-  ML         // มิลลิลิตร
-  TABLET     // เม็ด
-  CAPSULE    // แคปซูล
-  CUSTOM     // กำหนดเอง
-}
-
-enum ProductStatus {
-  ACTIVE     // ใช้งานได้
-  INACTIVE   // ไม่ใช้งาน
-  DISCONTINUED // เลิกผลิต
-  RESTRICTED   // จำกัดการใช้
-}
-
 // ===== ROLE SYSTEM ENUMS =====
 enum OrganizationRole {
   MEMBER  // ทำงานทั่วไป เบิก จ่าย แก้สต็อก
@@ -55,90 +29,11 @@ enum OrganizationRole {
   OWNER   // Admin + CRUD department + จัดการองค์กร
 }
 
-// ===== STOCK TRANSACTION ENUMS =====
-enum TransactionType {
-  // การรับสินค้า
-  RECEIVE_PURCHASE     // รับซื้อ
-  RECEIVE_DONATION     // รับบริจาค
-  RECEIVE_RETURN       // รับคืน
-  RECEIVE_TRANSFER     // รับโอน
-  
-  // การจ่ายสินค้า
-  DISPENSE_SALE        // จ่ายขาย
-  DISPENSE_USE         // จ่ายใช้งาน
-  DISPENSE_TRANSFER    // จ่ายโอน
-  DISPENSE_WASTE       // ทิ้ง/เสียหาย
-  
-  // การปรับปรุงสต็อก
-  ADJUST_INCREASE      // ปรับเพิ่ม
-  ADJUST_DECREASE      // ปรับลด
-  ADJUST_COUNT         // นับสต็อก
-  
-  // การจอง
-  RESERVE              // จองสินค้า
-  UNRESERVE           // ยกเลิกการจอง
-}
-
-// ===== TRANSFER SYSTEM ENUMS =====
-enum TransferStatus {
-  DRAFT      // ร่าง
-  PENDING    // รอการอนุมัติ
-  APPROVED   // อนุมัติแล้ว
-  PREPARING  // กำลังเตรียม
-  READY      // พร้อมส่ง
-  SHIPPED    // จัดส่งแล้ว
-  DELIVERED  // ส่งถึงแล้ว
-  RECEIVED   // รับแล้ว
-  CANCELLED  // ยกเลิก
-  REJECTED   // ปฏิเสธ
-}
-
-enum TransferItemStatus {
-  PENDING
-  APPROVED  
-  DISPATCHED
-  RECEIVED
-  CANCELLED
-}
-
-enum TransferType {
-  INTERNAL   // โอนภายในองค์กร
-  EXTERNAL   // โอนภายนอก
-  RETURN     // คืนสินค้า
-  LOAN       // ยืม
-  BORROW     // ให้ยืม
-}
-
-// ===== NOTIFICATION ENUMS =====
-enum NotificationType {
-  TRANSFER_REQUEST     // คำขอโอนสินค้า
-  TRANSFER_APPROVED    // อนุมัติการโอน
-  TRANSFER_REJECTED    // ปฏิเสธการโอน
-  STOCK_LOW           // สต็อกต่ำ
-  STOCK_EXPIRED       // สินค้าหมดอายุ
-  USER_INVITED        // เชิญผู้ใช้
-  ROLE_ASSIGNED       // มอบหมาย Role
-  SYSTEM_ALERT        // แจ้งเตือนระบบ
-}
-
-enum NotificationStatus {
-  UNREAD     // ยังไม่อ่าน
-  READ       // อ่านแล้ว
-  ARCHIVED   // เก็บถาวร
-}
-
-// ===== AUDIT LOG ENUMS =====
-enum AuditAction {
-  CREATE
-  UPDATE
-  DELETE
-  LOGIN
-  LOGOUT
-  APPROVE
-  REJECT
-  TRANSFER
-  EXPORT
-  IMPORT
+enum DepartmentRole {
+  VIEWER    // ดูอย่างเดียว
+  USER      // ใช้งานทั่วไป (เบิก จ่าย แก้สต็อก)
+  MANAGER   // จัดการแผนก (อนุมัติ จัดการสมาชิก)
+  ADMIN     // ผู้ดูแลแผนก (ทุกสิทธิ์ในแผนก)
 }
 
 // ===== UI ENUMS FOR COLORS & ICONS =====

@@ -1,5 +1,5 @@
 // prisma/schemas/organization.prisma
-// ===== MULTI-TENANT ORGANIZATION SCHEMA - InvenStock V1.0 =====
+// ===== AUTHENTICATION ORGANIZATION SCHEMA - InvenStock V2.0 =====
 
 model Organization {
   id          String             @id @default(cuid())
@@ -7,20 +7,13 @@ model Organization {
   slug        String             @unique // URL-friendly identifier
   description String?
   
-  // Branding & Appearance
-  logo        String?            // URL to logo
-  primaryColor String?           // Hex color code
-  
   // Contact Information
   email       String?
   phone       String?
-  website     String?
-  address     String?
   
   // Settings
   status      OrganizationStatus @default(ACTIVE)
   timezone    String             @default("Asia/Bangkok")
-  currency    String             @default("THB")
   
   // Feature Settings
   allowDepartments    Boolean    @default(true)
@@ -29,20 +22,11 @@ model Organization {
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   
-  // Relations
-  users               OrganizationUser[]
-  departments         Department[]
-  productCategories   ProductCategory[]
-  productTypes        ProductType[]     // Added for custom product types
-  productForms        ProductForm[]     // Added for custom product forms
-  products            Product[]
-  stocks              Stock[]
-  stockTransactions   StockTransaction[] // 🔥 ADDED MISSING RELATION
-  transfers           Transfer[]
-  invitations         UserInvitation[]
-  notifications       Notification[]
-  settings            OrganizationSetting[]
-  auditLogs          AuditLog[]
+  // Relations (Authentication Only)
+  users       OrganizationUser[]
+  departments Department[]       // Keep for department access control
+  invitations UserInvitation[]
+  auditLogs   AuditLog[]
   
   @@index([slug])
   @@index([status])
@@ -55,7 +39,8 @@ model OrganizationUser {
   organizationId String
   userId         String
   
-  // Membership Details
+  // Role & Membership
+  roles          OrganizationRole @default(MEMBER)
   isOwner        Boolean      @default(false)
   joinedAt       DateTime     @default(now())
   lastActiveAt   DateTime?
@@ -66,14 +51,14 @@ model OrganizationUser {
   // Relations
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roles          OrganizationRole @default(MEMBER)
   
   @@unique([organizationId, userId])
   @@index([isActive])
+  @@index([roles])
   @@map("organization_users")
 }
 
-// Hierarchical Departments
+// Hierarchical Departments (For Access Control)
 model Department {
   id             String       @id @default(cuid())
   organizationId String
@@ -81,13 +66,14 @@ model Department {
   
   // Department Details
   name           String
-  code           String       // Short code (e.g., "IT", "HR")
+  code           String       // Short code (e.g., "ICU", "OPD", "PHARMACY")
   description    String?
-  color          ColorTheme?    // แทน String?
-  icon           IconType?      // แทน String?
+  color          ColorTheme?
+  icon           IconType?
   
-  // Settings
+  // Access Control
   isActive       Boolean      @default(true)
+  requiresAccess Boolean      @default(false)  // Requires explicit access permission
   
   // Audit Fields
   createdBy      String       // User who created
@@ -101,40 +87,11 @@ model Department {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
-  stocks         Stock[]
-  transfersFrom  Transfer[]   @relation("FromDepartment")
-  transfersTo    Transfer[]   @relation("ToDepartment")
+  departmentUsers DepartmentUser[]  // Users with access to this department
   
   @@unique([organizationId, code])
   @@index([parentId])
   @@index([isActive])
+  @@index([requiresAccess])
   @@map("departments")
-}
-
-// Organization Settings (Key-Value Store)
-model OrganizationSetting {
-  id             String       @id @default(cuid())
-  organizationId String
-  key            String       // Setting key (e.g., "stock.low_threshold")
-  value          String       // JSON string value
-  type           String       @default("string") // string, number, boolean, json
-  
-  // Metadata
-  description    String?
-  isEditable     Boolean      @default(true)
-  
-  // Audit Fields
-  createdBy      String       // User who created
-  updatedBy      String?      // User who last updated
-  
-  // Timestamps
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  
-  // Relations
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  @@unique([organizationId, key])
-  @@index([key])
-  @@map("organization_settings")
 }
