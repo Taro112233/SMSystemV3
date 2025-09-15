@@ -1,4 +1,4 @@
-// lib/auth-server.ts - SIMPLIFIED 3-ROLE SYSTEM
+// lib/auth-server.ts - SIMPLIFIED 3-ROLE SYSTEM (FIXED TYPESCRIPT ERRORS)
 // InvenStock - Server-side User Verification Utilities (Next.js 15 Compatible)
 
 import { cookies } from 'next/headers';
@@ -6,6 +6,21 @@ import { verifyToken, JWTUser } from './auth';
 import { prisma } from './prisma';
 
 type OrganizationRole = 'MEMBER' | 'ADMIN' | 'OWNER';
+
+// Define proper types for organization data (matching actual schema)
+interface OrganizationData {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  timezone: string;
+  description?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  allowDepartments: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
 /**
  * Get current user from server-side (for API routes and server components)
@@ -111,7 +126,7 @@ export async function requireServerAuth(): Promise<JWTUser> {
  */
 export async function getServerUserWithOrganization(organizationId?: string): Promise<{
   user: JWTUser;
-  organization: any;
+  organization: OrganizationData | null;
   role: OrganizationRole | null;
 } | null> {
   const user = await getServerUser();
@@ -121,7 +136,7 @@ export async function getServerUserWithOrganization(organizationId?: string): Pr
   }
 
   // If no organizationId provided, try to get from JWT
-  let targetOrgId = organizationId || user.organizationId;
+  const targetOrgId = organizationId || user.organizationId; // Fixed: use const
 
   if (!targetOrgId) {
     return { user, organization: null, role: null };
@@ -143,19 +158,22 @@ export async function getServerUserWithOrganization(organizationId?: string): Pr
             slug: true,
             status: true,
             timezone: true,
-            currency: true,
+            description: true,
+            email: true,
+            phone: true,
+            allowDepartments: true,
           },
         },
       },
     });
 
-    if (!orgUser) {
+    if (!orgUser || !orgUser.organization) {
       return null;
     }
 
     return {
       user,
-      organization: orgUser.organization,
+      organization: orgUser.organization as OrganizationData,
       role: orgUser.roles as OrganizationRole, // Simple role from OrganizationUser
     };
   } catch (error) {
@@ -308,7 +326,7 @@ export async function requireMinimumRole(
 /**
  * Get organization from server context
  */
-export async function getServerOrganization(organizationId: string): Promise<any> {
+export async function getServerOrganization(organizationId: string): Promise<OrganizationData | null> {
   try {
     const organization = await prisma.organization.findUnique({
       where: { id: organizationId },
@@ -317,17 +335,17 @@ export async function getServerOrganization(organizationId: string): Promise<any
         name: true,
         slug: true,
         description: true,
-        logo: true,
         status: true,
         timezone: true,
-        currency: true,
+        email: true,
+        phone: true,
         allowDepartments: true,
         createdAt: true,
         updatedAt: true,
       },
     });
 
-    return organization;
+    return organization as OrganizationData | null;
   } catch (error) {
     console.error('Failed to get organization:', error);
     return null;
@@ -360,9 +378,9 @@ export async function validateOrganizationAccess(
 /**
  * Get user's organizations
  */
-export async function getUserOrganizations(userId: string): Promise<any[]> {
+export async function getUserOrganizations(userId: string): Promise<OrganizationData[]> {
   try {
-    const organizations = await prisma.organizationUser.findMany({
+    const organizationUsers = await prisma.organizationUser.findMany({
       where: {
         userId,
         isActive: true,
@@ -374,8 +392,10 @@ export async function getUserOrganizations(userId: string): Promise<any[]> {
             name: true,
             slug: true,
             description: true,
-            logo: true,
             status: true,
+            email: true,
+            phone: true,
+            allowDepartments: true,
           },
         },
       },
@@ -384,7 +404,7 @@ export async function getUserOrganizations(userId: string): Promise<any[]> {
       },
     });
 
-    return organizations;
+    return organizationUsers.map(orgUser => orgUser.organization) as OrganizationData[];
   } catch (error) {
     console.error('Failed to get user organizations:', error);
     return [];

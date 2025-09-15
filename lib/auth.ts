@@ -1,4 +1,4 @@
-// lib/auth.ts - SIMPLIFIED 3-ROLE SYSTEM
+// lib/auth.ts - SIMPLIFIED 3-ROLE SYSTEM (FIXED TYPESCRIPT ERRORS)
 // InvenStock - Server-side Authentication Utilities
 
 import { SignJWT, jwtVerify } from 'jose';
@@ -29,6 +29,17 @@ export interface JWTUser extends UserPayload {
   exp?: number;
 }
 
+// Define proper type for user data
+interface UserData {
+  id: string;
+  email?: string | null;
+  username?: string | null;
+  firstName: string;
+  lastName: string;
+  status: string;
+  isActive: boolean;
+}
+
 // ===== AUTH ERROR CONSTANTS =====
 
 export const AuthError = {
@@ -48,7 +59,7 @@ export const AuthError = {
  * Create JWT Token with organization context
  */
 export async function createToken(user: UserPayload): Promise<string> {
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = { // Fixed: use unknown instead of any
     userId: user.userId,
     email: user.email,
     firstName: user.firstName,
@@ -154,13 +165,13 @@ export function getCookieOptions() {
  * Convert user object to JWT payload (simplified for 3-Role System)
  */
 export function userToPayload(
-  user: any, 
+  user: UserData, // Fixed: use proper type instead of any
   organizationId?: string, 
   role?: 'MEMBER' | 'ADMIN' | 'OWNER'
 ): UserPayload {
   const payload: UserPayload = {
     userId: user.id,
-    email: user.email,
+    email: user.email || '',
     firstName: user.firstName,
     lastName: user.lastName,
   };

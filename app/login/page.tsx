@@ -19,7 +19,6 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Loader2,
-  Hospital,
   Eye,
   EyeOff,
   CheckCircle2,
