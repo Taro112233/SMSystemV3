@@ -1,6 +1,5 @@
 // app/page.tsx
-// Hospital Pharmacy Stock Management System V3.0 - Landing Page
-// Branch PDF Print
+// InvenStock Multi-Tenant Inventory Management System V2.0 - Enhanced Landing Page
 
 'use client'
 
@@ -10,12 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-  Pill, 
   Building2, 
   Users, 
   Shield, 
   Smartphone, 
-  Clock,
   Activity,
   CheckCircle,
   LogIn,
@@ -23,7 +20,26 @@ import {
   Download,
   History,
   Eye,
-  BookIcon
+  BookIcon,
+  ArrowRight,
+  Zap,
+  Globe,
+  Lock,
+  BarChart3,
+  RefreshCw,
+  Database,
+  Settings,
+  Network,
+  Workflow,
+  Crown,
+  UserCheck,
+  Layers,
+  Target,
+  TrendingUp,
+  FileText,
+  MessageSquare,
+  Star,
+  CheckCircle2
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -31,18 +47,15 @@ export default function LandingPage() {
 
   const handleManualClick = async () => {
     try {
-      // Call logout API to clear HTTP-only cookies
       await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include' // รวม cookies ในการเรียก API
+        credentials: 'include'
       })
       
-      // Clear any client-side storage
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       sessionStorage.clear()
       
-      // Clear all cookies on client side
       document.cookie.split(";").forEach((c) => {
         const eqPos = c.indexOf("=");
         const name = eqPos > -1 ? c.substr(0, eqPos) : c;
@@ -55,12 +68,10 @@ export default function LandingPage() {
     } catch (error) {
       console.error('Error clearing cookies:', error)
       
-      // Clear client-side storage even if API fails
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       sessionStorage.clear()
       
-      // Clear cookies even if API fails
       document.cookie.split(";").forEach((c) => {
         const eqPos = c.indexOf("=");
         const name = eqPos > -1 ? c.substr(0, eqPos) : c;
@@ -69,162 +80,204 @@ export default function LandingPage() {
       });
     }
     
-    // Show manual after clearing
     setShowManual(true);
   };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
-                <Pill className="w-6 h-6 text-white" />
+                <Building2 className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Hospital Pharmacy</h1>
-                <p className="text-sm text-gray-600">Stock Management System V3.0</p>
+                <h1 className="text-xl font-bold text-gray-900">InvenStock</h1>
+                <p className="text-sm text-gray-600">Multi-Tenant Inventory System V2.0</p>
               </div>
             </div>
             
-            <Link href="/dashboard">
-              <Button className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700">
-                <LogIn className="w-4 h-4" />
-                เข้าสู่ระบบ
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={handleManualClick}>
+                <BookIcon className="w-4 h-4 mr-2" />
+                คู่มือ
               </Button>
-            </Link>
+              <Link href="/dashboard">
+                <Button className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700">
+                  <LogIn className="w-4 h-4" />
+                  เข้าสู่ระบบ
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
       <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="max-w-6xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <Shield className="w-4 h-4" />
-            สำหรับโรงพยาบาล เภสัชกร และเจ้าหน้าที่
+            <Crown className="w-4 h-4" />
+            Enterprise-Grade Multi-Tenant Architecture
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            ระบบจัดการ
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">สต็อกยา</span>
+          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+            ระบบจัดการสต็อก
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 block">
+              แบบองค์กร
+            </span>
           </h1>
           
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            ติดตามสต็อกยา แจ้งเตือนยาใกล้หมด และตรวจเช็คสต็อกผ่านมือถือ
+          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+            Multi-Tenant Inventory Management พร้อม Department-Centric Stock Management, 
+            Custom Role System และ Real-time Analytics สำหรับองค์กรขนาดใหญ่
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Link href="/dashboard">
-              <Button size="lg" className="text-lg px-8 py-4 w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700">
-                <Building2 className="w-5 h-5 mr-2" />
+              <Button size="lg" className="text-lg px-8 py-4 w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 h-14">
+                <Zap className="w-5 h-5 mr-2" />
                 เริ่มใช้งานระบบ
               </Button>
             </Link>
             
-            <Button size="lg" variant="outline" className="text-lg px-8 py-4 w-full sm:w-auto border-blue-200 hover:bg-blue-50" onClick={handleManualClick}>
-              <BookIcon className="w-5 h-5 mr-2" />
-              ดูคู่มือการใช้งาน
+            <Button size="lg" variant="outline" className="text-lg px-8 py-4 w-full sm:w-auto border-blue-200 hover:bg-blue-50 h-14" onClick={handleManualClick}>
+              <FileText className="w-5 h-5 mr-2" />
+              ดูเอกสารระบบ
             </Button>
           </div>
 
-          {/* Quick Stats */}
+          {/* Key Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-16">
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="text-2xl font-bold text-blue-600">2</div>
-              <div className="text-sm text-gray-600">แผนกโรงพยาบาล</div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-3xl font-bold text-blue-600 mb-2">Multi-Tenant</div>
+              <div className="text-sm text-gray-600">หลายองค์กรในระบบเดียว</div>
             </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="text-2xl font-bold text-green-600">100%</div>
-              <div className="text-sm text-gray-600">ติดตามสต็อกยา</div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-3xl font-bold text-green-600 mb-2">Real-time</div>
+              <div className="text-sm text-gray-600">อัปเดตสต็อกแบบเรียลไทม์</div>
             </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="text-2xl font-bold text-orange-600">24/7</div>
-              <div className="text-sm text-gray-600">แจ้งเตือนอัตโนมัติ</div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-3xl font-bold text-purple-600 mb-2">Department</div>
+              <div className="text-sm text-gray-600">จัดการแยกตามแผนก</div>
             </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="text-2xl font-bold text-purple-600">📱</div>
-              <div className="text-sm text-gray-600">ใช้งานบนมือถือ</div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-3xl font-bold text-orange-600 mb-2">Enterprise</div>
+              <div className="text-sm text-gray-600">ระดับองค์กรขนาดใหญ่</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Core Features */}
+      {/* Core Architecture Features */}
       <section className="py-16 px-4 bg-white/50">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              ฟีเจอร์หลักของระบบ
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              สถาปัตยกรรมระดับองค์กร
             </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              ระบบติดตามสต็อกยาที่ใช้งานง่าย ผ่านมือถือ พร้อมการแจ้งเตือนอัตโนมัติ
+            <p className="text-gray-600 max-w-3xl mx-auto text-lg">
+              ออกแบบมาเพื่อรองรับองค์กรขนาดใหญ่ด้วย Multi-Tenant Architecture และ Department-Centric Management
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group">
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300 group">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Activity className="w-6 h-6 text-white" />
+                    <Network className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-lg font-bold">ติดตามสต็อกยา</div>
-                    <div className="text-sm text-gray-500">Stock Tracking</div>
+                    <div className="text-lg font-bold">Multi-Tenant Architecture</div>
+                    <div className="text-sm text-gray-500">องค์กรหลายองค์กร</div>
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  ติดตามสต็อกยาแยกตาม 2 แผนก พร้อมแจ้งเตือนเมื่อยาใกล้หมด
+                  แยกข้อมูลองค์กรอย่างสมบูรณ์ ผู้ใช้สามารถเป็นสมาชิกหลายองค์กรได้
                 </p>
                 <ul className="space-y-2 text-sm text-gray-500">
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
-                    ติดตามยาแบบเรียลไทม์
+                    Data Isolation ระดับองค์กร
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
-                    แจ้งเตือนยาใกล้หมด
+                    Multi-Organization Context
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
-                    รองรับ 2 แผนก
+                    Organization Switching
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group">
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300 group">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Layers className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold">Department-Centric</div>
+                    <div className="text-sm text-gray-500">จัดการแยกตามแผนก</div>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">
+                  จัดการสต็อกแยกตามแผนก พร้อมโครงสร้างแผนกแบบ Hierarchical
+                </p>
+                <ul className="space-y-2 text-sm text-gray-500">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    Hierarchical Departments
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    Department Stock Tracking
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    Inter-Department Transfers
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300 group">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Bell className="w-6 h-6 text-white" />
+                    <UserCheck className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-lg font-bold">แจ้งเตือนอัตโนมัติ</div>
-                    <div className="text-sm text-gray-500">Auto Alerts</div>
+                    <div className="text-lg font-bold">Custom Role System</div>
+                    <div className="text-sm text-gray-500">สิทธิ์แบบ Granular</div>
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  แจ้งเตือนให้ตรวจเช็คสต็อกที่ไม่ได้อัปเดตนาน และยาที่ใกล้หมด
+                  ระบบสิทธิ์แบบ 3-Tier: Member → Admin → Owner พร้อม Department Permissions
                 </p>
                 <ul className="space-y-2 text-sm text-gray-500">
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
-                    เตือนเช็คสต็อกที่ไม่ได้อัปเดต
+                    Granular Permissions
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
-                    แจ้งเตือนยาใกล้หมด
+                    Department-Level Access
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
-                    แสดงผลในระบบ
+                    Role Hierarchy System
                   </li>
                 </ul>
               </CardContent>
@@ -233,326 +286,242 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Additional Features */}
+      {/* Business Flow Section */}
       <section className="py-16 px-4">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              ฟีเจอร์เพิ่มเติม
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Business Flow & Navigation
             </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              ความสามารถเสริมที่ช่วยให้การจัดการสต็อกยามีประสิทธิภาพมากขึ้น
+            <p className="text-gray-600 max-w-3xl mx-auto text-lg">
+              ออกแบบ User Experience ให้เหมาะสมกับการทำงานแบบองค์กร
             </p>
           </div>
-          
+
+          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-8 mb-12">
+            <h3 className="text-2xl font-bold text-center mb-8">User Journey</h3>
+            
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex flex-col items-center text-center flex-1">
+                <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mb-4">
+                  <LogIn className="w-8 h-8 text-white" />
+                </div>
+                <h4 className="font-bold mb-2">1. Login</h4>
+                <p className="text-sm text-gray-600">เข้าสู่ระบบด้วย Username</p>
+              </div>
+              
+              <ArrowRight className="w-6 h-6 text-gray-400 hidden md:block" />
+              
+              <div className="flex flex-col items-center text-center flex-1">
+                <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mb-4">
+                  <Building2 className="w-8 h-8 text-white" />
+                </div>
+                <h4 className="font-bold mb-2">2. Select Organization</h4>
+                <p className="text-sm text-gray-600">เลือกองค์กรที่ต้องการ</p>
+              </div>
+              
+              <ArrowRight className="w-6 h-6 text-gray-400 hidden md:block" />
+              
+              <div className="flex flex-col items-center text-center flex-1">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-4">
+                  <Layers className="w-8 h-8 text-white" />
+                </div>
+                <h4 className="font-bold mb-2">3. Department Context</h4>
+                <p className="text-sm text-gray-600">เข้าสู่งานในแผนก</p>
+              </div>
+              
+              <ArrowRight className="w-6 h-6 text-gray-400 hidden md:block" />
+              
+              <div className="flex flex-col items-center text-center flex-1">
+                <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mb-4">
+                  <Activity className="w-8 h-8 text-white" />
+                </div>
+                <h4 className="font-bold mb-2">4. Work & Collaborate</h4>
+                <p className="text-sm text-gray-600">จัดการสต็อกและการเบิกจ่าย</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Structure */}
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-blue-600" />
+                  Organization Level
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+                  <Target className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium">/org/{'{slug}'} - Organization Dashboard</p>
+                    <p className="text-sm text-gray-600">ภาพรวมองค์กร และสถิติหลัก</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+                  <Database className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <p className="font-medium">/org/{'{slug}'}/products - Product Catalog</p>
+                    <p className="text-sm text-gray-600">จัดการสินค้าทั้งองค์กร</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+                  <Workflow className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="font-medium">/org/{'{slug}'}/transfers - Organization Transfers</p>
+                    <p className="text-sm text-gray-600">การเบิกจ่ายระหว่างแผนก</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-0">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-green-600" />
+                  Department Level
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+                  <Activity className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="font-medium">/departments/{'{id}'}/stocks - Department Stocks</p>
+                    <p className="text-sm text-gray-600">สต็อกเฉพาะแผนก</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+                  <RefreshCw className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium">/departments/{'{id}'}/transfers - Dept Transfers</p>
+                    <p className="text-sm text-gray-600">การเบิกจ่ายของแผนก</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+                  <BarChart3 className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <p className="font-medium">/departments/{'{id}'}/reports - Dept Analytics</p>
+                    <p className="text-sm text-gray-600">รายงานประสิทธิภาพแผนก</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Technical Excellence */}
+      <section className="py-16 px-4 bg-gradient-to-r from-gray-50 to-slate-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Technical Excellence
+            </h2>
+            <p className="text-gray-600 max-w-3xl mx-auto text-lg">
+              เทคโนโลยีและสถาปัตยกรรมระดับ Enterprise สำหรับระบบที่มีประสิทธิภาพสูง
+            </p>
+          </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="text-center p-6 border-0 bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-all">
-              <Download className="w-12 h-12 mx-auto mb-4 text-blue-600" />
-              <h3 className="font-semibold mb-2">ส่งออก Excel</h3>
-              <p className="text-sm text-gray-600">ส่งออกข้อมูลทุกประเภทเป็นไฟล์ Excel</p>
-            </Card>
-
-            <Card className="text-center p-6 border-0 bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-all">
-              <History className="w-12 h-12 mx-auto mb-4 text-green-600" />
-              <h3 className="font-semibold mb-2">ประวัติรายตัว</h3>
-              <p className="text-sm text-gray-600">ติดตามประวัติการเคลื่อนไหวยารายตัว</p>
-            </Card>
-
-            <Card className="text-center p-6 border-0 bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-all">
-              <Smartphone className="w-12 h-12 mx-auto mb-4 text-purple-600" />
-              <h3 className="font-semibold mb-2">Mobile-First</h3>
-              <p className="text-sm text-gray-600">ออกแบบใช้งานง่ายผ่านโทรศัพท์</p>
-            </Card>
-
-            <Card className="text-center p-6 border-0 bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-all">
-              <Eye className="w-12 h-12 mx-auto mb-4 text-orange-600" />
-              <h3 className="font-semibold mb-2">ดูข้อมูลครบ</h3>
-              <p className="text-sm text-gray-600">เข้าถึงข้อมูลทั้ง 2 แผนกได้</p>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Department Overview */}
-      <section className="py-16 px-4 bg-gradient-to-r from-blue-600 to-indigo-600">
-        <div className="max-w-4xl mx-auto text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">
-            รองรับ 2 แผนกหลัก
-          </h2>
-          <p className="text-blue-100 mb-12 text-lg">
-            ระบบแยกข้อมูลชัดเจนระหว่างแผนก ผู้ใช้สามารถดูข้อมูลทั้ง 2 แผนกได้
-          </p>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
-                  <Building2 className="w-8 h-8" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">คลังยา</h3>
-                <p className="text-blue-100 mb-4">
-                  ติดตามสต็อกยาหลัก พร้อมการแจ้งเตือน
-                </p>
-                <ul className="text-sm text-blue-100 space-y-1">
-                  <li>• ติดตามสต็อกยาหลัก</li>
-                  <li>• แจ้งเตือนยาใกล้หมด</li>
-                  <li>• ตรวจเช็คสต็อกตามกำหนด</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
-                  <Users className="w-8 h-8" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">OPD</h3>
-                <p className="text-blue-100 mb-4">
-                  ติดตามยาสำหรับผู้ป่วยนอก
-                </p>
-                <ul className="text-sm text-blue-100 space-y-1">
-                  <li>• ติดตามสต็อกยา OPD</li>
-                  <li>• ตรวจเช็คยาประจำวัน</li>
-                  <li>• จ่ายยาให้ผู้ป่วย</li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Key Features Detail */}
-      <section className="py-16 px-4 bg-gray-50">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              ความสามารถหลักของระบบ
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              ฟีเจอร์ที่ครอบคลุมการทำงานประจำวันของเภสัชกร
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="text-center p-6 border-0 bg-white shadow-md hover:shadow-lg transition-all">
-              <Bell className="w-12 h-12 mx-auto mb-4 text-red-600" />
-              <h3 className="font-semibold mb-2">แจ้งเตือนยาใกล้หมด</h3>
-              <p className="text-sm text-gray-600">แจ้งเตือนเมื่อยาต่ำกว่าสต็อกที่กำหนด</p>
-            </Card>
-
-            <Card className="text-center p-6 border-0 bg-white shadow-md hover:shadow-lg transition-all">
-              <Clock className="w-12 h-12 mx-auto mb-4 text-orange-600" />
-              <h3 className="font-semibold mb-2">เตือนตรวจเช็คสต็อก</h3>
-              <p className="text-sm text-gray-600">แจ้งเตือนสต็อกที่ไม่ได้อัปเดตเป็นเวลานาน</p>
-            </Card>
-
-            <Card className="text-center p-6 border-0 bg-white shadow-md hover:shadow-lg transition-all">
-              <Download className="w-12 h-12 mx-auto mb-4 text-blue-600" />
-              <h3 className="font-semibold mb-2">ส่งออก Excel</h3>
-              <p className="text-sm text-gray-600">ส่งออกข้อมูลทุกประเภทเป็นไฟล์ Excel</p>
-            </Card>
-
-            <Card className="text-center p-6 border-0 bg-white shadow-md hover:shadow-lg transition-all">
-              <History className="w-12 h-12 mx-auto mb-4 text-green-600" />
-              <h3 className="font-semibold mb-2">ประวัติรายตัว</h3>
-              <p className="text-sm text-gray-600">ติดตามประวัติการเคลื่อนไหวยารายตัว</p>
-            </Card>
-
-            <Card className="text-center p-6 border-0 bg-white shadow-md hover:shadow-lg transition-all">
-              <Smartphone className="w-12 h-12 mx-auto mb-4 text-purple-600" />
-              <h3 className="font-semibold mb-2">ใช้งานง่าย</h3>
-              <p className="text-sm text-gray-600">ออกแบบเพื่อใช้งานผ่านโทรศัพท์</p>
-            </Card>
-
-            <Card className="text-center p-6 border-0 bg-white shadow-md hover:shadow-lg transition-all">
-              <Eye className="w-12 h-12 mx-auto mb-4 text-indigo-600" />
-              <h3 className="font-semibold mb-2">ดูข้อมูลครบถ้วน</h3>
-              <p className="text-sm text-gray-600">เข้าถึงข้อมูลทั้ง 2 แผนกได้หมด</p>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Alert System Detail */}
-      <section className="py-16 px-4 bg-gradient-to-br from-red-50 to-orange-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              ระบบแจ้งเตือนอัตโนมัติ
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              ระบบแจ้งเตือนที่ช่วยให้คุณไม่พลาดการตรวจเช็คสต็อกยา
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="p-6 bg-white/80 backdrop-blur-sm border-red-200">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                  <Bell className="w-5 h-5 text-red-600" />
-                </div>
-                <h3 className="text-lg font-bold text-red-700">แจ้งเตือนยาใกล้หมด</h3>
+            <Card className="text-center p-6 bg-white hover:shadow-lg transition-all">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Database className="w-8 h-8 text-blue-600" />
               </div>
-              <p className="text-gray-600 mb-4">
-                แจ้งเตือนเมื่อยาในสต็อกต่ำกว่าจำนวนที่กำหนดไว้
-              </p>
-              <ul className="text-sm text-gray-500 space-y-1">
-                <li>• แจ้งเตือนทันทีเมื่อยาใกล้หมด</li>
-                <li>• แยกการแจ้งเตือนตามแผนก</li>
-                <li>• แสดงจำนวนที่เหลือและที่ควรสั่ง</li>
-              </ul>
+              <h3 className="font-bold mb-2">PostgreSQL + Prisma</h3>
+              <p className="text-sm text-gray-600">Row-level Security และ Type-safe Database Access</p>
             </Card>
 
-            <Card className="p-6 bg-white/80 backdrop-blur-sm border-orange-200">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-orange-600" />
-                </div>
-                <h3 className="text-lg font-bold text-orange-700">เตือนตรวจเช็คสต็อก</h3>
+            <Card className="text-center p-6 bg-white hover:shadow-lg transition-all">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-green-600" />
               </div>
-              <p className="text-gray-600 mb-4">
-                แจ้งเตือนเมื่อสต็อกไม่ได้อัปเดตเป็นเวลานาน
-              </p>
-              <ul className="text-sm text-gray-500 space-y-1">
-                <li>• ตรวจสอบสต็อกที่ไม่ได้อัปเดต</li>
-                <li>• กำหนดช่วงเวลาการเตือน</li>
-                <li>• ช่วยให้ข้อมูลสต็อกทันสมัย</li>
-              </ul>
+              <h3 className="font-bold mb-2">Arcjet Security</h3>
+              <p className="text-sm text-gray-600">Bot Detection, Rate Limiting และ Security Shield</p>
+            </Card>
+
+            <Card className="text-center p-6 bg-white hover:shadow-lg transition-all">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="font-bold mb-2">Next.js 15 + React 19</h3>
+              <p className="text-sm text-gray-600">Server Components และ Streaming Architecture</p>
+            </Card>
+
+            <Card className="text-center p-6 bg-white hover:shadow-lg transition-all">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="w-8 h-8 text-orange-600" />
+              </div>
+              <h3 className="font-bold mb-2">Real-time Updates</h3>
+              <p className="text-sm text-gray-600">Live Stock Updates และ Notification System</p>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* Installation Guide Section */}
+      {/* Feature Comparison */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              📲 วิธีสร้าง Shortcut บนอุปกรณ์
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              InvenStock V2.0 vs Traditional Systems
             </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              สร้างทางลัดเข้าระบบแบบคลิกเดียว ไม่ต้องจำ URL หรือพิมพ์ใหม่ทุกครั้ง
+            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+              เปรียบเทียบความสามารถที่โดดเด่นของระบบ
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-2 gap-8 mb-12">
-            {/* Desktop Section */}
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <Activity className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-lg font-bold">💻 Desktop (คอมพิวเตอร์)</div>
-                    <div className="text-sm text-gray-500">Windows & MacOS</div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Windows */}
-                <div className="bg-white/60 p-4 rounded-lg">
-                  <h4 className="font-semibold text-blue-700 mb-3 flex items-center gap-2">
-                    <span className="text-lg">🪟</span> Windows
-                  </h4>
-                  <ol className="text-sm space-y-2 text-gray-700">
-                    <li><strong>1.</strong> คลิกขวาบน Desktop → เลือก <strong>New → Shortcut</strong></li>
-                    <li><strong>2.</strong> ในช่อง <strong>Location</strong> ใส่:
-                      <div className="bg-gray-100 p-2 mt-1 rounded text-xs font-mono break-all">
-                        &quot;C:\Program Files\Google\Chrome\Application\chrome.exe&quot; --new-window https://substock-thoen.vercel.app/
-                      </div>
-                    </li>
-                    <li><strong>3.</strong> กด <strong>Next</strong> → ตั้งชื่อ เช่น `Substock`</li>
-                    <li><strong>4.</strong> กด <strong>Finish</strong> → ได้ไอคอนบน Desktop</li>
-                  </ol>
-                </div>
 
-                {/* MacOS */}
-                <div className="bg-white/60 p-4 rounded-lg">
-                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <span className="text-lg">🍎</span> MacOS
-                  </h4>
-                  <ol className="text-sm space-y-2 text-gray-700">
-                    <li><strong>1.</strong> เปิด <strong>Automator</strong> → สร้าง <strong>New Application</strong></li>
-                    <li><strong>2.</strong> เพิ่ม Action → <strong>Run Shell Script</strong></li>
-                    <li><strong>3.</strong> ใส่คำสั่งนี้:
-                      <div className="bg-gray-100 p-2 mt-1 rounded text-xs font-mono break-all">
-                        open -a &quot;Google Chrome&quot; https://substock-thoen.vercel.app/
-                      </div>
-                    </li>
-                    <li><strong>4.</strong> Save เป็น `Substock.app` → ลากไปไว้ Desktop/Dock</li>
-                  </ol>
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <Star className="w-6 h-6 text-yellow-500" />
+                  InvenStock V2.0
+                </h3>
+                <div className="space-y-4">
+                  {[
+                    "Multi-Tenant Architecture แยกข้อมูลองค์กร",
+                    "Department-Centric Stock Management",
+                    "Real-time Stock Updates ทุกแผนก",
+                    "Custom Role System แบบ Granular",
+                    "Organization Context Switching",
+                    "Inter-Department Transfer Workflow",
+                    "Enterprise Security (Arcjet)",
+                    "Mobile-First Responsive Design",
+                    "Advanced Analytics per Department",
+                    "Audit Trail และ Activity Logs"
+                  ].map((feature, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">{feature}</span>
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Mobile Section */}
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                    <Smartphone className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-lg font-bold">📱 มือถือ (Mobile)</div>
-                    <div className="text-sm text-gray-500">Android & iOS</div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Android */}
-                <div className="bg-white/60 p-4 rounded-lg">
-                  <h4 className="font-semibold text-green-700 mb-3 flex items-center gap-2">
-                    <span className="text-lg">🤖</span> Android (Chrome)
-                  </h4>
-                  <ol className="text-sm space-y-2 text-gray-700">
-                    <li><strong>1.</strong> เปิด Chrome → เข้า `https://substock-thoen.vercel.app/`</li>
-                    <li><strong>2.</strong> กดปุ่มเมนู (⋮) → เลือก <strong>Add to Home screen</strong></li>
-                    <li><strong>3.</strong> ได้ไอคอนแอปบน Home screen <strong>เหมือน App จริง!</strong></li>
-                  </ol>
-                </div>
-
-                {/* iOS */}
-                <div className="bg-white/60 p-4 rounded-lg">
-                  <h4 className="font-semibold text-purple-700 mb-3 flex items-center gap-2">
-                    <span className="text-lg">📱</span> iOS (Safari/Chrome)
-                  </h4>
-                  <ol className="text-sm space-y-2 text-gray-700">
-                    <li><strong>1.</strong> เปิด Safari → เข้า `https://substock-thoen.vercel.app/`</li>
-                    <li><strong>2.</strong> กด <strong>Share</strong> → เลือก <strong>Add to Home Screen</strong></li>
-                    <li><strong>3.</strong> ได้ไอคอนบนหน้าจอ <strong>เหมือนแอป!</strong></li>
-                  </ol>
-                  <p className="text-xs text-gray-500 mt-2">
-                    💡 แนะนำใช้ Safari เพราะ Add to Home screen ได้แน่นอน
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Benefits */}
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">✨ ประโยชน์ของการสร้าง Shortcut</h3>
-            <div className="grid md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-2xl mb-2">⚡</div>
-                <h4 className="font-semibold">เข้าถึงรวดเร็ว</h4>
-                <p className="text-sm text-gray-600">คลิกเดียวเข้าระบบ</p>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-2xl mb-2">📱</div>
-                <h4 className="font-semibold">เหมือน App</h4>
-                <p className="text-sm text-gray-600">ประสบการณ์เหมือนแอปจริง</p>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <div className="text-2xl mb-2">🔒</div>
-                <h4 className="font-semibold">ไม่ต้องจำ URL</h4>
-                <p className="text-sm text-gray-600">ไม่ต้องพิมพ์ใหม่ทุกครั้ง</p>
-              </div>
-              <div className="bg-orange-50 p-4 rounded-lg">
-                <div className="text-2xl mb-2">💾</div>
-                <h4 className="font-semibold">ไม่เปลื่อง Storage</h4>
-                <p className="text-sm text-gray-600">ไม่ต้องติดตั้งแอป</p>
+
+              <div>
+                <h3 className="text-2xl font-bold text-gray-500 mb-6">
+                  Traditional Inventory Systems
+                </h3>
+                <div className="space-y-4">
+                  {[
+                    "Single Organization เท่านั้น",
+                    "Global Stock Management",
+                    "Manual Stock Updates",
+                    "Fixed User Roles",
+                    "No Organization Context",
+                    "Basic Transfer Features",
+                    "Limited Security Features",
+                    "Desktop-First Design",
+                    "Basic Reporting",
+                    "Limited Activity Tracking"
+                  ].map((feature, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex-shrink-0" />
+                      <span className="text-gray-500 line-through">{feature}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -560,173 +529,403 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-gray-50 to-blue-50">
+      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            พร้อมที่จะเริ่มใช้งาน?
+          <h2 className="text-4xl font-bold mb-6">
+            พร้อมขยายธุรกิจด้วยระบบระดับ Enterprise?
           </h2>
-          <p className="text-gray-600 mb-8 text-lg">
-            ระบบพร้อมใช้งานทันที ใช้งานง่ายผ่านมือถือ ไม่ต้องติดตั้งซอฟต์แวร์เพิ่มเติม
+          <p className="text-xl mb-8 text-blue-100">
+            เริ่มต้นการจัดการสต็อกแบบมืออาชีพด้วย InvenStock V2.0 
+            ระบบที่ออกแบบมาสำหรับองค์กรที่เติบโตอย่างรวดเร็ว
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Link href="/dashboard">
-              <Button size="lg" className="text-lg px-8 py-4 w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700">
-                <LogIn className="w-5 h-5 mr-2" />
-                เข้าสู่ระบบ
+              <Button size="lg" className="text-lg px-8 py-4 w-full sm:w-auto bg-white text-blue-600 hover:bg-gray-100 h-14">
+                <Crown className="w-5 h-5 mr-2" />
+                เข้าใช้งานระบบ
               </Button>
             </Link>
+            
+            <Button size="lg" variant="outline" className="text-lg px-8 py-4 w-full sm:w-auto border-white text-white hover:bg-white/10 h-14" onClick={handleManualClick}>
+              <FileText className="w-5 h-5 mr-2" />
+              ดูเอกสารเทคนิค
+            </Button>
           </div>
 
-          <div className="mt-8 text-sm text-gray-500">
-            <p>ทดลองใช้งานได้ทันที • ใช้งานง่ายบนมือถือ • รองรับ 2 แผนก</p>
+          <div className="text-blue-100">
+            <p>✨ ระบบพร้อมใช้งานทันที • 🔒 รักษาความปลอดภัยระดับ Enterprise • 📱 รองรับทุกอุปกรณ์</p>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-12 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <Pill className="w-5 h-5 text-white" />
+      <footer className="bg-gray-900 text-gray-300 py-16 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-12">
+            <div className="col-span-2">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
                 </div>
-                <span className="font-bold text-white">Hospital Pharmacy V3.0</span>
+                <div>
+                  <span className="font-bold text-white text-xl">InvenStock V2.0</span>
+                  <p className="text-sm text-gray-400">Multi-Tenant Inventory Management</p>
+                </div>
               </div>
-              <p className="text-sm text-gray-400">
-                ระบบติดตามสต็อกยาโรงพยาบาลที่ใช้งานง่าย ผ่านมือถือ
+              <p className="text-gray-400 mb-4 max-w-md">
+                ระบบจัดการสต็อกสินค้าระดับองค์กรที่ออกแบบมาเพื่อรองรับการเติบโตและความซับซ้อนของธุรกิจสมัยใหม่
               </p>
+              <div className="flex gap-4">
+                <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-800">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  สนทนากับทีม
+                </Button>
+                <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-800">
+                  <FileText className="w-4 h-4 mr-2" />
+                  API Docs
+                </Button>
+              </div>
             </div>
 
             <div>
-              <h4 className="font-semibold text-white mb-4">ฟีเจอร์หลัก</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>• ติดตามสต็อกยาแบบเรียลไทม์</li>
-                <li>• แจ้งเตือนยาใกล้หมด</li>
-                <li>• เตือนตรวจเช็คสต็อก</li>
-                <li>• ส่งออกข้อมูล Excel</li>
+              <h4 className="font-semibold text-white mb-4">Core Features</h4>
+              <ul className="space-y-3 text-sm text-gray-400">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  Multi-Tenant Architecture
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  Department Stock Management
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  Real-time Updates
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  Custom Role System
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  Enterprise Security
+                </li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-semibold text-white mb-4">ความสามารถ</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>• ติดตามประวัติการเคลื่อนไหวยา</li>
-                <li>• ใช้งานง่ายผ่านโทรศัพท์</li>
-                <li>• รองรับข้อมูล 2 แผนก</li>
-                <li>• เข้าถึงข้อมูลได้ครบถ้วน</li>
+              <h4 className="font-semibold text-white mb-4">Tech Stack</h4>
+              <ul className="space-y-3 text-sm text-gray-400">
+                <li className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                  Next.js 15 + React 19
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full" />
+                  PostgreSQL + Prisma ORM
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                  TailwindCSS + Shadcn/UI
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                  JWT + bcryptjs
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full" />
+                  Arcjet Security
+                </li>
               </ul>
             </div>
           </div>
 
-          <div className="border-t border-gray-800 pt-8 text-center">
-            <p className="text-sm text-gray-500 mb-2">
-              พัฒนาโดย นสภ.ธนธัช ธำรงโสตถิสกุล มหาวิทยาลัยนเรศวร
-            </p>
-            <div className="text-xs text-gray-600">
-              <p>Hospital Pharmacy Stock Management System V3.0</p>
-              <p className="mt-1">© 2025 All rights reserved. Built with ❤️ for healthcare professionals.</p>
+          <div className="border-t border-gray-800 pt-8">
+            <div className="flex flex-col md:flex-row items-center justify-between">
+              <div className="text-sm text-gray-500 mb-4 md:mb-0">
+                <p>พัฒนาโดย นสภ.ธนธัช ธำรงโสตถิสกุล มหาวิทยาลัยนเรศวร</p>
+                <p className="mt-1">© 2025 InvenStock V2.0 - Enterprise Inventory Management System</p>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <span>Built with ❤️ for Enterprise</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span>System Online</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </footer>
 
-      {/* Manual Dialog */}
+      {/* Enhanced Manual Dialog */}
       <Dialog open={showManual} onOpenChange={setShowManual}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pill className="w-5 h-5 text-blue-600" />
-              คู่มือการใช้งานระบบ Hospital Pharmacy V3.0
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <Building2 className="w-6 h-6 text-blue-600" />
+              InvenStock V2.0 - Technical Documentation
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-6 text-sm">
-            {/* ฟีเจอร์หลัก */}
+          <div className="space-y-8 text-sm">
+            {/* Architecture Overview */}
             <div>
-              <h3 className="font-semibold text-lg mb-3 text-blue-700">🎯 ฟีเจอร์หลัก</h3>
-              <div className="space-y-2 text-gray-600">
-                <p><strong>✅ ติดตามสต็อกยา:</strong> ติดตามยาแบบเรียลไทม์แยกตาม 2 แผนก</p>
-                <p><strong>🔔 แจ้งเตือนยาใกล้หมด:</strong> แจ้งเตือนเมื่อยาต่ำกว่าสต็อกที่กำหนด</p>
-                <p><strong>⏰ เตือนตรวจเช็คสต็อก:</strong> แจ้งเตือนสต็อกที่ไม่ได้อัปเดตเป็นเวลานาน</p>
-                <p><strong>📱 ใช้งานบนมือถือ:</strong> ออกแบบใช้งานง่ายผ่านโทรศัพท์</p>
-                <p><strong>📊 ส่งออก Excel:</strong> ส่งออกข้อมูลทุกประเภทเป็นไฟล์ Excel</p>
-                <p><strong>📋 ประวัติรายตัว:</strong> ติดตามประวัติการเคลื่อนไหวยารายตัว</p>
+              <h3 className="font-bold text-lg mb-4 text-blue-700 flex items-center gap-2">
+                🏗️ System Architecture
+              </h3>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-gray-700 mb-3">
+                  <strong>Multi-Tenant Architecture:</strong> ระบบที่ออกแบบให้รองรับหลายองค์กรในระบบเดียว 
+                  โดยแยกข้อมูลอย่างสมบูรณ์ด้วย Row-level Security
+                </p>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold text-blue-800 mb-2">Frontend Architecture</h4>
+                    <ul className="text-xs space-y-1 text-gray-600">
+                      <li>• Next.js 15 with App Router</li>
+                      <li>• React 19 Server Components</li>
+                      <li>• TypeScript for Type Safety</li>
+                      <li>• TailwindCSS + Shadcn/UI</li>
+                      <li>• Responsive Mobile-First Design</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-800 mb-2">Backend Architecture</h4>
+                    <ul className="text-xs space-y-1 text-gray-600">
+                      <li>• PostgreSQL with Row-level Security</li>
+                      <li>• Prisma ORM with Multi-Schema</li>
+                      <li>• JWT Authentication</li>
+                      <li>• Arcjet Security Layer</li>
+                      <li>• RESTful API Design</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* แผนกทั้ง 2 */}
+            {/* Navigation Flow */}
             <div>
-              <h3 className="font-semibold text-lg mb-3 text-green-700">🏥 แผนกที่รองรับ</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-blue-700 mb-2">คลังยา</h4>
-                  <ul className="text-xs text-gray-600 space-y-1">
-                    <li>• ติดตามสต็อกยาหลัก</li>
-                    <li>• แจ้งเตือนยาใกล้หมด</li>
-                    <li>• ตรวจเช็คสต็อกตามกำหนด</li>
-                  </ul>
-                </div>
+              <h3 className="font-bold text-lg mb-4 text-green-700 flex items-center gap-2">
+                🗺️ Navigation & User Flow
+              </h3>
+              <div className="space-y-4">
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-green-700 mb-2">OPD</h4>
+                  <h4 className="font-semibold text-green-800 mb-2">Organization-Level Routes</h4>
+                  <div className="space-y-2 text-xs">
+                    <p><code>/dashboard</code> - Organization Selector (เลือกองค์กร)</p>
+                    <p><code>/org/[orgSlug]</code> - Organization Dashboard</p>
+                    <p><code>/org/[orgSlug]/products</code> - Product Management</p>
+                    <p><code>/org/[orgSlug]/transfers</code> - Organization-wide Transfers</p>
+                    <p><code>/org/[orgSlug]/reports</code> - Analytics & Reports</p>
+                    <p><code>/org/[orgSlug]/settings</code> - Organization Settings</p>
+                  </div>
+                </div>
+                
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-purple-800 mb-2">Department-Level Routes</h4>
+                  <div className="space-y-2 text-xs">
+                    <p><code>/org/[orgSlug]/departments/[deptId]</code> - Department Dashboard</p>
+                    <p><code>/org/[orgSlug]/departments/[deptId]/stocks</code> - Department Stock Management</p>
+                    <p><code>/org/[orgSlug]/departments/[deptId]/transfers</code> - Department Transfers</p>
+                    <p><code>/org/[orgSlug]/departments/[deptId]/reports</code> - Department Analytics</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Role System */}
+            <div>
+              <h3 className="font-bold text-lg mb-4 text-purple-700 flex items-center gap-2">
+                👥 Role & Permission System
+              </h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-1">
+                    <Users className="w-4 h-4" /> MEMBER
+                  </h4>
                   <ul className="text-xs text-gray-600 space-y-1">
-                    <li>• ติดตามสต็อกยา OPD</li>
-                    <li>• ตรวจเช็คยาประจำวัน</li>
-                    <li>• จ่ายยาให้ผู้ป่วย</li>
+                    <li>• ดูสต็อกสินค้า</li>
+                    <li>• ปรับสต็อกในแผนกที่มีสิทธิ์</li>
+                    <li>• สร้างใบเบิกสินค้า</li>
+                    <li>• รับสินค้าที่เบิก</li>
+                    <li>• ดูรายงานพื้นฐาน</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-1">
+                    <Shield className="w-4 h-4" /> ADMIN
+                  </h4>
+                  <ul className="text-xs text-gray-600 space-y-1">
+                    <li>• ทุกสิทธิ์ของ Member</li>
+                    <li>• จัดการสินค้า (CRUD)</li>
+                    <li>• สร้างหมวดหมู่สินค้า</li>
+                    <li>• เชิญผู้ใช้เข้าองค์กร</li>
+                    <li>• อนุมัติการเบิกจ่าย</li>
+                    <li>• ดูรายงานขั้นสูง</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-1">
+                    <Crown className="w-4 h-4" /> OWNER
+                  </h4>
+                  <ul className="text-xs text-gray-600 space-y-1">
+                    <li>• ทุกสิทธิ์ของ Admin</li>
+                    <li>• จัดการแผนก (CRUD)</li>
+                    <li>• ตั้งค่าองค์กร</li>
+                    <li>• จัดการสมาชิกองค์กร</li>
+                    <li>• ดูรายงานระดับองค์กร</li>
+                    <li>• กำหนดสิทธิ์ผู้ใช้</li>
                   </ul>
                 </div>
               </div>
             </div>
 
-            {/* วิธีการใช้งาน */}
+            {/* Department Transfer Workflow */}
             <div>
-              <h3 className="font-semibold text-lg mb-3 text-purple-700">📖 วิธีการใช้งาน</h3>
-              <div className="space-y-3 text-gray-600">
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p><strong>1. เข้าสู่ระบบ:</strong> กดปุ่ม เข้าสู่ระบบ เพื่อเข้าใช้งาน</p>
-                </div>
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p><strong>2. เลือกแผนก:</strong> เลือกแผนกที่ต้องการใช้งาน (คลังยา หรือ OPD)</p>
-                </div>
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p><strong>3. ติดตามสต็อก:</strong> ดูข้อมูลสต็อกปัจจุบันและรับการแจ้งเตือน</p>
-                </div>
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p><strong>4. ส่งออกข้อมูล:</strong> ส่งออกรายงานเป็นไฟล์ Excel เมื่อต้องการ</p>
+              <h3 className="font-bold text-lg mb-4 text-orange-700 flex items-center gap-2">
+                🔄 Transfer Workflow
+              </h3>
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <p className="text-gray-700 mb-3">
+                  <strong>Department-to-Department Transfer Process:</strong> กระบวนการเบิกจ่ายสินค้าระหว่างแผนกแบบมีการควบคุม
+                </p>
+                <div className="grid md:grid-cols-5 gap-3 text-xs">
+                  <div className="text-center p-3 bg-white rounded">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-white font-bold">1</span>
+                    </div>
+                    <h4 className="font-semibold">REQUEST</h4>
+                    <p className="text-gray-600">แผนกสร้างใบเบิก</p>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded">
+                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-white font-bold">2</span>
+                    </div>
+                    <h4 className="font-semibold">APPROVE</h4>
+                    <p className="text-gray-600">ผู้มีสิทธิ์อนุมัติ</p>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded">
+                    <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-white font-bold">3</span>
+                    </div>
+                    <h4 className="font-semibold">PREPARE</h4>
+                    <p className="text-gray-600">แผนกต้นทางเตรียม</p>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded">
+                    <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-white font-bold">4</span>
+                    </div>
+                    <h4 className="font-semibold">DELIVER</h4>
+                    <p className="text-gray-600">ส่งมอบสินค้า</p>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded">
+                    <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-white font-bold">5</span>
+                    </div>
+                    <h4 className="font-semibold">RECEIVE</h4>
+                    <p className="text-gray-600">แผนกปลายทางรับ</p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* การแจ้งเตือน */}
+            {/* Security Features */}
             <div>
-              <h3 className="font-semibold text-lg mb-3 text-red-700">🚨 ระบบแจ้งเตือน</h3>
-              <div className="space-y-2 text-gray-600">
-                <p><strong>🔴 ยาใกล้หมด:</strong> แจ้งเตือนเมื่อยาในสต็อกต่ำกว่าจำนวนขั้นต่ำ</p>
-                <p><strong>🟠 ต้องตรวจเช็ค:</strong> แจ้งเตือนสต็อกที่ไม่ได้อัปเดตเป็นเวลานาน</p>
-                <p><strong>🟢 สถานะปกติ:</strong> สต็อกอยู่ในระดับที่เหมาะสม</p>
+              <h3 className="font-bold text-lg mb-4 text-red-700 flex items-center gap-2">
+                🔒 Security Features
+              </h3>
+              <div className="bg-red-50 p-4 rounded-lg">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold text-red-800 mb-2">Authentication & Authorization</h4>
+                    <ul className="text-xs space-y-1 text-gray-600">
+                      <li>• JWT Token-based Authentication</li>
+                      <li>• bcrypt Password Hashing</li>
+                      <li>• Role-based Access Control (RBAC)</li>
+                      <li>• Organization-level Data Isolation</li>
+                      <li>• Department-level Permissions</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-red-800 mb-2">Arcjet Security Layer</h4>
+                    <ul className="text-xs space-y-1 text-gray-600">
+                      <li>• Bot Detection & Blocking</li>
+                      <li>• Rate Limiting (API & Login)</li>
+                      <li>• Shield Protection (SQL Injection, XSS)</li>
+                      <li>• Hosting IP Detection</li>
+                      <li>• Real-time Security Monitoring</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* ข้อมูลเทคนิค */}
-            <div>
-              <h3 className="font-semibold text-lg mb-3 text-gray-700">⚙️ ข้อมูลเทคนิค</h3>
-              <div className="space-y-2 text-gray-600">
-                <p><strong>🌐 เข้าถึงได้ทุกที่:</strong> ใช้งานผ่านเว็บเบราว์เซอร์บนทุกอุปกรณ์</p>
-                <p><strong>👥 รองรับหลายผู้ใช้:</strong> ผู้ใช้สามารถดูข้อมูลทั้ง 2 แผนกได้</p>
-                <p><strong>🔒 ปลอดภัย:</strong> ระบบ Authentication และการจัดการสิทธิ์</p>
-                <p><strong>📱 Mobile-First:</strong> ออกแบบใช้งานง่ายบนมือถือเป็นหลัก</p>
+            {/* Getting Started */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
+              <h3 className="font-bold text-lg mb-4 text-indigo-700 flex items-center gap-2">
+                🚀 Getting Started
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-white text-xs font-bold">1</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">สมัครสมาชิกและสร้างองค์กร</p>
+                    <p className="text-gray-600 text-xs">ใช้ Username เป็น Primary Credential พร้อมสร้างองค์กรแรก</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-white text-xs font-bold">2</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">ตั้งค่าแผนกและสินค้า</p>
+                    <p className="text-gray-600 text-xs">สร้างโครงสร้างแผนกและเพิ่มสินค้าพร้อมสต็อกเริ่มต้น</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-white text-xs font-bold">3</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">เชิญทีมงานและกำหนดสิทธิ์</p>
+                    <p className="text-gray-600 text-xs">เพิ่มสมาชิกในองค์กรและกำหนดสิทธิ์ตามแผนกและบทบาท</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-white text-xs font-bold">4</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">เริ่มใช้งานระบบ</p>
+                    <p className="text-gray-600 text-xs">จัดการสต็อก สร้างใบเบิก และติดตามการเคลื่อนไหวสินค้า</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* ติดต่อ */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-lg mb-2 text-blue-700">📞 ต้องการความช่วยเหลือ?</h3>
-              <p className="text-sm text-gray-600">
-                หากมีคำถามหรือต้องการความช่วยเหลือ สามารถติดต่อทีมพัฒนาได้
+            {/* Contact */}
+            <div className="bg-gray-50 p-4 rounded-lg text-center">
+              <h3 className="font-semibold text-lg mb-2 text-gray-800">ต้องการความช่วยเหลือเพิ่มเติม?</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                ติดต่อทีมพัฒนาสำหรับการสนับสนุนด้านเทคนิคและการปรับแต่งระบบ
               </p>
-              <p className="text-xs text-gray-500 mt-2">
+              <div className="flex justify-center gap-3">
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  สนทนากับทีม
+                </Button>
+                <Button size="sm" variant="outline">
+                  <FileText className="w-4 h-4 mr-2" />
+                  API Documentation
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
                 พัฒนาโดย นสภ.ธนธัช ธำรงโสตถิสกุล มหาวิทยาลัยนเรศวร
               </p>
             </div>
