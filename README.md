@@ -1,4 +1,4 @@
-Directory structure (now):
+Directory structure:
 └── taro112233-smsystemv3/
     ├── README.md
     ├── components.json
@@ -18,14 +18,17 @@ Directory structure (now):
     │   ├── api/
     │   │   ├── arcjet/
     │   │   │   └── route.ts
-    │   │   └── auth/
-    │   │       ├── login/
-    │   │       │   └── route.ts
-    │   │       ├── logout/
-    │   │       │   └── route.ts
-    │   │       ├── me/
-    │   │       │   └── route.ts
-    │   │       └── register/
+    │   │   ├── auth/
+    │   │   │   ├── login/
+    │   │   │   │   └── route.ts
+    │   │   │   ├── logout/
+    │   │   │   │   └── route.ts
+    │   │   │   ├── me/
+    │   │   │   │   └── route.ts
+    │   │   │   └── register/
+    │   │   │       └── route.ts
+    │   │   └── security/
+    │   │       └── monitoring/
     │   │           └── route.ts
     │   ├── dashboard/
     │   │   └── page.tsx
@@ -66,7 +69,6 @@ Directory structure (now):
     │       ├── navigation-menu.tsx
     │       ├── pagination.tsx
     │       ├── popover.tsx
-    │       ├── PrintButton.tsx
     │       ├── progress.tsx
     │       ├── radio-group.tsx
     │       ├── resizable.tsx
@@ -96,6 +98,7 @@ Directory structure (now):
     │   ├── auth.ts
     │   ├── config.ts
     │   ├── prisma.ts
+    │   ├── security-logger.ts
     │   └── utils.ts
     ├── prisma/
     │   ├── schema.prisma
@@ -103,11 +106,7 @@ Directory structure (now):
     │   ├── schemas/
     │   │   ├── audit.prisma
     │   │   ├── base.prisma
-    │   │   ├── notification.prisma
     │   │   ├── organization.prisma
-    │   │   ├── product.prisma
-    │   │   ├── stock.prisma
-    │   │   ├── transfer.prisma
     │   │   └── user.prisma
     │   └── seeds/
     │       ├── stock-transactions.seed.ts
