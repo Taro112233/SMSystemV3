@@ -3,6 +3,7 @@ Directory structure:
     ├── README.md
     ├── components.json
     ├── eslint.config.mjs
+    ├── INSTRUCTIONS.md
     ├── middleware.ts
     ├── next.config.ts
     ├── package.json
@@ -34,6 +35,31 @@ Directory structure:
     │   │   └── page.tsx
     │   ├── login/
     │   │   └── page.tsx
+    │   ├── org/
+    │   │   └── [orgSlug]/
+    │   │       ├── page.tsx
+    │   │       ├── components/
+    │   │       │   ├── DashboardHeader.tsx
+    │   │       │   ├── DashboardSidebar/
+    │   │       │   │   ├── DepartmentList.tsx
+    │   │       │   │   ├── index.tsx
+    │   │       │   │   ├── SidebarFooter.tsx
+    │   │       │   │   ├── SidebarHeader.tsx
+    │   │       │   │   └── SidebarNavigation.tsx
+    │   │       │   ├── DepartmentView/
+    │   │       │   │   ├── DepartmentActions.tsx
+    │   │       │   │   ├── DepartmentInfo.tsx
+    │   │       │   │   ├── DepartmentStats.tsx
+    │   │       │   │   └── index.tsx
+    │   │       │   └── OrganizationOverview/
+    │   │       │       ├── DepartmentOverview.tsx
+    │   │       │       ├── index.tsx
+    │   │       │       ├── OrganizationPerformance.tsx
+    │   │       │       ├── OrganizationStats.tsx
+    │   │       │       ├── QuickActions.tsx
+    │   │       │       └── RecentActivity.tsx
+    │   │       └── data/
+    │   │           └── mockData.ts
     │   ├── register/
     │   │   └── page.tsx
     │   └── utils/
