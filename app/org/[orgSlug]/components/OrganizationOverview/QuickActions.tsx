@@ -5,20 +5,31 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
-  Zap, Plus, AlertTriangle, Clock, BarChart3, TrendingUp, Activity, FileText,
-  Settings, UserPlus, Building2, Shield
+  Package, Plus, FolderTree, Calculator,
+  BarChart3, TrendingUp, Activity, FileText,
+  Users, Building2, Settings
 } from 'lucide-react';
 
 export const QuickActions = () => {
   const actionGroups = [
     {
-      title: 'การจัดการด่วน',
-      icon: Zap,
+      title: 'จัดการสินค้า',
+      icon: Package,
       iconColor: 'text-blue-500',
       actions: [
-        { icon: Plus, label: 'สร้างใบเบิกด่วน', onClick: () => console.log('Create urgent transfer') },
-        { icon: AlertTriangle, label: 'ตรวจสอบสต็อกต่ำ', onClick: () => console.log('Check low stock') },
-        { icon: Clock, label: 'รายการรออนุมัติ', onClick: () => console.log('Pending approvals') }
+        { icon: Package, label: 'รายการสินค้าทั้งหมด', onClick: () => console.log('All products') },
+        { icon: FolderTree, label: 'หมวดหมู่สินค้า', onClick: () => console.log('Product categories') },
+        { icon: Calculator, label: 'ตั้งค่าหน่วยนับ', onClick: () => console.log('Unit settings') }
+      ]
+    },
+    {
+      title: 'การจัดการองค์กร',
+      icon: Settings,
+      iconColor: 'text-purple-500',
+      actions: [
+        { icon: Users, label: 'จัดการสมาชิก', onClick: () => console.log('Manage members') },
+        { icon: Building2, label: 'ตั้งค่าหน่วยงาน', onClick: () => console.log('Department settings') },
+        { icon: Settings, label: 'ตั้งค่าองค์กร', onClick: () => console.log('Organization settings') }
       ]
     },
     {
@@ -27,18 +38,9 @@ export const QuickActions = () => {
       iconColor: 'text-green-500',
       actions: [
         { icon: TrendingUp, label: 'รายงานสต็อก', onClick: () => console.log('Stock reports') },
-        { icon: Activity, label: 'กิจกรรมแผนก', onClick: () => console.log('Department activity') },
-        { icon: FileText, label: 'รายงานการเบิกจ่าย', onClick: () => console.log('Transfer reports') }
-      ]
-    },
-    {
-      title: 'การจัดการองค์กร',
-      icon: Settings,
-      iconColor: 'text-purple-500',
-      actions: [
-        { icon: UserPlus, label: 'จัดการสมาชิก', onClick: () => console.log('Manage users') },
-        { icon: Building2, label: 'จัดการแผนก', onClick: () => console.log('Manage departments') },
-        { icon: Shield, label: 'ตั้งค่าสิทธิ์', onClick: () => console.log('Manage permissions') }
+        { icon: Activity, label: 'รายงานการเคลื่อนไหวสินค้า', onClick: () => console.log('Movement reports') },
+        { icon: FileText, label: 'รายงานการเบิกจ่าย', onClick: () => console.log('Transfer reports') },
+        { icon: FileText, label: 'รายงานกิจกรรม', onClick: () => console.log('Activity reports') }
       ]
     }
   ];
