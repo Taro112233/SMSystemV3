@@ -5,8 +5,10 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
-  ClipboardList, Eye, Edit, RefreshCw, Upload, TrendingUp, Plus, FileText, 
-  CheckCircle2, Download
+  ClipboardList, Eye, Calendar, TrendingUp, FileText, 
+  ArrowUp, ArrowDown, ShoppingCart, FileCheck, Package,
+  PlaneTakeoff,
+  PlaneLanding
 } from 'lucide-react';
 
 export const DepartmentActions = () => {
@@ -15,26 +17,32 @@ export const DepartmentActions = () => {
       title: 'การจัดการสต็อก',
       icon: ClipboardList,
       actions: [
-        { icon: Eye, label: 'ดูสต็อกสินค้า', onClick: () => console.log('View stock') },
-        { icon: Edit, label: 'ปรับสต็อก', onClick: () => console.log('Adjust stock') },
-        { icon: RefreshCw, label: 'นับสต็อก', onClick: () => console.log('Stock count') },
-        { icon: Upload, label: 'เพิ่มสินค้า', onClick: () => console.log('Add products') }
+        { icon: Eye, label: 'รายการสต็อกสินค้า', onClick: () => console.log('Stock inventory') },
+        { icon: Calendar, label: 'รายการสินค้าใกล้หมดอายุ', onClick: () => console.log('Expiring items') },
+        { icon: Package, label: 'จัดการสต็อกการ์ด', onClick: () => console.log('Manage stock cards') }
       ]
     },
     {
-      title: 'การเบิกจ่าย',
+      title: 'การเบิก-จ่าย',
       icon: TrendingUp,
       actions: [
-        { icon: Plus, label: 'สร้างใบเบิก', onClick: () => console.log('Create transfer') },
-        { icon: FileText, label: 'ดูรายการเบิก', onClick: () => console.log('View transfers') },
-        { icon: CheckCircle2, label: 'อนุมัติการเบิก', onClick: () => console.log('Approve transfers') },
-        { icon: Download, label: 'รับสินค้า', onClick: () => console.log('Receive items') }
+        { icon: FileText, label: 'สร้างใบเบิก', onClick: () => console.log('Create requisition') },
+        { icon: PlaneTakeoff, label: 'รายการเบิกออก', onClick: () => console.log('Outgoing transfers') },
+        { icon: PlaneLanding, label: 'รายการรับเข้า', onClick: () => console.log('Incoming transfers') }
+      ]
+    },
+    {
+      title: 'ระบบงานจัดซื้อ (Mockup)',
+      icon: ShoppingCart,
+      actions: [
+        { icon: FileCheck, label: 'ใบขอซื้อ', onClick: () => console.log('Purchase requests') },
+        { icon: Package, label: 'ใบสั่งซื้อ', onClick: () => console.log('Purchase orders') }
       ]
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {actionGroups.map((group, groupIndex) => {
         const GroupIcon = group.icon;
         return (

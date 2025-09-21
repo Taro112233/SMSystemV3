@@ -37,7 +37,7 @@ export const departments = [
     notifications: 5,
     stockItems: 856,
     lowStock: 12,
-    lastActivity: '5 นาทีที่แล้ว',
+    lastActivity: '12 กันยายน 2568 เวลา 09:49:42',
     manager: 'นายสมชาย ใจดี',
     category: 'main'
   },
@@ -53,7 +53,7 @@ export const departments = [
     notifications: 2,
     stockItems: 245,
     lowStock: 5,
-    lastActivity: '2 นาทีที่แล้ว',
+    lastActivity: '12 กันยายน 2568 เวลา 09:49:42',
     manager: 'นางสาวมาลี รักษา',
     category: 'clinical'
   },
@@ -69,7 +69,7 @@ export const departments = [
     notifications: 0,
     stockItems: 312,
     lowStock: 3,
-    lastActivity: '15 นาทีที่แล้ว',
+    lastActivity: '12 กันยายน 2568 เวลา 09:49:42',
     manager: 'นายประยุทธ ดูแล',
     category: 'clinical'
   },
@@ -85,7 +85,7 @@ export const departments = [
     notifications: 1,
     stockItems: 189,
     lowStock: 2,
-    lastActivity: '30 นาทีที่แล้ว',
+    lastActivity: '12 กันยายน 2568 เวลา 09:49:42',
     manager: 'นางสาวสุดา อบอุ่น',
     category: 'clinical'
   },
@@ -101,7 +101,7 @@ export const departments = [
     notifications: 3,
     stockItems: 156,
     lowStock: 1,
-    lastActivity: '1 ชั่วโมงที่แล้ว',
+    lastActivity: '12 กันยายน 2568 เวลา 09:49:42',
     manager: 'นายสุรชัย ผ่า',
     category: 'clinical'
   },
@@ -117,7 +117,7 @@ export const departments = [
     notifications: 0,
     stockItems: 89,
     lowStock: 0,
-    lastActivity: '2 ชั่วโมงที่แล้ว',
+    lastActivity: '12 กันยายน 2568 เวลา 09:49:42',
     manager: 'นางสาววิทยา วิเคราะห์',
     category: 'support'
   },
@@ -133,7 +133,7 @@ export const departments = [
     notifications: 1,
     stockItems: 567,
     lowStock: 8,
-    lastActivity: '10 นาทีที่แล้ว',
+    lastActivity: '12 กันยายน 2568 เวลา 09:49:42',
     manager: 'นางสาวเภสัช จ่ายยา',
     category: 'support'
   },
@@ -149,7 +149,7 @@ export const departments = [
     notifications: 4,
     stockItems: 134,
     lowStock: 3,
-    lastActivity: '8 นาทีที่แล้ว',
+    lastActivity: '12 กันยายน 2568 เวลา 09:49:42',
     manager: 'นายวิกฤต ช่วยชีวิต',
     category: 'clinical'
   }
@@ -162,7 +162,7 @@ export const recentActivities = [
     icon: ArrowLeft,
     title: 'การโอนยาระหว่างแผนก',
     description: 'ER → ICU: Epinephrine 10 หลอด',
-    time: '5 นาทีที่แล้ว',
+    time: '12 กันยายน 2568 เวลา 09:49:42',
     status: 'pending',
     user: 'นายสมชาย ใจดี'
   },
@@ -172,7 +172,7 @@ export const recentActivities = [
     icon: AlertTriangle,
     title: 'แจ้งเตือนสต็อกต่ำ',
     description: 'Morphine ในแผนก OR เหลือ 5 หลอด',
-    time: '12 นาทีที่แล้ว',
+    time: '12 กันยายน 2568 เวลา 09:49:42',
     status: 'warning',
     user: 'ระบบอัตโนมัติ'
   },
@@ -182,7 +182,7 @@ export const recentActivities = [
     icon: Edit,
     title: 'ปรับสต็อกสินค้า',
     description: 'ปรับยอดยา Paracetamol ในคลังหลัก +200 เม็ด',
-    time: '25 นาทีที่แล้ว',
+    time: '12 กันยายน 2568 เวลา 09:49:42',
     status: 'completed',
     user: 'นางสาวมาลี รักษา'
   },
@@ -192,7 +192,7 @@ export const recentActivities = [
     icon: UserPlus,
     title: 'เพิ่มสมาชิกใหม่',
     description: 'เพิ่มพยาบาลใหม่เข้าแผนก IPD',
-    time: '1 ชั่วโมงที่แล้ว',
+    time: '12 กันยายน 2568 เวลา 09:49:42',
     status: 'completed',
     user: 'นายประยุทธ ดูแล'
   }
