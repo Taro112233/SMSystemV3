@@ -28,11 +28,27 @@ Directory structure:
     │   │   │   │   └── route.ts
     │   │   │   └── register/
     │   │   │       └── route.ts
+    │   │   ├── dashboard/
+    │   │   │   └── organizations/
+    │   │   │       └── route.ts
+    │   │   ├── organizations/
+    │   │   │   ├── route.ts
+    │   │   │   ├── join-by-code/
+    │   │   │   │   └── route.ts
+    │   │   │   └── join-request/
+    │   │   │       └── route.ts
     │   │   └── security/
     │   │       └── monitoring/
     │   │           └── route.ts
     │   ├── dashboard/
-    │   │   └── page.tsx
+    │   │   ├── page.tsx
+    │   │   └── components/
+    │   │       ├── AddOrganizationCard.tsx
+    │   │       ├── CreateOrganizationModal.tsx
+    │   │       ├── DashboardHeader.tsx
+    │   │       ├── JoinOrganizationModal.tsx
+    │   │       ├── OrganizationCard.tsx
+    │   │       └── OrganizationGrid.tsx
     │   ├── login/
     │   │   └── page.tsx
     │   ├── org/
