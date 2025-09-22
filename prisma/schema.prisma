@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-09-22T10:37:23.424Z
+// Last generated: 2025-09-22T13:45:00.554Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -20,7 +20,7 @@ datasource db {
 // ==========================================
 
 // prisma/schemas/base.prisma
-// ===== CORE ENUMS & BASE TYPES - Authentication Only =====
+// ===== MINIMAL CORE ENUMS - Invite Code Only System =====
 
 // ===== USER & ORGANIZATION ENUMS =====
 enum UserStatus {
@@ -30,31 +30,17 @@ enum UserStatus {
   INACTIVE   // ไม่ใช้งาน
 }
 
-enum InvitationStatus {
-  PENDING    // รอตอบรับ
-  ACCEPTED   // ตอบรับแล้ว
-  DECLINED   // ปฏิเสธ
-  EXPIRED    // หมดอายุ
-}
-
 enum OrganizationStatus {
   ACTIVE     // ใช้งานได้
   SUSPENDED  // ระงับ
   TRIAL      // ทดลองใช้
 }
 
-// ===== ROLE SYSTEM ENUMS =====
+// ===== SIMPLIFIED ROLE SYSTEM =====
 enum OrganizationRole {
-  MEMBER  // ทำงานทั่วไป เบิก จ่าย แก้สต็อก
-  ADMIN   // Member + CRUD สต็อกการ์ด + สร้าง category + เชิญผู้ใช้
-  OWNER   // Admin + CRUD department + จัดการองค์กร
-}
-
-enum DepartmentRole {
-  VIEWER    // ดูอย่างเดียว
-  USER      // ใช้งานทั่วไป (เบิก จ่าย แก้สต็อก)
-  MANAGER   // จัดการแผนก (อนุมัติ จัดการสมาชิก)
-  ADMIN     // ผู้ดูแลแผนก (ทุกสิทธิ์ในแผนก)
+  MEMBER  // ทำงานทั่วไป เบิก จ่าย แก้สต็อก ดูทุกแผนก
+  ADMIN   // Member + CRUD สินค้า/แผนก + เชิญผู้ใช้ 
+  OWNER   // Admin + จัดการองค์กร + ตั้งค่าระบบ
 }
 
 // ===== UI ENUMS FOR COLORS & ICONS =====
@@ -90,7 +76,7 @@ enum IconType {
   
   // Role Icons
   CROWN        // 👑 เจ้าของ
-  SHIELD       // 🛡️ ผู้จัดการ
+  SHIELD       // 🛡์ ผู้จัดการ
   PERSON       // 👤 พนักงาน
   EYE          // 👁️ ผู้ตรวจสอบ
   GEAR         // ⚙️ ระบบ
@@ -111,7 +97,7 @@ enum IconType {
 // ==========================================
 
 // prisma/schemas/user.prisma
-// ===== USER MANAGEMENT SCHEMA - Authentication Only =====
+// ===== USER MANAGEMENT SCHEMA - Clean & Simple =====
 
 model User {
   id          String     @id @default(cuid())
@@ -136,13 +122,9 @@ model User {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   
-  // Relations (Authentication Only)
-  organizationUsers     OrganizationUser[]
-  departmentUsers       DepartmentUser[]                        // Department access
-  departmentAssignments DepartmentUser[] @relation("DepartmentAssigner") // Assignments made by this user
-  sentInvitations       UserInvitation[] @relation("InviterUser")
-  receivedInvitations   UserInvitation[] @relation("InviteeUser")
-  auditLogs            AuditLog[]
+  // Relations
+  organizationUsers   OrganizationUser[]
+  auditLogs          AuditLog[]
   
   @@index([email])
   @@index([username])
@@ -151,90 +133,12 @@ model User {
   @@map("users")
 }
 
-// Department Access Control
-model DepartmentUser {
-  id           String         @id @default(cuid())
-  departmentId String
-  userId       String
-  
-  // Department-Level Role
-  role         DepartmentRole @default(USER)
-  
-  // Granular Permissions
-  canView      Boolean        @default(true)   // View department data
-  canEdit      Boolean        @default(false)  // Edit department data
-  canApprove   Boolean        @default(false)  // Approve department actions
-  canManage    Boolean        @default(false)  // Manage department users
-  
-  // Assignment Details
-  assignedBy   String?        // Who assigned this access
-  assignedAt   DateTime       @default(now())
-  isActive     Boolean        @default(true)
-  
-  // Timestamps
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  
-  // Relations
-  department   Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assigner     User?          @relation("DepartmentAssigner", fields: [assignedBy], references: [id])
-  
-  @@unique([departmentId, userId])
-  @@index([isActive])
-  @@index([role])
-  @@map("department_users")
-}
-
-// User Invitations for joining organizations
-model UserInvitation {
-  id             String           @id @default(cuid())
-  organizationId String
-  inviterId      String
-  inviteeId      String?          // null if inviting by username/email
-  
-  // Invitation Methods
-  inviteeEmail   String?          // Can invite by email
-  inviteeUsername String?         // Can invite by username
-  
-  // Role Assignment
-  organizationRole OrganizationRole @default(MEMBER) // Organization-level role
-  departmentIds    String?         // JSON array of department IDs (optional)
-  departmentRole   DepartmentRole? // Role in departments (if assigned)
-  
-  // Invitation Details
-  message        String?          // Personal invitation message
-  
-  // Status
-  status         InvitationStatus @default(PENDING)
-  expiresAt      DateTime         // Invitation expiry
-  
-  // Response
-  respondedAt    DateTime?
-  response       String?          // Reason for decline
-  
-  // Timestamps
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  
-  // Relations
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  inviter        User             @relation("InviterUser", fields: [inviterId], references: [id])
-  invitee        User?            @relation("InviteeUser", fields: [inviteeId], references: [id])
-  
-  @@unique([organizationId, inviteeEmail])
-  @@unique([organizationId, inviteeUsername])
-  @@index([status])
-  @@index([expiresAt])
-  @@map("user_invitations")
-}
-
 // ==========================================
 // ORGANIZATION SCHEMA - V1.0
 // ==========================================
 
 // prisma/schemas/organization.prisma
-// ===== AUTHENTICATION ORGANIZATION SCHEMA - InvenStock V2.0 =====
+// ===== SIMPLIFIED ORGANIZATION SCHEMA WITH INVITE CODE ONLY =====
 
 model Organization {
   id          String             @id @default(cuid())
@@ -250,21 +154,22 @@ model Organization {
   status      OrganizationStatus @default(ACTIVE)
   timezone    String             @default("Asia/Bangkok")
   
-  // Feature Settings
-  allowDepartments    Boolean    @default(true)
+  // Invite Code System Only
+  inviteCode     String?    @unique // Organization-generated invite code
+  inviteEnabled  Boolean    @default(true) // Allow joining via invite code
   
   // Timestamps
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   
-  // Relations (Authentication Only)
+  // Relations
   users       OrganizationUser[]
-  departments Department[]       // Keep for department access control
-  invitations UserInvitation[]
+  departments Department[]
   auditLogs   AuditLog[]
   
   @@index([slug])
   @@index([status])
+  @@index([inviteCode])
   @@map("organizations")
 }
 
@@ -293,11 +198,11 @@ model OrganizationUser {
   @@map("organization_users")
 }
 
-// Hierarchical Departments (For Access Control)
+// Simplified Departments (Data Organization Only)
 model Department {
   id             String       @id @default(cuid())
   organizationId String
-  parentId       String?      // For hierarchical structure
+  parentId       String?      // For hierarchical structure (optional)
   
   // Department Details
   name           String
@@ -306,11 +211,10 @@ model Department {
   color          ColorTheme?
   icon           IconType?
   
-  // Access Control
+  // Simple Status
   isActive       Boolean      @default(true)
-  requiresAccess Boolean      @default(false)  // Requires explicit access permission
   
-  // Audit Fields
+  // Audit Fields (for tracking who created/modified)
   createdBy      String       // User who created
   updatedBy      String?      // User who last updated
   
@@ -322,12 +226,10 @@ model Department {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
-  departmentUsers DepartmentUser[]  // Users with access to this department
   
   @@unique([organizationId, code])
   @@index([parentId])
   @@index([isActive])
-  @@index([requiresAccess])
   @@map("departments")
 }
 

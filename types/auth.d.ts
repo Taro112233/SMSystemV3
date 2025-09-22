@@ -1,5 +1,5 @@
 // types/auth.d.ts - SIMPLIFIED 3-ROLE SYSTEM
-// InvenStock - Authentication Type Definitions
+// InvenStock - Authentication Type Definitions (Updated)
 
 export interface User {
   id: string;
@@ -24,18 +24,15 @@ export interface Organization {
   name: string;
   slug: string;
   description?: string;
-  logo?: string;
-  primaryColor?: string;
   email?: string;
   phone?: string;
-  website?: string;
-  address?: string;
   status: OrganizationStatus;
   timezone: string;
-  currency: string;
-  allowDepartments: boolean;
   createdAt: Date;
   updatedAt: Date;
+  
+  // ❌ REMOVED: allowDepartments, currency, logo, primaryColor, website, address
+  // เหลือเฉพาะ fields ที่มีใน simplified schema
 }
 
 export interface OrganizationUser {
@@ -86,17 +83,26 @@ export interface RegisterResponse {
   message?: string;
 }
 
-// Multi-tenant Context
+// Multi-tenant Context - SIMPLIFIED
 export interface AuthContextType {
   user: User | null;
   currentOrganization: Organization | null;
   organizations: OrganizationUser[];
+  userRole: OrganizationRole | null;    // ✅ Organization role only
   loading: boolean;
+  
+  // Actions
   login: (data: LoginRequest) => Promise<LoginResponse>;
   register: (data: RegisterRequest) => Promise<RegisterResponse>;
   logout: () => Promise<void>;
   switchOrganization: (organizationId: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  
+  // Permission helpers
+  hasPermission: (permission: string) => boolean;
+  hasMinimumRole: (minimumRole: OrganizationRole) => boolean;
+  
+  // ❌ REMOVED: currentDepartment, departmentPermissions
 }
 
 // JWT Payload - Simplified
@@ -120,7 +126,7 @@ export interface UserInvitation {
   inviteeId?: string;
   inviteeEmail?: string;      // Optional
   inviteeUsername?: string;   // Optional
-  role: OrganizationRole;     // Simple role assignment
+  role: OrganizationRole;     // ✅ Simple role assignment (organization level)
   message?: string;
   status: InvitationStatus;
   expiresAt: Date;
@@ -131,13 +137,41 @@ export interface UserInvitation {
   organization: Organization;
   inviter: User;
   invitee?: User;
+  
+  // ❌ REMOVED: departmentIds, departmentRole - ไม่มี department access control แล้ว
+}
+
+// Department Interface - Simplified (Data Organization Only)
+export interface Department {
+  id: string;
+  organizationId: string;
+  parentId?: string;          // For hierarchical structure
+  name: string;
+  code: string;               // Short code (e.g., "ICU", "ER", "PHARMACY")
+  description?: string;
+  color?: ColorTheme;
+  icon?: IconType;
+  isActive: boolean;
+  
+  // Audit fields
+  createdBy: string;
+  updatedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // Relations
+  organization: Organization;
+  parent?: Department;
+  children?: Department[];
+  
+  // ❌ REMOVED: requiresAccess, departmentUsers - no access control
 }
 
 // Simple 3-Role System
 export enum OrganizationRole {
-  MEMBER = 'MEMBER',  // ทำงานทั่วไป เบิก จ่าย แก้สต็อก
-  ADMIN = 'ADMIN',    // Member + CRUD สต็อกการ์ด + สร้าง category + เชิญผู้ใช้
-  OWNER = 'OWNER'     // Admin + CRUD department + จัดการองค์กร
+  MEMBER = 'MEMBER',  // ทำงานทั่วไป เบิก จ่าย แก้สต็อก ดูทุกแผนก
+  ADMIN = 'ADMIN',    // Member + CRUD สินค้า/แผนก + เชิญผู้ใช้
+  OWNER = 'OWNER'     // Admin + จัดการองค์กร + ตั้งค่าระบบ
 }
 
 // Enums ตรงกับ Prisma Schema

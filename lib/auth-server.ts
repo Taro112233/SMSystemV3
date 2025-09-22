@@ -4,10 +4,11 @@
 import { cookies } from 'next/headers';
 import { verifyToken, JWTUser } from './auth';
 import { prisma } from './prisma';
+import { ColorTheme, IconType } from '@prisma/client';
 
 type OrganizationRole = 'MEMBER' | 'ADMIN' | 'OWNER';
 
-// Define proper types for organization data (matching actual schema)
+// Define proper types for organization data (matching simplified schema)
 interface OrganizationData {
   id: string;
   name: string;
@@ -17,7 +18,6 @@ interface OrganizationData {
   description?: string | null;
   email?: string | null;
   phone?: string | null;
-  allowDepartments: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -136,7 +136,7 @@ export async function getServerUserWithOrganization(organizationId?: string): Pr
   }
 
   // If no organizationId provided, try to get from JWT
-  const targetOrgId = organizationId || user.organizationId; // Fixed: use const
+  const targetOrgId = organizationId || user.organizationId;
 
   if (!targetOrgId) {
     return { user, organization: null, role: null };
@@ -161,7 +161,6 @@ export async function getServerUserWithOrganization(organizationId?: string): Pr
             description: true,
             email: true,
             phone: true,
-            allowDepartments: true,
           },
         },
       },
@@ -174,7 +173,7 @@ export async function getServerUserWithOrganization(organizationId?: string): Pr
     return {
       user,
       organization: orgUser.organization as OrganizationData,
-      role: orgUser.roles as OrganizationRole, // Simple role from OrganizationUser
+      role: orgUser.roles as OrganizationRole,
     };
   } catch (error) {
     console.error('Failed to get user organization context:', error);
@@ -231,10 +230,11 @@ export async function hasPermission(
 
     // Simple role-based permission checking
     switch (permission) {
-      // MEMBER permissions
+      // MEMBER permissions - ทุกคนในองค์กรทำได้
       case 'stocks.read':
       case 'stocks.adjust':
       case 'products.read':
+      case 'departments.read':     // ✅ ทุกคนเห็นทุกแผนก
       case 'transfers.create':
       case 'transfers.receive':
         return ['MEMBER', 'ADMIN', 'OWNER'].includes(userRole);
@@ -244,14 +244,14 @@ export async function hasPermission(
       case 'products.update':
       case 'products.delete':
       case 'categories.create':
+      case 'departments.create':   // ✅ สร้างแผนกได้
+      case 'departments.update':   // ✅ แก้ไขแผนกได้
       case 'users.invite':
       case 'transfers.approve':
         return ['ADMIN', 'OWNER'].includes(userRole);
       
       // OWNER permissions
-      case 'departments.create':
-      case 'departments.update':
-      case 'departments.delete':
+      case 'departments.delete':   // ✅ ลบแผนกได้เฉพาะ OWNER
       case 'organization.settings':
       case 'users.manage':
         return userRole === 'OWNER';
@@ -339,7 +339,6 @@ export async function getServerOrganization(organizationId: string): Promise<Org
         timezone: true,
         email: true,
         phone: true,
-        allowDepartments: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -395,7 +394,6 @@ export async function getUserOrganizations(userId: string): Promise<Organization
             status: true,
             email: true,
             phone: true,
-            allowDepartments: true,
           },
         },
       },
@@ -458,5 +456,190 @@ export async function isOrganizationAdminOrOwner(
   } catch (error) {
     console.error('Failed to check admin/owner status:', error);
     return false;
+  }
+}
+
+// ===== FIXED DEPARTMENT FUNCTIONS =====
+
+/**
+ * Get all departments in organization (no access control)
+ * ✅ All users can see all departments
+ */
+export async function getDepartments(organizationId: string) {
+  try {
+    return await prisma.department.findMany({
+      where: { 
+        organizationId,
+        isActive: true
+      },
+      orderBy: { name: 'asc' },
+      include: {
+        parent: true,
+        children: true,
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Failed to get departments:', error);
+    return [];
+  }
+}
+
+/**
+ * Get single department (no access control)
+ */
+export async function getDepartment(organizationId: string, departmentId: string) {
+  try {
+    return await prisma.department.findFirst({
+      where: {
+        id: departmentId,
+        organizationId,
+        isActive: true
+      },
+      include: {
+        parent: true,
+        children: true,
+        organization: true
+      }
+    });
+  } catch (error) {
+    console.error('Failed to get department:', error);
+    return null;
+  }
+}
+
+/**
+ * Create department (requires ADMIN+ role) - FIXED TYPES
+ */
+export async function createDepartment(
+  organizationId: string, 
+  userId: string, 
+  data: {
+    name: string;
+    code: string;
+    description?: string;
+    color?: ColorTheme;      // ✅ Fixed: proper enum type
+    icon?: IconType;         // ✅ Fixed: proper enum type
+    parentId?: string;
+  }
+) {
+  // Check permission
+  await requirePermission('departments.create', organizationId, userId);
+  
+  try {
+    return await prisma.department.create({
+      data: {
+        organizationId,
+        createdBy: userId,
+        isActive: true,
+        name: data.name,
+        code: data.code,
+        description: data.description || null,
+        color: data.color || null,          // ✅ Fixed: explicit null handling
+        icon: data.icon || null,            // ✅ Fixed: explicit null handling
+        parentId: data.parentId || null,    // ✅ Fixed: explicit null handling
+      },
+      include: {
+        organization: true,
+        parent: true
+      }
+    });
+  } catch (error) {
+    console.error('Failed to create department:', error);
+    throw new Error('Failed to create department');
+  }
+}
+
+/**
+ * Update department (requires ADMIN+ role) - FIXED TYPES
+ */
+export async function updateDepartment(
+  organizationId: string,
+  userId: string,
+  departmentId: string,
+  data: {
+    name?: string;
+    code?: string;
+    description?: string;
+    color?: ColorTheme;        // ✅ Fixed: proper enum type  
+    icon?: IconType;           // ✅ Fixed: proper enum type
+    parentId?: string | null;  // ✅ Fixed: allow explicit null
+    isActive?: boolean;
+  }
+) {
+  // Check permission
+  await requirePermission('departments.update', organizationId, userId);
+  
+  try {
+    // ✅ Fixed: Build update data with proper types
+    const updateData: any = {
+      updatedBy: userId,
+      updatedAt: new Date()
+    };
+
+    // Only include fields that are provided
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.code !== undefined) updateData.code = data.code;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.color !== undefined) updateData.color = data.color;
+    if (data.icon !== undefined) updateData.icon = data.icon;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    
+    // ✅ Fixed: Handle parentId properly for hierarchical updates
+    if (data.parentId !== undefined) {
+      updateData.parentId = data.parentId;
+    }
+
+    return await prisma.department.update({
+      where: {
+        id: departmentId,
+        organizationId
+      },
+      data: updateData,
+      include: {
+        organization: true,
+        parent: true,
+        children: true
+      }
+    });
+  } catch (error) {
+    console.error('Failed to update department:', error);
+    throw new Error('Failed to update department');
+  }
+}
+
+/**
+ * Delete department (requires OWNER role)
+ */
+export async function deleteDepartment(
+  organizationId: string,
+  userId: string,
+  departmentId: string
+) {
+  // Check permission - only OWNER can delete departments
+  await requirePermission('departments.delete', organizationId, userId);
+  
+  try {
+    // Soft delete - set isActive to false
+    return await prisma.department.update({
+      where: {
+        id: departmentId,
+        organizationId
+      },
+      data: {
+        isActive: false,
+        updatedBy: userId,
+        updatedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Failed to delete department:', error);
+    throw new Error('Failed to delete department');
   }
 }

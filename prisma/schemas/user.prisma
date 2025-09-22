@@ -1,5 +1,5 @@
 // prisma/schemas/user.prisma
-// ===== USER MANAGEMENT SCHEMA - Authentication Only =====
+// ===== USER MANAGEMENT SCHEMA - Clean & Simple =====
 
 model User {
   id          String     @id @default(cuid())
@@ -24,95 +24,13 @@ model User {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   
-  // Relations (Authentication Only)
-  organizationUsers     OrganizationUser[]
-  departmentUsers       DepartmentUser[]                        // Department access
-  departmentAssignments DepartmentUser[] @relation("DepartmentAssigner") // Assignments made by this user
-  sentInvitations       UserInvitation[] @relation("InviterUser")
-  receivedInvitations   UserInvitation[] @relation("InviteeUser")
-  auditLogs            AuditLog[]
+  // Relations
+  organizationUsers   OrganizationUser[]
+  auditLogs          AuditLog[]
   
   @@index([email])
   @@index([username])
   @@index([status])
   @@index([isActive])
   @@map("users")
-}
-
-// Department Access Control
-model DepartmentUser {
-  id           String         @id @default(cuid())
-  departmentId String
-  userId       String
-  
-  // Department-Level Role
-  role         DepartmentRole @default(USER)
-  
-  // Granular Permissions
-  canView      Boolean        @default(true)   // View department data
-  canEdit      Boolean        @default(false)  // Edit department data
-  canApprove   Boolean        @default(false)  // Approve department actions
-  canManage    Boolean        @default(false)  // Manage department users
-  
-  // Assignment Details
-  assignedBy   String?        // Who assigned this access
-  assignedAt   DateTime       @default(now())
-  isActive     Boolean        @default(true)
-  
-  // Timestamps
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  
-  // Relations
-  department   Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assigner     User?          @relation("DepartmentAssigner", fields: [assignedBy], references: [id])
-  
-  @@unique([departmentId, userId])
-  @@index([isActive])
-  @@index([role])
-  @@map("department_users")
-}
-
-// User Invitations for joining organizations
-model UserInvitation {
-  id             String           @id @default(cuid())
-  organizationId String
-  inviterId      String
-  inviteeId      String?          // null if inviting by username/email
-  
-  // Invitation Methods
-  inviteeEmail   String?          // Can invite by email
-  inviteeUsername String?         // Can invite by username
-  
-  // Role Assignment
-  organizationRole OrganizationRole @default(MEMBER) // Organization-level role
-  departmentIds    String?         // JSON array of department IDs (optional)
-  departmentRole   DepartmentRole? // Role in departments (if assigned)
-  
-  // Invitation Details
-  message        String?          // Personal invitation message
-  
-  // Status
-  status         InvitationStatus @default(PENDING)
-  expiresAt      DateTime         // Invitation expiry
-  
-  // Response
-  respondedAt    DateTime?
-  response       String?          // Reason for decline
-  
-  // Timestamps
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  
-  // Relations
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  inviter        User             @relation("InviterUser", fields: [inviterId], references: [id])
-  invitee        User?            @relation("InviteeUser", fields: [inviteeId], references: [id])
-  
-  @@unique([organizationId, inviteeEmail])
-  @@unique([organizationId, inviteeUsername])
-  @@index([status])
-  @@index([expiresAt])
-  @@map("user_invitations")
 }

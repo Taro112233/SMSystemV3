@@ -1,5 +1,5 @@
 // prisma/schemas/organization.prisma
-// ===== AUTHENTICATION ORGANIZATION SCHEMA - InvenStock V2.0 =====
+// ===== SIMPLIFIED ORGANIZATION SCHEMA WITH INVITE CODE ONLY =====
 
 model Organization {
   id          String             @id @default(cuid())
@@ -15,21 +15,22 @@ model Organization {
   status      OrganizationStatus @default(ACTIVE)
   timezone    String             @default("Asia/Bangkok")
   
-  // Feature Settings
-  allowDepartments    Boolean    @default(true)
+  // Invite Code System Only
+  inviteCode     String?    @unique // Organization-generated invite code
+  inviteEnabled  Boolean    @default(true) // Allow joining via invite code
   
   // Timestamps
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   
-  // Relations (Authentication Only)
+  // Relations
   users       OrganizationUser[]
-  departments Department[]       // Keep for department access control
-  invitations UserInvitation[]
+  departments Department[]
   auditLogs   AuditLog[]
   
   @@index([slug])
   @@index([status])
+  @@index([inviteCode])
   @@map("organizations")
 }
 
@@ -58,11 +59,11 @@ model OrganizationUser {
   @@map("organization_users")
 }
 
-// Hierarchical Departments (For Access Control)
+// Simplified Departments (Data Organization Only)
 model Department {
   id             String       @id @default(cuid())
   organizationId String
-  parentId       String?      // For hierarchical structure
+  parentId       String?      // For hierarchical structure (optional)
   
   // Department Details
   name           String
@@ -71,11 +72,10 @@ model Department {
   color          ColorTheme?
   icon           IconType?
   
-  // Access Control
+  // Simple Status
   isActive       Boolean      @default(true)
-  requiresAccess Boolean      @default(false)  // Requires explicit access permission
   
-  // Audit Fields
+  // Audit Fields (for tracking who created/modified)
   createdBy      String       // User who created
   updatedBy      String?      // User who last updated
   
@@ -87,11 +87,9 @@ model Department {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
-  departmentUsers DepartmentUser[]  // Users with access to this department
   
   @@unique([organizationId, code])
   @@index([parentId])
   @@index([isActive])
-  @@index([requiresAccess])
   @@map("departments")
 }
