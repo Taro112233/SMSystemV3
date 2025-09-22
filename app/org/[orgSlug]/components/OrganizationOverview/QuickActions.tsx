@@ -28,7 +28,6 @@ export const QuickActions = () => {
       iconColor: 'text-purple-500',
       actions: [
         { icon: Building2, label: 'ตั้งค่าองค์กร', onClick: () => console.log('Organization settings') },
-        { icon: Settings, label: 'ตั้งค่าหน่วยงาน', onClick: () => console.log('Department settings') },
         { icon: Users, label: 'จัดการสมาชิก', onClick: () => console.log('Manage members') }
       ]
     },
