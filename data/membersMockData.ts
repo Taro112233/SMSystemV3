@@ -1,7 +1,7 @@
 // app/org/[orgSlug]/components/MembersManagement/mockData.ts
 // MembersManagement/mockData - Mock data for members management
 
-import { Member, PendingInvitation } from './index';
+import { Member, PendingInvitation } from '../components/MembersManagement/index';
 
 export const mockMembers: Member[] = [
   {

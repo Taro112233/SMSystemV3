@@ -8,7 +8,7 @@ import { InviteMemberModal } from './InviteMemberModal';
 import { MembersHeader } from './MembersHeader';
 import { MembersStats } from './MembersStats';
 import { MembersTable } from './MembersTable';
-import { mockMembers, mockInvitations } from './mockData';
+import { mockMembers, mockInvitations } from '../../data/membersMockData';
 
 export interface Member {
   id: string;

@@ -6,10 +6,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/app/utils/auth';
 import { useRouter } from 'next/navigation';
-import { organization, departments, recentActivities } from '../data/mockData';
-import { DashboardSidebar } from '../components/DashboardSidebar';
-import { DashboardHeader } from '../components/DashboardHeader';
-import { MembersManagement } from '../components/MembersManagement';
+import { organization, departments, recentActivities } from '../../../../data/orgMockData';
+import { DashboardSidebar } from '../../../../components/OrganizationLayout';
+import { DashboardHeader } from '../../../../components/OrganizationLayout/OrganizationHeader';
+import { MembersManagement } from '../../../../components/MembersManagement';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, AlertTriangle, Users } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';

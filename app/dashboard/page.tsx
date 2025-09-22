@@ -8,9 +8,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/app/utils/auth';
-import { DashboardHeader } from './components/DashboardHeader';
-import { AddOrganizationCard } from './components/AddOrganizationCard';
-import { OrganizationGrid } from './components/OrganizationGrid';
+import { DashboardHeader } from '../../components/OrganizationList/DashboardHeader';
+import { AddOrganizationCard } from '../../components/OrganizationList/AddOrganizationCard';
+import { OrganizationGrid } from '../../components/OrganizationList/OrganizationGrid';
 
 interface Organization {
   id: string;

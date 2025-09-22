@@ -3,11 +3,11 @@
 "use client";
 
 import React, { useState } from 'react';
-import { organization, departments, recentActivities } from './data/mockData';
-import { DashboardSidebar } from './components/DashboardSidebar';
-import { DashboardHeader } from './components/DashboardHeader';
-import { OrganizationOverview } from './components/OrganizationOverview';
-import { DepartmentView } from './components/DepartmentView';
+import { organization, departments, recentActivities } from '../../../data/orgMockData';
+import { DashboardSidebar } from '../../../components/OrganizationLayout';
+import { DashboardHeader } from '../../../components/OrganizationLayout/OrganizationHeader';
+import { OrganizationOverview } from '../../../components/OrganizationDashboard';
+import { DepartmentView } from '../../../components/DepartmentDashboard';
 
 const OrganizationDashboard = () => {
   const [selectedDepartment, setSelectedDepartment] = useState(null);
