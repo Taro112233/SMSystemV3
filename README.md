@@ -1,9 +1,8 @@
 Directory structure:
-└── taro112233-smsystemv3/
+└── taro112233-smsystemv2/
     ├── README.md
     ├── components.json
     ├── eslint.config.mjs
-    ├── INSTRUCTIONS.md
     ├── middleware.ts
     ├── next.config.ts
     ├── package.json
@@ -19,63 +18,19 @@ Directory structure:
     │   ├── api/
     │   │   ├── arcjet/
     │   │   │   └── route.ts
-    │   │   ├── auth/
-    │   │   │   ├── login/
-    │   │   │   │   └── route.ts
-    │   │   │   ├── logout/
-    │   │   │   │   └── route.ts
-    │   │   │   ├── me/
-    │   │   │   │   └── route.ts
-    │   │   │   └── register/
-    │   │   │       └── route.ts
-    │   │   ├── dashboard/
-    │   │   │   └── organizations/
-    │   │   │       └── route.ts
-    │   │   ├── organizations/
-    │   │   │   ├── route.ts
-    │   │   │   ├── join-by-code/
-    │   │   │   │   └── route.ts
-    │   │   │   └── join-request/
-    │   │   │       └── route.ts
-    │   │   └── security/
-    │   │       └── monitoring/
+    │   │   └── auth/
+    │   │       ├── login/
+    │   │       │   └── route.ts
+    │   │       ├── logout/
+    │   │       │   └── route.ts
+    │   │       ├── me/
+    │   │       │   └── route.ts
+    │   │       └── register/
     │   │           └── route.ts
     │   ├── dashboard/
-    │   │   ├── page.tsx
-    │   │   └── components/
-    │   │       ├── AddOrganizationCard.tsx
-    │   │       ├── CreateOrganizationModal.tsx
-    │   │       ├── DashboardHeader.tsx
-    │   │       ├── JoinOrganizationModal.tsx
-    │   │       ├── OrganizationCard.tsx
-    │   │       └── OrganizationGrid.tsx
+    │   │   └── page.tsx
     │   ├── login/
     │   │   └── page.tsx
-    │   ├── org/
-    │   │   └── [orgSlug]/
-    │   │       ├── page.tsx
-    │   │       ├── components/
-    │   │       │   ├── DashboardHeader.tsx
-    │   │       │   ├── DashboardSidebar/
-    │   │       │   │   ├── DepartmentList.tsx
-    │   │       │   │   ├── index.tsx
-    │   │       │   │   ├── SidebarFooter.tsx
-    │   │       │   │   ├── SidebarHeader.tsx
-    │   │       │   │   └── SidebarNavigation.tsx
-    │   │       │   ├── DepartmentView/
-    │   │       │   │   ├── DepartmentActions.tsx
-    │   │       │   │   ├── DepartmentInfo.tsx
-    │   │       │   │   ├── DepartmentStats.tsx
-    │   │       │   │   └── index.tsx
-    │   │       │   └── OrganizationOverview/
-    │   │       │       ├── DepartmentOverview.tsx
-    │   │       │       ├── index.tsx
-    │   │       │       ├── OrganizationPerformance.tsx
-    │   │       │       ├── OrganizationStats.tsx
-    │   │       │       ├── QuickActions.tsx
-    │   │       │       └── RecentActivity.tsx
-    │   │       └── data/
-    │   │           └── mockData.ts
     │   ├── register/
     │   │   └── page.tsx
     │   └── utils/
@@ -111,6 +66,7 @@ Directory structure:
     │       ├── navigation-menu.tsx
     │       ├── pagination.tsx
     │       ├── popover.tsx
+    │       ├── PrintButton.tsx
     │       ├── progress.tsx
     │       ├── radio-group.tsx
     │       ├── resizable.tsx
@@ -140,7 +96,6 @@ Directory structure:
     │   ├── auth.ts
     │   ├── config.ts
     │   ├── prisma.ts
-    │   ├── security-logger.ts
     │   └── utils.ts
     ├── prisma/
     │   ├── schema.prisma
@@ -148,7 +103,11 @@ Directory structure:
     │   ├── schemas/
     │   │   ├── audit.prisma
     │   │   ├── base.prisma
+    │   │   ├── notification.prisma
     │   │   ├── organization.prisma
+    │   │   ├── product.prisma
+    │   │   ├── stock.prisma
+    │   │   ├── transfer.prisma
     │   │   └── user.prisma
     │   └── seeds/
     │       ├── stock-transactions.seed.ts

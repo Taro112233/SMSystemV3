@@ -1,4 +1,4 @@
-// app/api/organizations/route.ts
+// app/api/organizations/route.ts - FIXED FOR NEW SCHEMA
 // Organizations API - Create and list organizations
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,7 +22,7 @@ const aj = arcjet({
   ],
 });
 
-// ===== VALIDATION SCHEMAS =====
+// ===== VALIDATION SCHEMAS - UPDATED FOR NEW SCHEMA =====
 const CreateOrganizationSchema = z.object({
   name: z.string().min(2).max(100).trim(),
   slug: z.string().min(3).max(50).regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'),
@@ -30,7 +30,7 @@ const CreateOrganizationSchema = z.object({
   email: z.string().email().max(255).optional().or(z.literal('')),
   phone: z.string().max(20).optional().or(z.literal('')),
   timezone: z.string().max(50).default('Asia/Bangkok'),
-  allowDepartments: z.boolean().default(true),
+  // ❌ REMOVED: allowDepartments (doesn't exist in new schema)
 });
 
 interface ValidationError {
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // Fetch user's organizations
+    // ✅ FIXED: Updated organization select to match new schema
     const organizationUsers = await prisma.organizationUser.findMany({
       where: {
         userId: user.userId,
@@ -70,9 +70,11 @@ export async function GET(request: NextRequest) {
             phone: true,
             status: true,
             timezone: true,
-            allowDepartments: true,
+            inviteCode: true,      // ✅ new field
+            inviteEnabled: true,   // ✅ new field
             createdAt: true,
             updatedAt: true,
+            // ❌ REMOVED: allowDepartments (doesn't exist)
           }
         }
       },
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { name, slug, description, email, phone, timezone, allowDepartments } = validation.data;
+    const { name, slug, description, email, phone, timezone } = validation.data;
 
     // Check if slug is already taken
     const existingOrg = await prisma.organization.findUnique({
@@ -156,7 +158,7 @@ export async function POST(request: NextRequest) {
 
     // Create organization with transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create the organization
+      // ✅ FIXED: Create organization with new schema fields
       const organization = await tx.organization.create({
         data: {
           name: name.trim(),
@@ -166,7 +168,10 @@ export async function POST(request: NextRequest) {
           phone: phone?.trim() || null,
           status: 'ACTIVE',
           timezone,
-          allowDepartments,
+          // ✅ NEW: Set default invite settings
+          inviteEnabled: true,
+          // inviteCode will be generated later if needed
+          // ❌ REMOVED: allowDepartments (doesn't exist in new schema)
         },
         select: {
           id: true,
@@ -177,7 +182,8 @@ export async function POST(request: NextRequest) {
           phone: true,
           status: true,
           timezone: true,
-          allowDepartments: true,
+          inviteCode: true,
+          inviteEnabled: true,
           createdAt: true,
           updatedAt: true,
         }

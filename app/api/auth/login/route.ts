@@ -1,4 +1,4 @@
-// app/api/auth/login/route.ts - FIXED TYPESCRIPT ERRORS
+// app/api/auth/login/route.ts - FIXED SCHEMA FIELDS
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, createToken, getCookieOptions, userToPayload } from '@/lib/auth';
@@ -31,7 +31,6 @@ const LoginSchema = z.object({
   password: z.string().min(6).max(100),
 });
 
-// ✅ FIXED: Define proper interface for validation errors
 interface ValidationError {
   field: string;
   message: string;
@@ -79,7 +78,6 @@ export async function POST(request: NextRequest) {
     const validation = LoginSchema.safeParse(body);
     
     if (!validation.success) {
-      // ✅ FIXED: Properly type the validation errors
       const details: ValidationError[] = validation.error.issues.map((err) => ({
         field: err.path.join('.'),
         message: err.message
@@ -124,13 +122,25 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Login successful: ${username} from IP: ${clientIp}`);
 
+    // ✅ FIXED: Updated organization select to match new schema
     const userOrganizations = await prisma.organizationUser.findMany({
       where: { userId: user.id, isActive: true },
       include: {
         organization: {
           select: {
-            id: true, name: true, slug: true, description: true,
-            status: true, timezone: true, email: true, phone: true, allowDepartments: true
+            id: true, 
+            name: true, 
+            slug: true, 
+            description: true,
+            status: true, 
+            timezone: true, 
+            email: true,           // ✅ exists in new schema
+            phone: true,           // ✅ exists in new schema
+            inviteCode: true,      // ✅ new field
+            inviteEnabled: true,   // ✅ new field
+            createdAt: true,
+            updatedAt: true
+            // ❌ REMOVED: allowDepartments (doesn't exist in new schema)
           }
         }
       },
@@ -159,16 +169,25 @@ export async function POST(request: NextRequest) {
     });
 
     const userResponse = {
-      id: user.id, username: user.username, email: user.email,
-      firstName: user.firstName, lastName: user.lastName,
+      id: user.id, 
+      username: user.username, 
+      email: user.email,
+      firstName: user.firstName, 
+      lastName: user.lastName,
       fullName: `${user.firstName} ${user.lastName}`,
-      status: user.status, isActive: user.isActive,
-      emailVerified: user.emailVerified, createdAt: user.createdAt, updatedAt: user.updatedAt,
+      status: user.status, 
+      isActive: user.isActive,
+      emailVerified: user.emailVerified, 
+      createdAt: user.createdAt, 
+      updatedAt: user.updatedAt,
     };
 
     const response = NextResponse.json({
-      success: true, message: 'Login successful',
-      user: userResponse, token: token, organizations: userOrganizations
+      success: true, 
+      message: 'Login successful',
+      user: userResponse, 
+      token: token, 
+      organizations: userOrganizations
     });
 
     response.cookies.set('auth-token', token, getCookieOptions());

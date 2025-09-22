@@ -1,4 +1,4 @@
-// app/api/dashboard/organizations/route.ts
+// app/api/dashboard/organizations/route.ts - FIXED FOR NEW SCHEMA
 // Dashboard Organizations API - Get user's organizations with stats
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // Fetch user's organizations with detailed information
+    // ✅ FIXED: Updated organization select to match new schema
     const organizationUsers = await prisma.organizationUser.findMany({
       where: {
         userId: user.userId,
@@ -31,10 +31,11 @@ export async function GET(request: NextRequest) {
             phone: true,
             status: true,
             timezone: true,
-            allowDepartments: true,
+            inviteCode: true,      // ✅ new field
+            inviteEnabled: true,   // ✅ new field
             createdAt: true,
             updatedAt: true,
-            // Count departments
+            // Count departments (if departments exist in new schema)
             departments: {
               select: { id: true },
               where: { isActive: true }
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
               select: { id: true },
               where: { isActive: true }
             }
+            // ❌ REMOVED: allowDepartments (doesn't exist in new schema)
           }
         }
       },
@@ -100,7 +102,13 @@ export async function GET(request: NextRequest) {
           lastActivity: org.updatedAt,
           stats,
           notifications: 0, // TODO: Count notifications
-          isActive: org.status === 'ACTIVE'
+          isActive: org.status === 'ACTIVE',
+          
+          // ✅ NEW: Include invite code info (for admins/owners)
+          inviteInfo: (orgUser.roles === 'ADMIN' || orgUser.roles === 'OWNER') ? {
+            inviteCode: org.inviteCode,
+            inviteEnabled: org.inviteEnabled
+          } : null
         };
       })
     );
