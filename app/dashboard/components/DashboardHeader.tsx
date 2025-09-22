@@ -38,9 +38,16 @@ export const DashboardHeader = ({
     if (onLogout) {
       try {
         await onLogout();
+        // Navigate to login page after successful logout
+        window.location.href = '/login';
       } catch (error) {
         console.error('Logout error:', error);
+        // Still redirect to login even if logout fails (for better UX)
+        window.location.href = '/login';
       }
+    } else {
+      // If no onLogout function provided, just redirect
+      window.location.href = '/login';
     }
   };
 
