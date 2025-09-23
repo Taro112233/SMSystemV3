@@ -1,56 +1,37 @@
 // components/MembersManagement/index.tsx
 // MembersManagement - Main members management component
 
-
-import React, { useState } from 'react';
-import { EditMemberModal } from './EditMemberModal';
-import { InviteMemberModal } from './InviteMemberModal';
-import { MembersHeader } from './MembersHeader';
+import React, { useState, useMemo } from 'react';
 import { MembersStats } from './MembersStats';
+import { MembersHeader } from './MembersHeader';
 import { MembersTable } from './MembersTable';
-import { mockMembers, mockInvitations } from '../../data/membersMockData';
+import { InviteMemberModal } from './InviteMemberModal';
+import { EditMemberModal } from './EditMemberModal';
+import { organizationMembers, memberStats } from '@/data/membersMockData';
+import { toast } from 'sonner';
 
-export interface Member {
+// Define Member interface here to match mock data structure
+interface Member {
   id: string;
-  userId: string;
-  organizationId: string;
   firstName: string;
   lastName: string;
-  email: string;
+  fullName: string;
   username: string;
+  email: string;
   phone?: string;
-  role: 'MEMBER' | 'ADMIN' | 'OWNER';
-  isOwner: boolean;
+  status: string;
+  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  joinedAt: Date;
+  lastActiveAt?: Date;
+  departmentAccess: string[];
+  invitedBy?: string | null;
   isActive: boolean;
-  joinedAt: string;
-  lastActiveAt?: string;
-  status: 'ACTIVE' | 'PENDING' | 'SUSPENDED';
+  emailVerified: boolean;
+  isOwner: boolean;
+  avatar?: string | null;
+  lastLogin?: Date | null;
   permissions: string[];
-  avatar?: string;
-  department?: string;
-}
-
-export interface PendingInvitation {
-  id: string;
-  organizationId: string;
-  inviterId: string;
-  inviterName: string;
-  inviteeEmail: string;
-  inviteeUsername?: string;
-  role: 'MEMBER' | 'ADMIN' | 'OWNER';
-  message?: string;
-  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
-  expiresAt: string;
-  createdAt: string;
-}
-
-export interface MembersStats {
-  totalMembers: number;
-  activeMembers: number;
-  pendingInvitations: number;
-  admins: number;
-  owners: number;
-  recentJoins: number;
+  createdBy: string;
 }
 
 interface MembersManagementProps {
@@ -65,152 +46,154 @@ interface MembersManagementProps {
   };
 }
 
-export const MembersManagement = ({ organization, currentUser }: MembersManagementProps) => {
-  const [members, setMembers] = useState<Member[]>(mockMembers);
-  const [invitations, setInvitations] = useState<PendingInvitation[]>(mockInvitations);
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+export const MembersManagement = ({
+  organization,
+  currentUser
+}: MembersManagementProps) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [members, setMembers] = useState<Member[]>(organizationMembers as Member[]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'ALL' | 'MEMBER' | 'ADMIN' | 'OWNER'>('ALL');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PENDING' | 'SUSPENDED'>('ALL');
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
-  // Calculate stats
-  const stats: MembersStats = {
-    totalMembers: members.length,
-    activeMembers: members.filter(m => m.status === 'ACTIVE' && m.isActive).length,
-    pendingInvitations: invitations.filter(i => i.status === 'PENDING').length,
-    admins: members.filter(m => m.role === 'ADMIN').length,
-    owners: members.filter(m => m.role === 'OWNER').length,
-    recentJoins: members.filter(m => {
-      const joinDate = new Date(m.joinedAt);
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return joinDate > thirtyDaysAgo;
-    }).length,
-  };
-
-  // Filter members based on search and filters
-  const filteredMembers = members.filter(member => {
-    const matchesSearch = 
-      member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.username.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesRole = roleFilter === 'ALL' || member.role === roleFilter;
-    const matchesStatus = statusFilter === 'ALL' || member.status === statusFilter;
-
-    return matchesSearch && matchesRole && matchesStatus;
-  });
-
-  const handleInviteMember = (memberData: any) => {
-    const newInvitation: PendingInvitation = {
-      id: `inv-${Date.now()}`,
-      organizationId: organization.id,
-      inviterId: currentUser.id,
-      inviterName: 'Current User',
-      inviteeEmail: memberData.email,
-      inviteeUsername: memberData.username,
-      role: memberData.role,
-      message: memberData.message,
-      status: 'PENDING',
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      createdAt: new Date().toISOString(),
-    };
-    setInvitations([...invitations, newInvitation]);
-    setShowInviteModal(false);
-  };
-
-  const handleEditMember = (memberData: Partial<Member>) => {
-    if (!selectedMember) return;
+  // Filter members based on search term
+  const filteredMembers = useMemo(() => {
+    if (!searchTerm) return members;
     
-    const updatedMembers = members.map(member =>
-      member.id === selectedMember.id
-        ? { ...member, ...memberData }
-        : member
+    const searchLower = searchTerm.toLowerCase();
+    return members.filter(member =>
+      member.fullName.toLowerCase().includes(searchLower) ||
+      member.username.toLowerCase().includes(searchLower) ||
+      member.email.toLowerCase().includes(searchLower) ||
+      member.firstName.toLowerCase().includes(searchLower) ||
+      member.lastName.toLowerCase().includes(searchLower)
     );
-    setMembers(updatedMembers);
-    setSelectedMember(null);
-    setShowEditModal(false);
+  }, [members, searchTerm]);
+
+  // Recalculate stats based on current members
+  const currentStats = useMemo(() => ({
+    total: members.length,
+    active: members.filter(m => m.status === 'ACTIVE').length,
+    pending: members.filter(m => m.status === 'PENDING').length,
+    suspended: members.filter(m => m.status === 'SUSPENDED').length,
+    owners: members.filter(m => m.role === 'OWNER').length,
+    admins: members.filter(m => m.role === 'ADMIN').length,
+    members: members.filter(m => m.role === 'MEMBER').length,
+  }), [members]);
+
+  const handleInviteMember = (inviteData: any) => {
+    console.log('Invite member:', inviteData);
+    // In real app, this would call an API
+    toast.success('ส่งคำเชิญสมาชิกแล้ว');
   };
 
-  const handleRemoveMember = (memberId: string) => {
-    const updatedMembers = members.map(member =>
-      member.id === memberId
-        ? { ...member, isActive: false, status: 'SUSPENDED' as const }
-        : member
-    );
-    setMembers(updatedMembers);
-  };
-
-  const handleResendInvitation = (invitationId: string) => {
-    const updatedInvitations = invitations.map(invitation =>
-      invitation.id === invitationId
-        ? { ...invitation, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() }
-        : invitation
-    );
-    setInvitations(updatedInvitations);
-  };
-
-  const openEditModal = (member: Member) => {
+  const handleEditMember = (member: Member) => {
     setSelectedMember(member);
     setShowEditModal(true);
   };
 
-  // Check if current user can manage members
+  const handleSaveMember = (memberId: string, updatedData: any) => {
+    setMembers(prev => prev.map(member => 
+      member.id === memberId 
+        ? { ...member, ...updatedData, fullName: `${updatedData.firstName} ${updatedData.lastName}` }
+        : member
+    ));
+  };
+
+  const handleDeleteMember = (memberId: string) => {
+    const member = members.find(m => m.id === memberId);
+    if (member) {
+      setMembers(prev => prev.filter(m => m.id !== memberId));
+      toast.success(`ลบ ${member.fullName} ออกจากองค์กรแล้ว`);
+    }
+  };
+
+  const handleChangeRole = (memberId: string, newRole: string) => {
+    const member = members.find(m => m.id === memberId);
+    if (member) {
+      setMembers(prev => prev.map(m => 
+        m.id === memberId ? { ...m, role: newRole as 'OWNER' | 'ADMIN' | 'MEMBER' } : m
+      ));
+      toast.success(`เปลี่ยนบทบาทของ ${member.fullName} แล้ว`);
+    }
+  };
+
+  const handleToggleStatus = (memberId: string) => {
+    const member = members.find(m => m.id === memberId);
+    if (member) {
+      const newStatus = member.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+      setMembers(prev => prev.map(m => 
+        m.id === memberId ? { ...m, status: newStatus, isActive: newStatus === 'ACTIVE' } : m
+      ));
+      toast.success(`${newStatus === 'ACTIVE' ? 'เปิดใช้งาน' : 'ระงับการใช้งาน'}${member.fullName} แล้ว`);
+    }
+  };
+
+  const handleExportMembers = () => {
+    toast.info('กำลังส่งออกข้อมูลสมาชิก...');
+    // In real app, this would generate and download a file
+    setTimeout(() => {
+      toast.success('ส่งออกข้อมูลสมาชิกสำเร็จ');
+    }, 1000);
+  };
+
+  const handleShowFilters = () => {
+    toast.info('ตัวกรองยังไม่พร้อมใช้งาน');
+  };
+
+  // Check permissions
+  const canInviteMembers = currentUser.role === 'ADMIN' || currentUser.role === 'OWNER';
   const canManageMembers = currentUser.role === 'ADMIN' || currentUser.role === 'OWNER';
-  const canInviteMembers = canManageMembers;
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <MembersStats stats={stats} />
-      
+      {/* Statistics */}
+      <MembersStats stats={currentStats} />
+
       {/* Header with search and actions */}
       <MembersHeader
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        roleFilter={roleFilter}
-        onRoleFilterChange={setRoleFilter}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
         onInviteMember={() => setShowInviteModal(true)}
-        canInviteMembers={canInviteMembers}
-        organization={organization}
+        onExportMembers={handleExportMembers}
+        onShowFilters={handleShowFilters}
       />
 
       {/* Members Table */}
       <MembersTable
         members={filteredMembers}
-        invitations={invitations}
-        currentUser={currentUser}
-        onEditMember={openEditModal}
-        onRemoveMember={handleRemoveMember}
-        onResendInvitation={handleResendInvitation}
-        canManageMembers={canManageMembers}
+        currentUserId={currentUser.id}
+        onEditMember={handleEditMember}
+        onDeleteMember={handleDeleteMember}
+        onChangeRole={handleChangeRole}
+        onToggleStatus={handleToggleStatus}
       />
 
+      {/* No results message */}
+      {filteredMembers.length === 0 && searchTerm && (
+        <div className="text-center py-8 text-gray-500">
+          <p>ไม่พบสมาชิกที่ค้นหา "{searchTerm}"</p>
+        </div>
+      )}
+
       {/* Modals */}
-      {showInviteModal && (
+      {canInviteMembers && (
         <InviteMemberModal
           isOpen={showInviteModal}
           onClose={() => setShowInviteModal(false)}
           onInvite={handleInviteMember}
-          organization={organization}
         />
       )}
 
-      {showEditModal && selectedMember && (
+      {canManageMembers && (
         <EditMemberModal
           isOpen={showEditModal}
-          member={selectedMember}
           onClose={() => {
             setShowEditModal(false);
             setSelectedMember(null);
           }}
-          onSave={handleEditMember}
-          currentUserRole={currentUser.role}
+          member={selectedMember}
+          onSave={handleSaveMember}
         />
       )}
     </div>
