@@ -1,8 +1,9 @@
 Directory structure:
-└── taro112233-smsystemv2/
+└── taro112233-smsystemv3/
     ├── README.md
     ├── components.json
     ├── eslint.config.mjs
+    ├── INSTRUCTIONS.md
     ├── middleware.ts
     ├── next.config.ts
     ├── package.json
@@ -18,25 +19,73 @@ Directory structure:
     │   ├── api/
     │   │   ├── arcjet/
     │   │   │   └── route.ts
-    │   │   └── auth/
-    │   │       ├── login/
-    │   │       │   └── route.ts
-    │   │       ├── logout/
-    │   │       │   └── route.ts
-    │   │       ├── me/
-    │   │       │   └── route.ts
-    │   │       └── register/
+    │   │   ├── auth/
+    │   │   │   ├── login/
+    │   │   │   │   └── route.ts
+    │   │   │   ├── logout/
+    │   │   │   │   └── route.ts
+    │   │   │   ├── me/
+    │   │   │   │   └── route.ts
+    │   │   │   └── register/
+    │   │   │       └── route.ts
+    │   │   ├── dashboard/
+    │   │   │   └── organizations/
+    │   │   │       └── route.ts
+    │   │   ├── organizations/
+    │   │   │   ├── route.ts
+    │   │   │   └── join-by-code/
+    │   │   │       └── route.ts
+    │   │   └── security/
+    │   │       └── monitoring/
     │   │           └── route.ts
     │   ├── dashboard/
     │   │   └── page.tsx
     │   ├── login/
     │   │   └── page.tsx
+    │   ├── org/
+    │   │   └── [orgSlug]/
+    │   │       ├── page.tsx
+    │   │       └── members/
+    │   │           └── page.tsx
     │   ├── register/
     │   │   └── page.tsx
     │   └── utils/
     │       ├── auth-client.ts
     │       └── auth.tsx
     ├── components/
+    │   ├── DepartmentDashboard/
+    │   │   ├── DepartmentActions.tsx
+    │   │   ├── DepartmentInfo.tsx
+    │   │   ├── DepartmentStats.tsx
+    │   │   └── index.tsx
+    │   ├── MembersManagement/
+    │   │   ├── EditMemberModal.tsx
+    │   │   ├── index.tsx
+    │   │   ├── InviteMemberModal.tsx
+    │   │   ├── MembersHeader.tsx
+    │   │   ├── MembersStats.tsx
+    │   │   └── MembersTable.tsx
+    │   ├── OrganizationDashboard/
+    │   │   ├── DepartmentOverview.tsx
+    │   │   ├── index.tsx
+    │   │   ├── OrganizationPerformance.tsx
+    │   │   ├── OrganizationStats.tsx
+    │   │   ├── QuickActions.tsx
+    │   │   └── RecentActivity.tsx
+    │   ├── OrganizationLayout/
+    │   │   ├── DepartmentList.tsx
+    │   │   ├── index.tsx
+    │   │   ├── OrganizationHeader.tsx
+    │   │   ├── SidebarFooter.tsx
+    │   │   ├── SidebarHeader.tsx
+    │   │   └── SidebarNavigation.tsx
+    │   ├── OrganizationList/
+    │   │   ├── AddOrganizationCard.tsx
+    │   │   ├── CreateOrganizationModal.tsx
+    │   │   ├── DashboardHeader.tsx
+    │   │   ├── JoinOrganizationModal.tsx
+    │   │   ├── OrganizationCard.tsx
+    │   │   └── OrganizationGrid.tsx
     │   └── ui/
     │       ├── accordion.tsx
     │       ├── alert-dialog.tsx
@@ -66,7 +115,6 @@ Directory structure:
     │       ├── navigation-menu.tsx
     │       ├── pagination.tsx
     │       ├── popover.tsx
-    │       ├── PrintButton.tsx
     │       ├── progress.tsx
     │       ├── radio-group.tsx
     │       ├── resizable.tsx
@@ -88,14 +136,17 @@ Directory structure:
     │       ├── toggle.tsx
     │       └── tooltip.tsx
     ├── data/
-    │   └── hospital-drugs.csv
+    │   ├── membersMockData.ts
+    │   └── orgMockData.ts
     ├── hooks/
     │   └── use-mobile.ts
     ├── lib/
     │   ├── auth-server.ts
     │   ├── auth.ts
     │   ├── config.ts
+    │   ├── invite-code.ts
     │   ├── prisma.ts
+    │   ├── security-logger.ts
     │   └── utils.ts
     ├── prisma/
     │   ├── schema.prisma
@@ -103,11 +154,7 @@ Directory structure:
     │   ├── schemas/
     │   │   ├── audit.prisma
     │   │   ├── base.prisma
-    │   │   ├── notification.prisma
     │   │   ├── organization.prisma
-    │   │   ├── product.prisma
-    │   │   ├── stock.prisma
-    │   │   ├── transfer.prisma
     │   │   └── user.prisma
     │   └── seeds/
     │       ├── stock-transactions.seed.ts
@@ -121,6 +168,7 @@ Directory structure:
     └── types/
         ├── auth.d.ts
         └── cookie.d.ts
+
 
 
 🏢 InvenStock - Multi-Tenant Inventory Management System V2.0
