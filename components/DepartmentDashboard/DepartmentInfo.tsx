@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/DepartmentView/DepartmentInfo.tsx
+// components/DepartmentDashboard/DepartmentInfo.tsx
 // DepartmentView/DepartmentInfo - Department details, team info and performance metrics
 
 import React from 'react';

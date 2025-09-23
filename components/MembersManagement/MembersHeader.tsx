@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/MembersManagement/MembersHeader.tsx
+// components/MembersManagement/MembersHeader.tsx
 // MembersManagement/MembersHeader - Header with search and filters
 
 import React from 'react';

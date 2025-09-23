@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/MembersManagement/index.tsx
+// components/MembersManagement/index.tsx
 // MembersManagement - Main members management component
 
 

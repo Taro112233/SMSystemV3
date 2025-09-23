@@ -166,13 +166,12 @@ export async function POST(request: NextRequest) {
             name: cleanOrgName, slug, 
             description: `Organization created by ${newUser.firstName} ${newUser.lastName}`,
             status: 'ACTIVE', timezone: 'Asia/Bangkok',
-            allowDepartments: true,
             email: cleanEmail?.toLowerCase(),
             phone: cleanPhone,
           },
           select: {
             id: true, name: true, slug: true, description: true,
-            status: true, timezone: true, email: true, phone: true, allowDepartments: true,
+            status: true, timezone: true, email: true, phone: true,
           }
         });
 

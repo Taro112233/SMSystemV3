@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/DashboardSidebar/SidebarNavigation.tsx
+// components/OrganizationLayout/SidebarNavigation.tsx
 // DashboardSidebar/SidebarNavigation - Main navigation menu and search
 
 import React from 'react';

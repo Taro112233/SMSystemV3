@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/MembersManagement/InviteMemberModal.tsx
+// components/MembersManagement/InviteMemberModal.tsx
 // MembersManagement/InviteMemberModal - Modal for inviting new members
 
 import React, { useState } from 'react';

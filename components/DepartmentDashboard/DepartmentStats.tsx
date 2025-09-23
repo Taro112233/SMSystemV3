@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/DepartmentView/DepartmentStats.tsx
+// components/DepartmentDashboard/DepartmentStats.tsx
 // DepartmentView/DepartmentStats - Department-specific statistics cards
 
 import React from 'react';

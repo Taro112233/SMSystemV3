@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/DashboardSidebar/index.tsx
+// components/OrganizationLayout/index.tsx
 // DashboardSidebar - Main sidebar navigation component
 
 import React from 'react';

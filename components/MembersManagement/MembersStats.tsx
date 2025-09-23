@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/MembersManagement/MembersStats.tsx
+// components/MembersManagement/MembersStats.tsx
 // MembersManagement/MembersStats - Member statistics cards
 
 import React from 'react';

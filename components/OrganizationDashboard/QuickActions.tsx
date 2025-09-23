@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/OrganizationOverview/QuickActions.tsx
+// components/OrganizationDashboard/QuickActions.tsx
 // OrganizationOverview/QuickActions - Quick action buttons grouped by function
 
 import React from 'react';

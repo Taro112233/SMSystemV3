@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/DepartmentView/index.tsx
+// components/DepartmentDashboard/index.tsx
 // DepartmentView - Individual department dashboard
 
 import React from 'react';

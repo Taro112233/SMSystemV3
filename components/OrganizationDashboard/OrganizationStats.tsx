@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/OrganizationOverview/OrganizationStats.tsx
+// components/OrganizationDashboard/OrganizationStats.tsx
 // OrganizationOverview/OrganizationStats - Main organization statistics cards
 
 import React from 'react';

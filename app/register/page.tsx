@@ -1,4 +1,4 @@
-// app/register/page.tsx - SIMPLIFIED VERSION (No Pending Approval)
+// app/register/page.tsx
 
 'use client';
 

@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/DashboardSidebar/SidebarFooter.tsx
+// components/OrganizationLayout/SidebarFooter.tsx
 // DashboardSidebar/SidebarFooter - User profile section with logout
 
 import React from 'react';

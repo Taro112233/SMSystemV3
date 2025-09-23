@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/OrganizationOverview/index.tsx
+// components/OrganizationDashboard/index.tsx
 // OrganizationOverview - Main organization dashboard view
 
 import React from 'react';

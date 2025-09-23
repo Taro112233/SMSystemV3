@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/DashboardSidebar/SidebarHeader.tsx
+// components/OrganizationLayout/SidebarHeader.tsx
 // DashboardSidebar/SidebarHeader - Organization header with collapse toggle
 
 import React from 'react';

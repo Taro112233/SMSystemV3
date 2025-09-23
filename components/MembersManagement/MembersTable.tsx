@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/MembersManagement/MembersTable.tsx
+// components/MembersManagement/MembersTable.tsx
 // MembersManagement/MembersTable - Members data display table
 
 import React from 'react';

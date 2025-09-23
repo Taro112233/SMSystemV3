@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/DashboardSidebar/DepartmentList.tsx
+// components/OrganizationLayout/DepartmentList.tsx
 // DashboardSidebar/DepartmentList - Simple department navigation without grouping
 
 import React from 'react';

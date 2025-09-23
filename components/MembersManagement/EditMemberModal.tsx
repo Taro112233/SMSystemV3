@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/MembersManagement/EditMemberModal.tsx
+// components/MembersManagement/EditMemberModal.tsx
 // MembersManagement/EditMemberModal - Modal for editing member details
 
 import React, { useState, useEffect } from 'react';

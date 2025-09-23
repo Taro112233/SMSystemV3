@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/DepartmentView/DepartmentActions.tsx
+// components/DepartmentDashboard/DepartmentActions.tsx
 // DepartmentView/DepartmentActions - Department management action buttons
 
 import React from 'react';

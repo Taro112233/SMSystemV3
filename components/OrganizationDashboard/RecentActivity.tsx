@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/OrganizationOverview/RecentActivity.tsx
+// components/OrganizationDashboard/RecentActivity.tsx
 // OrganizationOverview/RecentActivity - Activity feed with status indicators
 
 import React from 'react';

@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/OrganizationOverview/OrganizationPerformance.tsx
+// components/OrganizationDashboard/OrganizationPerformance.tsx
 // OrganizationOverview/OrganizationPerformance - Performance metrics and charts
 
 import React from 'react';

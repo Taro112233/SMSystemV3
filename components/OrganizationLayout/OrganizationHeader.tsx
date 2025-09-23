@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/DashboardHeader.tsx
+// components/OrganizationLayout/OrganizationHeader.tsx
 // DashboardHeader - Breadcrumb navigation bar
 
 import React from 'react';

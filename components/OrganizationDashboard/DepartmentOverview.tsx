@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/components/OrganizationOverview/DepartmentOverview.tsx
+// components/OrganizationDashboard/DepartmentOverview.tsx
 // OrganizationOverview/DepartmentOverview - Grid of departments with stats and click handler
 
 import React from 'react';
