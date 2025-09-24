@@ -1,33 +1,17 @@
-// lib/auth-server.ts - SIMPLIFIED 3-ROLE SYSTEM (FIXED TYPESCRIPT ERRORS)
+// lib/auth-server.ts - DYNAMIC ORGANIZATION CHECKING
 // InvenStock - Server-side User Verification Utilities (Next.js 15 Compatible)
 
 import { cookies } from 'next/headers';
 import { verifyToken, JWTUser } from './auth';
 import { prisma } from './prisma';
-import { ColorTheme, IconType } from '@prisma/client';
 
 type OrganizationRole = 'MEMBER' | 'ADMIN' | 'OWNER';
 
-// Define proper types for organization data (matching simplified schema)
-interface OrganizationData {
-  id: string;
-  name: string;
-  slug: string;
-  status: string;
-  timezone: string;
-  description?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
 /**
- * Get current user from server-side (for API routes and server components)
+ * ✅ Get current user from server-side (JWT only - no org context)
  */
 export async function getServerUser(): Promise<JWTUser | null> {
   try {
-    // Get token from cookies (Next.js 15 - cookies() is now async)
     const cookieStore = await cookies();
     const token = cookieStore.get('auth-token')?.value;
 
@@ -35,14 +19,13 @@ export async function getServerUser(): Promise<JWTUser | null> {
       return null;
     }
 
-    // Verify JWT token
     const payload = await verifyToken(token);
 
     if (!payload || !payload.userId) {
       return null;
     }
 
-    // Verify user still exists and is active in database
+    // Verify user still exists and is active
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       select: {
@@ -63,7 +46,7 @@ export async function getServerUser(): Promise<JWTUser | null> {
     return {
       userId: user.id,
       email: user.email || '',
-      username: user.username || undefined,
+      username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
     };
@@ -74,167 +57,92 @@ export async function getServerUser(): Promise<JWTUser | null> {
 }
 
 /**
- * Get user ID from server-side (quick version)
- */
-export async function getServerUserId(): Promise<string | null> {
-  const user = await getServerUser();
-  return user?.userId || null;
-}
-
-/**
- * Check if user is authenticated on server-side
- */
-export async function isServerAuthenticated(): Promise<boolean> {
-  const user = await getServerUser();
-  return user !== null;
-}
-
-/**
  * Get user from request headers (for API routes with middleware)
  */
 export function getUserFromHeaders(headers: Headers): {
   userId: string;
   email: string;
-  role?: OrganizationRole;
+  username: string;
 } | null {
   const userId = headers.get('x-user-id');
   const email = headers.get('x-user-email');
-  const role = headers.get('x-role') as OrganizationRole;
+  const username = headers.get('x-username');
 
-  if (!userId || !email) {
+  if (!userId || !email || !username) {
     return null;
   }
 
-  return { userId, email, role };
+  return { userId, email, username };
 }
 
 /**
- * Require authentication on server-side (throws if not authenticated)
+ * ✅ Check user's role in specific organization (real-time database check)
  */
-export async function requireServerAuth(): Promise<JWTUser> {
-  const user = await getServerUser();
-  
-  if (!user) {
-    throw new Error('Authentication required');
-  }
-  
-  return user;
-}
-
-/**
- * Get user with organization context - SIMPLIFIED
- */
-export async function getServerUserWithOrganization(organizationId?: string): Promise<{
-  user: JWTUser;
-  organization: OrganizationData | null;
-  role: OrganizationRole | null;
-} | null> {
-  const user = await getServerUser();
-  
-  if (!user) {
-    return null;
-  }
-
-  // If no organizationId provided, try to get from JWT
-  const targetOrgId = organizationId || user.organizationId;
-
-  if (!targetOrgId) {
-    return { user, organization: null, role: null };
-  }
-
-  try {
-    // Get user's organization membership with simple role
-    const orgUser = await prisma.organizationUser.findFirst({
-      where: {
-        userId: user.userId,
-        organizationId: targetOrgId,
-        isActive: true,
-      },
-      include: {
-        organization: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            status: true,
-            timezone: true,
-            description: true,
-            email: true,
-            phone: true,
-          },
-        },
-      },
-    });
-
-    if (!orgUser || !orgUser.organization) {
-      return null;
-    }
-
-    return {
-      user,
-      organization: orgUser.organization as OrganizationData,
-      role: orgUser.roles as OrganizationRole,
-    };
-  } catch (error) {
-    console.error('Failed to get user organization context:', error);
-    return { user, organization: null, role: null };
-  }
-}
-
-/**
- * Get user's role in organization - SIMPLIFIED
- */
-export async function getUserRole(
+export async function getUserOrgRole(
   userId: string, 
-  organizationId: string
-): Promise<OrganizationRole | null> {
+  orgSlug: string
+): Promise<{ role: OrganizationRole; organizationId: string } | null> {
   try {
     const orgUser = await prisma.organizationUser.findFirst({
       where: {
         userId,
-        organizationId,
         isActive: true,
+        organization: {
+          slug: orgSlug,
+          status: 'ACTIVE'
+        }
       },
+      include: {
+        organization: {
+          select: { id: true }
+        }
+      }
     });
 
-    return orgUser?.roles as OrganizationRole || null;
+    if (!orgUser) return null;
+
+    return {
+      role: orgUser.roles as OrganizationRole,
+      organizationId: orgUser.organization.id
+    };
   } catch (error) {
-    console.error('Failed to get user role:', error);
+    console.error('Failed to get user org role:', error);
     return null;
   }
 }
 
 /**
- * Check if user has permission - SIMPLIFIED 3-ROLE SYSTEM
+ * ✅ Validate user has access to organization
  */
-export async function hasPermission(
-  permission: string,
-  organizationId?: string,
-  userId?: string
+export async function validateOrgAccess(
+  userId: string,
+  orgSlug: string
+): Promise<boolean> {
+  const access = await getUserOrgRole(userId, orgSlug);
+  return access !== null;
+}
+
+/**
+ * ✅ Check if user has specific permission in organization
+ */
+export async function hasOrgPermission(
+  userId: string,
+  orgSlug: string,
+  permission: string
 ): Promise<boolean> {
   try {
-    const user = userId ? { userId } : await getServerUser();
-    if (!user) return false;
+    const access = await getUserOrgRole(userId, orgSlug);
+    if (!access) return false;
 
-    const orgUser = await prisma.organizationUser.findFirst({
-      where: {
-        userId: user.userId,
-        organizationId,
-        isActive: true,
-      },
-    });
-
-    if (!orgUser) return false;
-
-    const userRole = orgUser.roles as OrganizationRole;
+    const userRole = access.role;
 
     // Simple role-based permission checking
     switch (permission) {
-      // MEMBER permissions - ทุกคนในองค์กรทำได้
+      // MEMBER permissions - all org members
       case 'stocks.read':
       case 'stocks.adjust':
       case 'products.read':
-      case 'departments.read':     // ✅ ทุกคนเห็นทุกแผนก
+      case 'departments.read':
       case 'transfers.create':
       case 'transfers.receive':
         return ['MEMBER', 'ADMIN', 'OWNER'].includes(userRole);
@@ -244,14 +152,15 @@ export async function hasPermission(
       case 'products.update':
       case 'products.delete':
       case 'categories.create':
-      case 'departments.create':   // ✅ สร้างแผนกได้
-      case 'departments.update':   // ✅ แก้ไขแผนกได้
+      case 'departments.create':
+      case 'departments.update':
       case 'users.invite':
       case 'transfers.approve':
+      case 'join_code.generate':
         return ['ADMIN', 'OWNER'].includes(userRole);
       
       // OWNER permissions
-      case 'departments.delete':   // ✅ ลบแผนกได้เฉพาะ OWNER
+      case 'departments.delete':
       case 'organization.settings':
       case 'users.manage':
         return userRole === 'OWNER';
@@ -266,34 +175,39 @@ export async function hasPermission(
 }
 
 /**
- * Require specific permission (throws if not authorized)
+ * ✅ Require specific permission (throws if not authorized)
  */
-export async function requirePermission(
-  permission: string,
-  organizationId?: string,
-  userId?: string
-): Promise<void> {
-  const hasAccess = await hasPermission(permission, organizationId, userId);
+export async function requireOrgPermission(
+  userId: string,
+  orgSlug: string,
+  permission: string
+): Promise<{ role: OrganizationRole; organizationId: string }> {
+  const access = await getUserOrgRole(userId, orgSlug);
+  
+  if (!access) {
+    throw new Error(`No access to organization: ${orgSlug}`);
+  }
+
+  const hasAccess = await hasOrgPermission(userId, orgSlug, permission);
   
   if (!hasAccess) {
     throw new Error(`Permission denied: ${permission}`);
   }
+
+  return access;
 }
 
 /**
- * Check if user has minimum role - SIMPLIFIED
+ * ✅ Check if user has minimum role in organization
  */
-export async function hasMinimumRole(
-  minimumRole: OrganizationRole,
-  organizationId: string,
-  userId?: string
+export async function hasMinimumOrgRole(
+  userId: string,
+  orgSlug: string,
+  minimumRole: OrganizationRole
 ): Promise<boolean> {
   try {
-    const user = userId ? { userId } : await getServerUser();
-    if (!user) return false;
-
-    const userRole = await getUserRole(user.userId, organizationId);
-    if (!userRole) return false;
+    const access = await getUserOrgRole(userId, orgSlug);
+    if (!access) return false;
 
     const roleHierarchy = {
       MEMBER: 1,
@@ -301,7 +215,7 @@ export async function hasMinimumRole(
       OWNER: 3
     };
 
-    return roleHierarchy[userRole] >= roleHierarchy[minimumRole];
+    return roleHierarchy[access.role] >= roleHierarchy[minimumRole];
   } catch (error) {
     console.error('Role check failed:', error);
     return false;
@@ -309,27 +223,15 @@ export async function hasMinimumRole(
 }
 
 /**
- * Require minimum role (throws if not authorized)
+ * ✅ Get organization data by slug
  */
-export async function requireMinimumRole(
-  minimumRole: OrganizationRole,
-  organizationId: string,
-  userId?: string
-): Promise<void> {
-  const hasAccess = await hasMinimumRole(minimumRole, organizationId, userId);
-  
-  if (!hasAccess) {
-    throw new Error(`Insufficient role: requires ${minimumRole} or higher`);
-  }
-}
-
-/**
- * Get organization from server context
- */
-export async function getServerOrganization(organizationId: string): Promise<OrganizationData | null> {
+export async function getOrganizationBySlug(orgSlug: string) {
   try {
-    const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
+    return await prisma.organization.findUnique({
+      where: { 
+        slug: orgSlug,
+        status: 'ACTIVE'
+      },
       select: {
         id: true,
         name: true,
@@ -343,8 +245,6 @@ export async function getServerOrganization(organizationId: string): Promise<Org
         updatedAt: true,
       },
     });
-
-    return organization as OrganizationData | null;
   } catch (error) {
     console.error('Failed to get organization:', error);
     return null;
@@ -352,32 +252,9 @@ export async function getServerOrganization(organizationId: string): Promise<Org
 }
 
 /**
- * Validate organization access for user
+ * ✅ Get user's organizations list
  */
-export async function validateOrganizationAccess(
-  userId: string,
-  organizationId: string
-): Promise<boolean> {
-  try {
-    const orgUser = await prisma.organizationUser.findFirst({
-      where: {
-        userId,
-        organizationId,
-        isActive: true,
-      },
-    });
-
-    return orgUser !== null;
-  } catch (error) {
-    console.error('Failed to validate organization access:', error);
-    return false;
-  }
-}
-
-/**
- * Get user's organizations
- */
-export async function getUserOrganizations(userId: string): Promise<OrganizationData[]> {
+export async function getUserOrganizations(userId: string) {
   try {
     const organizationUsers = await prisma.organizationUser.findMany({
       where: {
@@ -402,7 +279,12 @@ export async function getUserOrganizations(userId: string): Promise<Organization
       },
     });
 
-    return organizationUsers.map(orgUser => orgUser.organization) as OrganizationData[];
+    return organizationUsers.map(orgUser => ({
+      ...orgUser.organization,
+      role: orgUser.roles,
+      isOwner: orgUser.isOwner,
+      joinedAt: orgUser.joinedAt
+    }));
   } catch (error) {
     console.error('Failed to get user organizations:', error);
     return [];
@@ -410,236 +292,47 @@ export async function getUserOrganizations(userId: string): Promise<Organization
 }
 
 /**
- * Check if user is owner of organization
+ * ✅ API route helper - extract org context and validate access
  */
-export async function isOrganizationOwner(
-  userId: string,
-  organizationId: string
-): Promise<boolean> {
-  try {
-    const orgUser = await prisma.organizationUser.findFirst({
-      where: {
-        userId,
-        organizationId,
-        isActive: true,
-        roles: 'OWNER',
-      },
-    });
-
-    return orgUser !== null;
-  } catch (error) {
-    console.error('Failed to check organization ownership:', error);
-    return false;
-  }
-}
-
-/**
- * Check if user is admin or owner of organization
- */
-export async function isOrganizationAdminOrOwner(
-  userId: string,
-  organizationId: string
-): Promise<boolean> {
-  try {
-    const orgUser = await prisma.organizationUser.findFirst({
-      where: {
-        userId,
-        organizationId,
-        isActive: true,
-        roles: {
-          in: ['ADMIN', 'OWNER']
-        },
-      },
-    });
-
-    return orgUser !== null;
-  } catch (error) {
-    console.error('Failed to check admin/owner status:', error);
-    return false;
-  }
-}
-
-// ===== FIXED DEPARTMENT FUNCTIONS =====
-
-/**
- * Get all departments in organization (no access control)
- * ✅ All users can see all departments
- */
-export async function getDepartments(organizationId: string) {
-  try {
-    return await prisma.department.findMany({
-      where: { 
-        organizationId,
-        isActive: true
-      },
-      orderBy: { name: 'asc' },
-      include: {
-        parent: true,
-        children: true,
-        organization: {
-          select: {
-            id: true,
-            name: true,
-            slug: true
-          }
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Failed to get departments:', error);
-    return [];
-  }
-}
-
-/**
- * Get single department (no access control)
- */
-export async function getDepartment(organizationId: string, departmentId: string) {
-  try {
-    return await prisma.department.findFirst({
-      where: {
-        id: departmentId,
-        organizationId,
-        isActive: true
-      },
-      include: {
-        parent: true,
-        children: true,
-        organization: true
-      }
-    });
-  } catch (error) {
-    console.error('Failed to get department:', error);
-    return null;
-  }
-}
-
-/**
- * Create department (requires ADMIN+ role) - FIXED TYPES
- */
-export async function createDepartment(
-  organizationId: string, 
-  userId: string, 
-  data: {
-    name: string;
-    code: string;
-    description?: string;
-    color?: ColorTheme;      // ✅ Fixed: proper enum type
-    icon?: IconType;         // ✅ Fixed: proper enum type
-    parentId?: string;
-  }
+export async function withOrgContext(
+  request: Request,
+  handler: (userId: string, orgId: string, role: OrganizationRole) => Promise<Response>
 ) {
-  // Check permission
-  await requirePermission('departments.create', organizationId, userId);
-  
   try {
-    return await prisma.department.create({
-      data: {
-        organizationId,
-        createdBy: userId,
-        isActive: true,
-        name: data.name,
-        code: data.code,
-        description: data.description || null,
-        color: data.color || null,          // ✅ Fixed: explicit null handling
-        icon: data.icon || null,            // ✅ Fixed: explicit null handling
-        parentId: data.parentId || null,    // ✅ Fixed: explicit null handling
-      },
-      include: {
-        organization: true,
-        parent: true
-      }
-    });
-  } catch (error) {
-    console.error('Failed to create department:', error);
-    throw new Error('Failed to create department');
-  }
-}
-
-/**
- * Update department (requires ADMIN+ role) - FIXED TYPES
- */
-export async function updateDepartment(
-  organizationId: string,
-  userId: string,
-  departmentId: string,
-  data: {
-    name?: string;
-    code?: string;
-    description?: string;
-    color?: ColorTheme;        // ✅ Fixed: proper enum type  
-    icon?: IconType;           // ✅ Fixed: proper enum type
-    parentId?: string | null;  // ✅ Fixed: allow explicit null
-    isActive?: boolean;
-  }
-) {
-  // Check permission
-  await requirePermission('departments.update', organizationId, userId);
-  
-  try {
-    // ✅ Fixed: Build update data with proper types
-    const updateData: any = {
-      updatedBy: userId,
-      updatedAt: new Date()
-    };
-
-    // Only include fields that are provided
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.code !== undefined) updateData.code = data.code;
-    if (data.description !== undefined) updateData.description = data.description;
-    if (data.color !== undefined) updateData.color = data.color;
-    if (data.icon !== undefined) updateData.icon = data.icon;
-    if (data.isActive !== undefined) updateData.isActive = data.isActive;
-    
-    // ✅ Fixed: Handle parentId properly for hierarchical updates
-    if (data.parentId !== undefined) {
-      updateData.parentId = data.parentId;
+    // Get user from headers
+    const user = getUserFromHeaders(new Headers(request.headers));
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    return await prisma.department.update({
-      where: {
-        id: departmentId,
-        organizationId
-      },
-      data: updateData,
-      include: {
-        organization: true,
-        parent: true,
-        children: true
-      }
-    });
-  } catch (error) {
-    console.error('Failed to update department:', error);
-    throw new Error('Failed to update department');
-  }
-}
+    // Get org slug from headers
+    const orgSlug = new Headers(request.headers).get('x-current-org');
+    if (!orgSlug) {
+      return new Response(
+        JSON.stringify({ error: 'Organization context required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-/**
- * Delete department (requires OWNER role)
- */
-export async function deleteDepartment(
-  organizationId: string,
-  userId: string,
-  departmentId: string
-) {
-  // Check permission - only OWNER can delete departments
-  await requirePermission('departments.delete', organizationId, userId);
-  
-  try {
-    // Soft delete - set isActive to false
-    return await prisma.department.update({
-      where: {
-        id: departmentId,
-        organizationId
-      },
-      data: {
-        isActive: false,
-        updatedBy: userId,
-        updatedAt: new Date()
-      }
-    });
+    // Validate access and get role
+    const access = await getUserOrgRole(user.userId, orgSlug);
+    if (!access) {
+      return new Response(
+        JSON.stringify({ error: 'No access to organization' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    return await handler(user.userId, access.organizationId, access.role);
+
   } catch (error) {
-    console.error('Failed to delete department:', error);
-    throw new Error('Failed to delete department');
+    console.error('Organization context error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }

@@ -169,200 +169,462 @@ Directory structure:
         ├── auth.d.ts
         └── cookie.d.ts
 
+        
+# InvenStock Development Instructions
 
+## 🎯 Project Overview
 
-🏢 InvenStock - Multi-Tenant Inventory Management System V2.0
+InvenStock เป็นระบบ Multi-Tenant Inventory Management ที่ออกแบบสำหรับโรงพยาบาลและสถานพยาบาล โดยเน้นการจัดการสต็อกแบบ Department-Centric
 
-ระบบจัดการสต็อกสินค้าแบบ Multi-Tenant พร้อม Custom Role Management และการเบิกสินค้าระหว่างแผนกแบบ Department-Centric
+## 🏗️ Technical Architecture
 
-✨ Key Features V2.0
-🏢 Multi-Tenant Architecture
+### Tech Stack
+- **Frontend:** Next.js 15 + TypeScript + TailwindCSS + Shadcn/UI
+- **Backend:** Next.js API Routes + Prisma ORM
+- **Database:** PostgreSQL with Row-level Security
+- **Authentication:** JWT + bcryptjs
+- **Security:** Arcjet + Multi-tenant isolation
+- **Hosting:** Vercel + Supabase
 
-แยกข้อมูลตามองค์กรอย่างสมบูรณ์
-ผู้ใช้สามารถเป็นสมาชิกหลายองค์กรได้
-Switch องค์กรโดยเปิด tab ใหม่ (ไม่ต้อง logout)
+### Database Schema Organization
+```
+prisma/schemas/
+├── base.prisma          # Core types & enums
+├── user.prisma          # User & authentication
+├── organization.prisma  # Multi-tenant setup
+├── audit.prisma        # Audit trails & logging
+└── (another)
+```
 
-🎭 Custom Role Management (แบบ Discord)
+## 🏢 Multi-Tenant Architecture Rules
 
-หัวหน้าองค์กรสร้าง Role เองได้
-กำหนดสิทธิ์แบบ Granular (ละเอียด)
-Role Hierarchy & Position System
-One Role per User per Organization
+### Organization Context
+- **URL Pattern:** `/org/[orgSlug]/...`
+- **Data Isolation:** Row-level security enforced
+- **User Access:** Multiple organization membership allowed
+- **Tab Management:** Each tab maintains separate org context
 
-🏬 Department-Centric Stock Management
+### Department-Centric Design
+```typescript
+// ✅ Correct: Department-specific endpoints
+/api/[orgId]/departments/[deptId]/stocks
+/api/[orgId]/departments/[deptId]/transfers
 
-โครงสร้างแผนกแบบ Hierarchical
-จัดการสต็อกแยกตามแผนก (ไม่มีหน้า stocks แยก)
-เบิกสินค้าระหว่างแผนกได้
-Workflow: Request → Approve → Prepare → Deliver → Receive
+// ❌ Avoid: Global stock endpoints
+/api/[orgId]/stocks (should not exist)
+```
 
-💼 Product & Department Integration
-
-หมวดหมู่สินค้าแบบ Custom per Organization
-ติดตาม Batch/Lot และวันหมดอายุ
-Stock Tracking แบบ Real-time ตามแผนก
-การแจ้งเตือนสต็อกต่ำ/หมดอายุ แยกตามแผนก
-
-🗂️ Application Structure V2.0
-Frontend Architecture
-app/
-├── dashboard/                   # Organization Selector
-├── org/[orgSlug]/              # Organization Context
-│   ├── layout.tsx              # Org Layout + Sidebar
-│   ├── page.tsx                # Org Dashboard
-│   ├── products/               # Product Management
-│   ├── departments/            # Department-Centric Management
-│   │   └── [deptId]/
-│   │       ├── stocks/         # Department Stock Management
-│   │       └── transfers/      # Department Transfers
-│   ├── transfers/              # Organization-wide Transfers
-│   ├── reports/                # Analytics & Reports
-│   └── settings/               # Organization Settings
-Key Navigation Flow
-1. Login → /dashboard (เลือกองค์กร)
-2. คลิกองค์กร → เปิด tab ใหม่ /org/{slug}
-3. จัดการสต็อก → /org/{slug}/departments/{deptId}/stocks
-4. ดูสต็อกสินค้า → /org/{slug}/products/{id} (แสดงทุกแผนก)
-5. เบิกสินค้า → /org/{slug}/transfers/new
-🎯 Business Logic V2.0
-Department-Centric Stock Management
-javascript// สต็อกแยกตามแผนก
-departmentStock = {
-  departmentId: "dept-001",
-  productId: "prod-001", 
-  totalQuantity: 500,
-  reservedQty: 50,
-  availableQty: 450,
-  minStockLevel: 100,
-  maxStockLevel: 1000
+### Permission Implementation
+```typescript
+// Department-level permissions
+interface DepartmentPermission {
+  pattern: "departments.{deptId}.{resource}.{action}"
+  example: "departments.dept-001.stocks.adjust"
 }
 
-// คำนวณสถานะสต็อก
-stockStatus = {
-  available: totalQuantity - reservedQty,
-  status: available <= minStock ? 'LOW' : 'NORMAL',
-  needReorder: available <= (minStock * 0.5)
+// Organization-level permissions
+interface OrgPermission {
+  pattern: "organization.{resource}.{action}"
+  example: "organization.departments.create"
 }
-Multi-Tab Organization Context
-javascript// แต่ละ tab มี context แยก
-organizationContext = {
-  orgId: "org-001",
-  currentDepartment: "dept-001", 
-  userRole: "manager",
-  permissions: ["stock.adjust", "transfers.approve"]
+```
+
+## 🔄 Transfer Workflow Implementation
+
+### State Machine Requirements
+```typescript
+enum TransferStatus {
+  PENDING = "PENDING",           // Initial request
+  APPROVED = "APPROVED",         // Management approval
+  PREPARED = "PREPARED",         // Items ready for pickup
+  IN_TRANSIT = "IN_TRANSIT",     // Items being delivered
+  DELIVERED = "DELIVERED",       // Items received
+  CANCELLED = "CANCELLED"        // Process cancelled
 }
-Transfer Workflow Between Departments
-Department A → Department B:
-1. Request (Department A สร้างใบเบิก)
-2. Approve (ผู้มีสิทธิ์อนุมัติ)
-3. Prepare (Department A เตรียมสินค้า)
-4. Deliver (ส่งมอบ)
-5. Receive (Department B รับและยืนยัน)
-🔐 Permission System V2.0
-Department-Level Permissions
-javascript// Granular permissions per department
-departmentPermissions = {
-  "departments.{deptId}.stocks.read": true,
-  "departments.{deptId}.stocks.adjust": true,
-  "departments.{deptId}.transfers.approve": true,
-  "departments.*": false, // ไม่ได้สิทธิ์ทุกแผนก
-  "products.read": true,
-  "products.create": false
+```
+
+### Business Logic Rules
+1. **Stock Reservation:** Reserved quantity updated on APPROVED status
+2. **Department Validation:** Both source/target departments must exist
+3. **Permission Checks:** User must have transfer permissions for source dept
+4. **Rollback Logic:** Handle cancellation at any stage
+5. **Audit Trail:** Log all status changes with timestamps
+
+## 📊 Real-time Features
+
+### WebSocket Implementation
+```typescript
+// Department-specific channels
+const channel = `org:${orgId}:dept:${deptId}:stocks`
+
+// Event types
+interface StockUpdateEvent {
+  type: 'STOCK_UPDATED'
+  productId: string
+  newQuantity: number
+  reservedQuantity: number
 }
-Role Examples V2.0
 
-เจ้าขององค์กร - สิทธิ์ทุกอย่าง (*)
-ผู้จัดการแผนก - จัดการแผนกเฉพาะ (departments.{deptId}.*)
-เภสัชกร - จัดการสต็อกและอนุมัติการเบิก
-พยาบาล - เบิกสินค้าและดูสต็อก
-ผู้ตรวจสอบ - ดูรายงานเท่านั้น
-
-📊 User Experience V2.0
-Organization Selection
-
-หน้า /dashboard แสดงการ์ดองค์กรทั้งหมด
-คลิกเพื่อเปิด tab ใหม่ไปยัง /org/{slug}
-แสดงสถิติพื้นฐาน: สินค้า, สต็อกต่ำ, รออนุมัติ
-
-Department Dashboard
-
-/org/{slug}/departments/{deptId} - หน้าหลักของแผนก
-แสดงสต็อกเฉพาะแผนก, การเบิกเข้า-ออก, กิจกรรมล่าสุด
-Quick actions: ปรับสต็อก, นับสต็อก, สร้างใบเบิก
-
-Product Overview
-
-/org/{slug}/products/{id} - แสดงสต็อกสินค้าในทุกแผนก
-Real-time stock levels per department
-ประวัติการเคลื่อนไหวทั้งหมด
-
-Transfer Management
-
-/org/{slug}/transfers - ภาพรวมการเบิกจ่ายทั้งองค์กร
-/org/{slug}/departments/{deptId}/transfers - การเบิกเฉพาะแผนก
-สถานะ real-time และการแจ้งเตือน
-
-🚀 Technical Implementation V2.0
-Multi-Tab Context Management
-javascript// แต่ละ tab เก็บ state แยก
-const OrgProvider = ({ orgSlug, children }) => {
-  const [currentDepartment, setCurrentDepartment] = useState(null);
-  const [userPermissions, setUserPermissions] = useState([]);
-  // context per tab
+interface TransferStatusEvent {
+  type: 'TRANSFER_STATUS_CHANGED'
+  transferId: string
+  status: TransferStatus
+  updatedBy: string
 }
-Department-Centric API Design
-GET /api/[orgId]/departments/[deptId]/stocks
-POST /api/[orgId]/departments/[deptId]/stocks/adjust
-GET /api/[orgId]/departments/[deptId]/transfers/incoming
-POST /api/[orgId]/transfers (organization-wide)
-Real-time Stock Updates
-javascript// WebSocket per department
-useRealtimeStocks(departmentId, {
-  onStockUpdate: (productId, newStock) => {
-    updateDepartmentStock(productId, newStock);
-  },
-  onLowStockAlert: (products) => {
-    showNotification(products);
+```
+
+### Performance Requirements
+- **Stock Updates:** < 500ms propagation
+- **Low Stock Alerts:** Real-time per department
+- **Transfer Notifications:** Immediate status updates
+
+## 🔐 Authentication Architecture Overview
+
+**JWT Strategy**: Lightweight user identity only → Real-time organization permission checking
+
+```typescript
+// JWT Payload (Minimal)
+{ userId, username, firstName, lastName, email, phone }
+
+// Organization Context (Dynamic)
+Check via: getUserOrgRole(userId, orgSlug) → { role, organizationId }
+```
+
+---
+
+### 📱 Frontend Page Patterns
+
+#### Pattern 1: Public Page (No Auth Required)
+```typescript
+// pages/login.tsx, pages/register.tsx, pages/landing.tsx
+export default function PublicPage() {
+  return Public content
+}
+```
+
+#### Pattern 2: Auth Required (No Organization)
+```typescript
+// pages/dashboard.tsx (organization selector)
+export default function DashboardPage() {
+  const { user, loading } = useAuth()
+  
+  if (loading) return 
+  if (!user) return 
+  
+  return 
+}
+```
+
+#### Pattern 3: Organization + Role Required
+```typescript
+// pages/org/[orgSlug]/products.tsx
+export default function ProductsPage() {
+  const { user, currentOrganization, userRole, switchOrganization } = useAuth()
+  const { orgSlug } = useParams()
+  
+  // Initialize organization context
+  useEffect(() => {
+    if (user && orgSlug && (!currentOrganization || currentOrganization.slug !== orgSlug)) {
+      switchOrganization(orgSlug)
+    }
+  }, [user, orgSlug, currentOrganization])
+  
+  // Loading states
+  if (!user) return 
+  if (!currentOrganization) return 
+  
+  // Permission check
+  if (!userRole || !['ADMIN', 'OWNER'].includes(userRole)) {
+    return 
   }
-});
-📈 Analytics & Reporting V2.0
-Department Performance
+  
+  return 
+}
+```
 
-สต็อกต่ำต่อแผนก
-ความถี่ในการเบิกจ่าย
-ประสิทธิภาพการจัดการสต็อก
+#### Pattern 4: Department Context (All Org Members)
+```typescript
+// pages/org/[orgSlug]/departments/[deptId]/stocks.tsx
+export default function DepartmentStocksPage() {
+  const { user, currentOrganization, userRole, switchOrganization } = useAuth()
+  const { orgSlug, deptId } = useParams()
+  
+  useEffect(() => {
+    if (user && orgSlug && (!currentOrganization || currentOrganization.slug !== orgSlug)) {
+      switchOrganization(orgSlug)
+    }
+  }, [user, orgSlug, currentOrganization])
+  
+  if (!user) return 
+  if (!currentOrganization) return 
+  if (!userRole) return 
+  
+  // All org members can access departments
+  return 
+}
+```
 
-Organization Overview
+---
 
-สรุปสต็อกรวมทุกแผนก
-การเคลื่อนไหวสินค้าระหว่างแผนก
-ต้นทุนและมูลค่าสต็อก
+### 🔌 API Route Patterns
 
-Predictive Analytics
+#### Pattern 1: Public API (No Auth)
+```typescript
+// app/api/health/route.ts
+export async function GET() {
+  return NextResponse.json({ status: 'ok' })
+}
+```
 
-คาดการณ์ความต้องการ per department
-แนะนำการสั่งซื้อ
-วิเคราะห์รูปแบบการใช้งาน
+#### Pattern 2: User Auth Only
+```typescript
+// app/api/user/profile/route.ts
+import { getServerUser } from '@/lib/auth-server'
+
+export async function GET() {
+  const user = await getServerUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+  
+  return NextResponse.json({ user })
+}
+```
+
+#### Pattern 3: Organization Member Required
+```typescript
+// app/api/[orgSlug]/products/route.ts
+import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server'
+
+export async function GET(request: Request, { params }: { params: { orgSlug: string } }) {
+  const user = getUserFromHeaders(request.headers)
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+  
+  const access = await getUserOrgRole(user.userId, params.orgSlug)
+  if (!access) {
+    return NextResponse.json({ error: 'No access to organization' }, { status: 403 })
+  }
+  
+  // Business logic - all org members can read products
+  const products = await prisma.product.findMany({
+    where: { organizationId: access.organizationId }
+  })
+  
+  return NextResponse.json({ products })
+}
+```
+
+#### Pattern 4: Role-Based Permission Required
+```typescript
+// app/api/[orgSlug]/products/route.ts (POST - Create Product)
+import { requireOrgPermission } from '@/lib/auth-server'
+
+export async function POST(request: Request, { params }: { params: { orgSlug: string } }) {
+  const user = getUserFromHeaders(request.headers)
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+  
+  // Check permission (ADMIN or OWNER required)
+  try {
+    const access = await requireOrgPermission(user.userId, params.orgSlug, 'products.create')
+    
+    const body = await request.json()
+    const product = await prisma.product.create({
+      data: {
+        ...body,
+        organizationId: access.organizationId,
+        createdBy: user.userId
+      }
+    })
+    
+    return NextResponse.json({ product })
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 403 })
+  }
+}
+```
+
+#### Pattern 5: Helper Wrapper for Clean Code
+```typescript
+// app/api/[orgSlug]/admin-only/route.ts
+import { withOrgContext } from '@/lib/auth-server'
+
+export const POST = (request: Request, { params }: any) => 
+  withOrgContext(request, async (userId, orgId, userRole) => {
+    // Check if user is admin
+    if (!['ADMIN', 'OWNER'].includes(userRole)) {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+    
+    // Business logic here
+    return NextResponse.json({ success: true })
+  })
+```
+
+## 🎨 Frontend Component Standards
+
+### Page Structure
+🎨 Responsive Design
+typescript// Desktop-first, mobile-compatible
+<div className="grid grid-cols-3 lg:grid-cols-2 md:grid-cols-1">
+
+// Touch-friendly sizes
+const BUTTON_HEIGHT = 'h-11'  // 44px minimum
+🧩 Component Modularity
+File Structure
+components/
+├── ui/           # Base components
+├── layout/       # Layouts, headers, nav
+├── forms/        # Form modules
+├── data-display/ # Tables, cards
+└── features/     # Business components
+Size Rules
+
+Max 200 lines per component
+Max 8 props - use composition
+Extract logic to custom hooks
+
+Component Patterns
+```typescript
+typescript// ✅ Page = orchestrator only
+export default function StocksPage() {
+  return (
+    <PageLayout>
+      <StockHeader />
+      <StockTable />
+    </PageLayout>
+  )
+}
+
+// ✅ Responsive rendering
+const DataDisplay = ({ data }) => {
+  const isMobile = useMediaQuery('(max-width: 768px)')
+  return isMobile ? <CardView /> : <TableView />
+}
+
+// ✅ Complex forms as directories
+forms/TransferForm/
+├── index.tsx
+├── BasicInfo.tsx
+└── ItemSelection.tsx
+```
+
+📁 Module Component Creation
+เมื่อสร้าง module component ให้แยกไฟล์และใส่คอมเมนต์ระบุไฟล์ที่ด้านบนทุกไฟล์
+```typescript
+// components/forms/TransferForm/index.tsx
+// TransferForm - Main form component
+
+// components/forms/TransferForm/BasicInfo.tsx  
+// TransferForm/BasicInfo - Basic information step
+
+// components/data-display/StockTable/index.tsx
+// StockTable - Main table component
+
+// components/data-display/StockTable/StockRow.tsx
+// StockTable/StockRow - Individual table row
+```
+
+🎯 Key Rules
+Desktop-first, mobile-compatible
+Extract logic to hooks
+Split complex forms into modules
+Pages orchestrate, components execute
+แยกไฟล์ module + คอมเมนต์ชื่อไฟล์ ด้านบนทุกไฟล์
+
+### Data Isolation
+- **Row-level Security:** Enforced at database level
+- **API Filtering:** All queries include org context
+- **Frontend Guards:** Permission-based UI rendering
+
+## 📈 Performance & Monitoring
+
+### Database Optimization
+- **Indexes:** Composite indexes on (orgId, deptId, ...)
+- **Query Patterns:** Always include org context in WHERE clauses
+- **Connection Pooling:** Configured for multi-tenant usage
+
+### Monitoring Requirements
+- **API Response Times:** < 200ms for CRUD operations
+- **Real-time Latency:** < 500ms for stock updates
+- **Database Connections:** Monitor pool usage
+- **Security Events:** Log authentication failures
 
 
-🎯 Development Priorities
-Phase 1: Core Department Management
+## 📋 Development Guidelines
 
-Organization selector + multi-tab navigation
-Department dashboard with stock management
-Basic transfer workflow
-Real-time notifications
+### API Design Patterns
+```typescript
+// ✅ Multi-tenant API structure
+/api/[orgId]/departments/[deptId]/stocks
+/api/[orgId]/departments/[deptId]/transfers
+/api/[orgId]/products
+/api/[orgId]/users
 
-Phase 2: Advanced Features
+// ✅ Always include org context validation
+export async function GET(
+  request: Request,
+  { params }: { params: { orgId: string; deptId: string } }
+) {
+  const user = await authenticateUser(request)
+  await validateOrgAccess(user.id, params.orgId)
+  // Business logic here
+}
+```
 
-Batch/Lot tracking per department
-Advanced reporting and analytics
-Role-based permissions per department
-Mobile optimization
+### Component Architecture
+```typescript
+// ✅ Permission-aware components
+interface BaseComponentProps {
+  organizationId: string
+  permissions: string[]
+}
 
-Phase 3: Enterprise Features
+// ✅ Department context
+interface DepartmentComponentProps extends BaseComponentProps {
+  departmentId: string
+}
+```
 
-API integrations
-Advanced forecasting
-Audit trails and compliance
-Multi-language support
+### Error Handling
+```typescript
+// ✅ Structured error responses
+interface APIError {
+  code: string
+  message: string
+  details?: any
+  timestamp: string
+}
+
+// Common error patterns
+const ErrorCodes = {
+  ORG_ACCESS_DENIED: 'ORG_ACCESS_DENIED',
+  DEPT_PERMISSION_REQUIRED: 'DEPT_PERMISSION_REQUIRED',
+  STOCK_INSUFFICIENT: 'STOCK_INSUFFICIENT',
+  TRANSFER_INVALID_STATE: 'TRANSFER_INVALID_STATE'
+}
+```
+## 🚀 Deployment Guide
+
+### Environment Configuration
+```bash
+# Production environment variables
+# .env
+# InvenStock - Production Configuration
+
+# Database Configuration (Neon)
+DATABASE_URL="postgresql://neondb_owner:npg_INhGAa5CDRH8@ep-cold-fog-a1lm4e80-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+DIRECT_URL="postgresql://neondb_owner:npg_INhGAa5CDRH8@ep-cold-fog-a1lm4e80-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+# JWT Configuration
+JWT_SECRET="565c8b590ef28ebf5ab45dfe6d4f2d18f26cbe5045e378d425d90d91749dc319"
+
+# Security (Arcjet)
+ARCJET_KEY="ajkey_01k4fqfvdzeb1sw7sectgh005x"
+
+# Application Configuration
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NODE_ENV="development"

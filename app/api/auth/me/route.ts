@@ -1,10 +1,10 @@
-// app/api/auth/me/route.ts - CLEANED VERSION (NO INVITATION SYSTEM)
+// app/api/auth/me/route.ts - DYNAMIC ORGANIZATION CONTEXT
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerUser, getUserFromHeaders } from '@/lib/auth-server';
+import { getServerUser } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import type { JWTUser } from '@/lib/auth';
 
-// ===== RESPONSE INTERFACE (NO INVITATION) =====
+// ===== RESPONSE INTERFACE =====
 interface CompleteUserData {
   user: {
     id: string;
@@ -53,7 +53,7 @@ interface CompleteUserData {
     canManageOrganization: boolean;
     canManageDepartments: boolean;
     canCreateProducts: boolean;
-    canGenerateJoinCode: boolean;     // ✅ Join code permission (instead of invite)
+    canGenerateJoinCode: boolean;
     organizationPermissions: string[];
   };
   session: {
@@ -66,53 +66,22 @@ interface CompleteUserData {
 export async function GET(request: NextRequest) {
   try {
     // ===== AUTHENTICATION CHECK =====
-    let user: JWTUser | null = await getServerUser();
+    const user: JWTUser | null = await getServerUser();
     
-    if (!user) {
-      const userInfo = getUserFromHeaders(request.headers);
-      if (!userInfo) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Authentication required',
-          code: 'AUTH_REQUIRED' 
-        }, { status: 401 });
-      }
-      
-      const dbUser = await prisma.user.findUnique({
-        where: { id: userInfo.userId },
-        select: {
-          id: true, username: true, email: true, firstName: true, lastName: true,
-          phone: true, status: true, isActive: true, emailVerified: true,
-          lastLogin: true, createdAt: true, updatedAt: true,
-        }
-      });
-
-      if (!dbUser || !dbUser.isActive || dbUser.status !== 'ACTIVE') {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'User account not active',
-          code: 'ACCOUNT_INACTIVE' 
-        }, { status: 403 });
-      }
-
-      user = {
-        userId: dbUser.id, 
-        email: dbUser.email || '',
-        username: dbUser.username || undefined,
-        firstName: dbUser.firstName,
-        lastName: dbUser.lastName,
-      };
-    }
-
     if (!user) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Authentication failed',
-        code: 'AUTH_FAILED' 
+        error: 'Authentication required',
+        code: 'AUTH_REQUIRED' 
       }, { status: 401 });
     }
 
-    // ===== SINGLE OPTIMIZED QUERY (NO INVITATION FIELDS) =====
+    // ===== GET ORGANIZATION CONTEXT FROM URL/HEADERS =====
+    const url = new URL(request.url);
+    const orgSlug = url.searchParams.get('orgSlug') || 
+                    request.headers.get('x-current-org');
+
+    // ===== SINGLE OPTIMIZED QUERY =====
     const userData = await prisma.user.findUnique({
       where: { id: user.userId },
       select: {
@@ -157,10 +126,19 @@ export async function GET(request: NextRequest) {
     let currentRole: string | null = null;
 
     if (userOrganizations.length > 0) {
-      const contextOrgId = user.organizationId;
-      const targetOrgUser = contextOrgId 
-        ? userOrganizations.find(org => org.organizationId === contextOrgId)
-        : userOrganizations[0];
+      let targetOrgUser = null;
+      
+      if (orgSlug) {
+        // Find organization by slug
+        targetOrgUser = userOrganizations.find(org => 
+          org.organization.slug === orgSlug
+        );
+      }
+      
+      // Fallback to first organization if slug not found or not provided
+      if (!targetOrgUser) {
+        targetOrgUser = userOrganizations[0];
+      }
 
       if (targetOrgUser) {
         const orgData = targetOrgUser.organization;
@@ -175,7 +153,7 @@ export async function GET(request: NextRequest) {
           timezone: orgData.timezone,
           memberCount: orgData._count.users,
           departmentCount: orgData._count.departments,
-          // ✅ ONLY show join code info for ADMIN/OWNER (no invitation fields)
+          // Only show join code info for ADMIN/OWNER
           ...((['ADMIN', 'OWNER'].includes(currentRole)) && {
             inviteCode: orgData.inviteCode,
             inviteEnabled: orgData.inviteEnabled,
@@ -184,13 +162,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // ===== CALCULATE PERMISSIONS (NO INVITATION PERMISSIONS) =====
+    // ===== CALCULATE PERMISSIONS =====
     const permissions = {
       currentRole,
       canManageOrganization: currentRole === 'OWNER',
       canManageDepartments: ['ADMIN', 'OWNER'].includes(currentRole || ''),
       canCreateProducts: ['ADMIN', 'OWNER'].includes(currentRole || ''),
-      canGenerateJoinCode: ['ADMIN', 'OWNER'].includes(currentRole || ''), // ✅ Join code permission
+      canGenerateJoinCode: ['ADMIN', 'OWNER'].includes(currentRole || ''),
       organizationPermissions: getPermissionsByRole(currentRole)
     };
 
@@ -245,7 +223,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Get user data error:', error);
+    console.error('Get user data error:', error);
     return NextResponse.json({ 
       success: false, 
       error: 'Internal server error',
@@ -254,7 +232,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ===== HELPER FUNCTIONS (CLEANED - NO INVITATION PERMISSIONS) =====
+// ===== HELPER FUNCTIONS =====
 
 function getPermissionsByRole(role: string | null): string[] {
   if (!role) return [];
@@ -266,7 +244,7 @@ function getPermissionsByRole(role: string | null): string[] {
       'products.create', 'products.update', 'products.delete',
       'stocks.read', 'stocks.adjust',
       'transfers.create', 'transfers.approve',
-      'join_code.generate', 'join_code.disable',  // ✅ Join code permissions
+      'join_code.generate', 'join_code.disable',
       'users.manage', 'reports.view', 'audit.view'
     ],
     ADMIN: [
@@ -274,7 +252,7 @@ function getPermissionsByRole(role: string | null): string[] {
       'products.create', 'products.update', 'products.delete',
       'stocks.read', 'stocks.adjust',
       'transfers.create', 'transfers.approve',
-      'join_code.generate',                       // ✅ Can generate join codes
+      'join_code.generate',
       'reports.view'
     ],
     MEMBER: [
@@ -293,33 +271,10 @@ function generateAvatarUrl(firstName: string, lastName: string): string {
 }
 
 function checkTokenExpiry(user: JWTUser): boolean {
-  // Check if JWT token expires within 24 hours
   if (user.exp) {
     const now = Math.floor(Date.now() / 1000);
     const timeToExpiry = user.exp - now;
     return timeToExpiry < 24 * 60 * 60; // < 24 hours
   }
   return false;
-}
-
-// ===== HTTP METHOD RESTRICTIONS =====
-export async function POST() {
-  return NextResponse.json({ 
-    success: false, 
-    error: 'Method not allowed. Use GET to fetch user info.' 
-  }, { status: 405 });
-}
-
-export async function PUT() {
-  return NextResponse.json({ 
-    success: false, 
-    error: 'Method not allowed. Use GET to fetch user info.' 
-  }, { status: 405 });
-}
-
-export async function DELETE() {
-  return NextResponse.json({ 
-    success: false, 
-    error: 'Method not allowed. Use GET to fetch user info.' 
-  }, { status: 405 });
 }

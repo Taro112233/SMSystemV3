@@ -1,4 +1,4 @@
-// lib/auth.ts - SIMPLIFIED 3-ROLE SYSTEM (FIXED TYPESCRIPT ERRORS)
+// lib/auth.ts - SIMPLIFIED JWT (USER IDENTITY ONLY)
 // InvenStock - Server-side Authentication Utilities
 
 import { SignJWT, jwtVerify } from 'jose';
@@ -13,15 +13,15 @@ const JWT_EXPIRES_IN = '7d';
 
 // ===== TYPE DEFINITIONS =====
 
-// Simplified to match 3-Role System
+// ✅ Simplified - Only user identity, no organization context
 export interface UserPayload {
   userId: string;
-  email: string;
-  username?: string;          // Optional
+  email?: string;             // Optional
+  username: string;           // Primary credential
   firstName: string;
   lastName: string;
-  organizationId?: string;    // Current active organization
-  role?: 'MEMBER' | 'ADMIN' | 'OWNER';  // Simple role enum
+  phone?: string;
+  // ❌ REMOVED: organizationId, role (will be checked dynamically)
 }
 
 export interface JWTUser extends UserPayload {
@@ -33,45 +33,28 @@ export interface JWTUser extends UserPayload {
 interface UserData {
   id: string;
   email?: string | null;
-  username?: string | null;
+  username: string;
   firstName: string;
   lastName: string;
+  phone?: string | null;
   status: string;
   isActive: boolean;
 }
 
-// ===== AUTH ERROR CONSTANTS =====
-
-export const AuthError = {
-  INVALID_CREDENTIALS: 'Invalid username or password',
-  USER_NOT_FOUND: 'User not found',
-  USER_NOT_APPROVED: 'User account pending approval',
-  USER_SUSPENDED: 'User account suspended',
-  USER_INACTIVE: 'User account inactive',
-  INVALID_TOKEN: 'Invalid or expired token',
-  ORGANIZATION_NOT_FOUND: 'Organization not found',
-  NO_ORGANIZATION_ACCESS: 'No access to organization'
-} as const;
-
 // ===== JWT FUNCTIONS =====
 
 /**
- * Create JWT Token with organization context
+ * ✅ Create lightweight JWT - only user identity
  */
 export async function createToken(user: UserPayload): Promise<string> {
-  const payload: Record<string, unknown> = { // Fixed: use unknown instead of any
+  return await new SignJWT({
     userId: user.userId,
-    email: user.email,
+    email: user.email || '',
+    username: user.username,
     firstName: user.firstName,
     lastName: user.lastName,
-  };
-
-  // Add optional fields only if they exist
-  if (user.username) payload.username = user.username;
-  if (user.organizationId) payload.organizationId = user.organizationId;
-  if (user.role) payload.role = user.role;
-
-  return await new SignJWT(payload)
+    phone: user.phone || null,
+  })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime(JWT_EXPIRES_IN)
     .setIssuedAt()
@@ -79,57 +62,26 @@ export async function createToken(user: UserPayload): Promise<string> {
 }
 
 /**
- * Verify JWT Token using Jose
+ * ✅ Verify JWT Token - returns user identity only
  */
 export async function verifyToken(token: string): Promise<JWTUser | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     
-    const result: JWTUser = {
+    return {
       userId: payload.userId as string,
-      email: payload.email as string,
+      email: payload.email as string || undefined,
+      username: payload.username as string,
       firstName: payload.firstName as string,
       lastName: payload.lastName as string,
+      phone: payload.phone as string || undefined,
       iat: payload.iat,
       exp: payload.exp
     };
-
-    // Add optional fields only if they exist
-    if (payload.username) result.username = payload.username as string;
-    if (payload.organizationId) result.organizationId = payload.organizationId as string;
-    if (payload.role) result.role = payload.role as 'MEMBER' | 'ADMIN' | 'OWNER';
-
-    return result;
   } catch (error) {
     console.error('JWT verification failed:', error);
     return null;
   }
-}
-
-/**
- * Create token with organization context
- */
-export async function createTokenWithOrganization(
-  user: UserPayload,
-  organizationId: string,
-  role?: 'MEMBER' | 'ADMIN' | 'OWNER'
-): Promise<string> {
-  return createToken({
-    ...user,
-    organizationId,
-    role
-  });
-}
-
-/**
- * Alias functions for backward compatibility
- */
-export async function verifyJWT(token: string): Promise<JWTUser | null> {
-  return verifyToken(token);
-}
-
-export async function signJWT(payload: UserPayload): Promise<string> {
-  return createToken(payload);
 }
 
 // ===== PASSWORD FUNCTIONS =====
@@ -139,12 +91,8 @@ export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, saltRounds);
 }
 
-export async function comparePassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword);
-}
-
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return comparePassword(password, hashedPassword);
+  return bcrypt.compare(password, hashedPassword);
 }
 
 // ===== UTILITY FUNCTIONS =====
@@ -162,25 +110,17 @@ export function getCookieOptions() {
 }
 
 /**
- * Convert user object to JWT payload (simplified for 3-Role System)
+ * ✅ Convert user object to JWT payload - no organization context
  */
-export function userToPayload(
-  user: UserData, // Fixed: use proper type instead of any
-  organizationId?: string, 
-  role?: 'MEMBER' | 'ADMIN' | 'OWNER'
-): UserPayload {
-  const payload: UserPayload = {
+export function userToPayload(user: UserData): UserPayload {
+  return {
     userId: user.id,
-    email: user.email || '',
+    email: user.email || undefined,
+    username: user.username,
     firstName: user.firstName,
     lastName: user.lastName,
+    phone: user.phone || undefined,
   };
-
-  if (user.username) payload.username = user.username;
-  if (organizationId) payload.organizationId = organizationId;
-  if (role) payload.role = role;
-
-  return payload;
 }
 
 export function isUserActive(user: { status: string; isActive: boolean }): boolean {
@@ -192,16 +132,6 @@ export function shouldRefreshToken(user: JWTUser): boolean {
   const now = Math.floor(Date.now() / 1000);
   const timeToExpiry = user.exp - now;
   return timeToExpiry < 24 * 60 * 60; // Refresh if expires within 24 hours
-}
-
-export function extractTokenFromHeader(authHeader: string | null): string | null {
-  if (!authHeader) return null;
-  
-  if (authHeader.startsWith('Bearer ')) {
-    return authHeader.slice(7);
-  }
-  
-  return authHeader;
 }
 
 // ===== VALIDATION FUNCTIONS =====
@@ -232,136 +162,4 @@ export function validatePasswordStrength(password: string): {
 
 export function isValidUserStatus(status: string): boolean {
   return ['PENDING', 'ACTIVE', 'SUSPENDED', 'INACTIVE'].includes(status);
-}
-
-// ===== SIMPLE PERMISSION CHECKING =====
-
-export function hasPermission(
-  userRole: 'MEMBER' | 'ADMIN' | 'OWNER',
-  permission: string
-): boolean {
-  switch (permission) {
-    // MEMBER permissions
-    case 'stocks.read':
-    case 'stocks.adjust':
-    case 'products.read':
-    case 'transfers.create':
-    case 'transfers.receive':
-      return ['MEMBER', 'ADMIN', 'OWNER'].includes(userRole);
-    
-    // ADMIN permissions
-    case 'products.create':
-    case 'products.update':
-    case 'products.delete':
-    case 'categories.create':
-    case 'users.invite':
-    case 'transfers.approve':
-      return ['ADMIN', 'OWNER'].includes(userRole);
-    
-    // OWNER permissions
-    case 'departments.create':
-    case 'departments.update':
-    case 'departments.delete':
-    case 'organization.settings':
-    case 'users.manage':
-      return userRole === 'OWNER';
-    
-    default:
-      return false;
-  }
-}
-
-export function requireRole(
-  userRole: 'MEMBER' | 'ADMIN' | 'OWNER',
-  minimumRole: 'MEMBER' | 'ADMIN' | 'OWNER'
-): boolean {
-  const roleHierarchy = {
-    MEMBER: 1,
-    ADMIN: 2,
-    OWNER: 3
-  };
-  
-  return roleHierarchy[userRole] >= roleHierarchy[minimumRole];
-}
-
-// ===== RATE LIMITING =====
-
-export class RateLimiter {
-  private attempts: Map<string, { count: number; resetTime: number }> = new Map();
-  
-  constructor(
-    private maxAttempts: number = 5,
-    private windowMs: number = 15 * 60 * 1000
-  ) {}
-  
-  isAllowed(identifier: string): boolean {
-    const now = Date.now();
-    const record = this.attempts.get(identifier);
-    
-    if (!record || now > record.resetTime) {
-      this.attempts.set(identifier, { count: 1, resetTime: now + this.windowMs });
-      return true;
-    }
-    
-    if (record.count >= this.maxAttempts) {
-      return false;
-    }
-    
-    record.count++;
-    return true;
-  }
-  
-  getRemainingTime(identifier: string): number {
-    const record = this.attempts.get(identifier);
-    if (!record) return 0;
-    
-    return Math.max(0, record.resetTime - Date.now());
-  }
-  
-  reset(identifier: string): void {
-    this.attempts.delete(identifier);
-  }
-}
-
-export const loginRateLimiter = new RateLimiter(5, 15 * 60 * 1000);
-
-// ===== REFRESH TOKEN FUNCTIONS =====
-
-export async function generateRefreshToken(userId: string): Promise<string> {
-  return await new SignJWT({ userId, type: 'refresh' })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime('30d')
-    .sign(JWT_SECRET);
-}
-
-export async function verifyRefreshToken(token: string): Promise<{ userId: string } | null> {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    if (payload.type !== 'refresh') {
-      return null;
-    }
-    return { userId: payload.userId as string };
-  } catch (error) {
-    console.error('Refresh token verification failed:', error);
-    return null;
-  }
-}
-
-export function generateRandomPassword(length = 12): string {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-  let password = '';
-  
-  // Ensure we have at least one of each type
-  password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
-  password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
-  password += '0123456789'[Math.floor(Math.random() * 10)];
-  password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
-  
-  // Fill the rest
-  for (let i = password.length; i < length; i++) {
-    password += charset[Math.floor(Math.random() * charset.length)];
-  }
-  
-  // Shuffle the password
-  return password.split('').sort(() => Math.random() - 0.5).join('');
 }

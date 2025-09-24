@@ -1,11 +1,11 @@
-// app/api/auth/login/route.ts - FIXED SCHEMA FIELDS
+// app/api/auth/login/route.ts - SIMPLIFIED (NO ORG CONTEXT IN JWT)
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, createToken, getCookieOptions, userToPayload } from '@/lib/auth';
 import { z } from 'zod';
 import arcjet, { shield, tokenBucket, slidingWindow } from "@arcjet/next";
 
-// ===== ARCJET CONFIGURATION FOR LOGIN ENDPOINT =====
+// ===== ARCJET CONFIGURATION =====
 const aj = arcjet({
   key: process.env.ARCJET_KEY!,
   rules: [
@@ -39,9 +39,7 @@ interface ValidationError {
 export async function POST(request: NextRequest) {
   try {
     const decision = await aj.protect(request, { requested: 1 });
-    const clientIp = request.headers.get('x-forwarded-for') || 
-                    request.headers.get('x-real-ip') || 
-                    'unknown';
+    const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
     
     if (decision.isDenied()) {
       if (decision.reason.isRateLimit()) {
@@ -60,14 +58,6 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      if (decision.reason.isShield()) {
-        console.log(`🛡️ Login attempt blocked by shield from IP: ${clientIp}`);
-        return NextResponse.json(
-          { success: false, error: "Request blocked by security filter" },
-          { status: 403 }
-        );
-      }
-
       return NextResponse.json(
         { success: false, error: "Access denied" },
         { status: 403 }
@@ -99,8 +89,9 @@ export async function POST(request: NextRequest) {
       where: { username: username.toLowerCase() },
       select: {
         id: true, username: true, email: true, password: true,
-        firstName: true, lastName: true, status: true, isActive: true,
-        emailVerified: true, lastLogin: true, createdAt: true, updatedAt: true,
+        firstName: true, lastName: true, phone: true,
+        status: true, isActive: true, emailVerified: true, 
+        lastLogin: true, createdAt: true, updatedAt: true,
       }
     });
 
@@ -122,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Login successful: ${username} from IP: ${clientIp}`);
 
-    // ✅ FIXED: Updated organization select to match new schema
+    // ✅ Get user's organizations (no org context in JWT)
     const userOrganizations = await prisma.organizationUser.findMany({
       where: { userId: user.id, isActive: true },
       include: {
@@ -134,35 +125,23 @@ export async function POST(request: NextRequest) {
             description: true,
             status: true, 
             timezone: true, 
-            email: true,           // ✅ exists in new schema
-            phone: true,           // ✅ exists in new schema
-            inviteCode: true,      // ✅ new field
-            inviteEnabled: true,   // ✅ new field
+            email: true,
+            phone: true,
+            inviteCode: true,
+            inviteEnabled: true,
             createdAt: true,
             updatedAt: true
-            // ❌ REMOVED: allowDepartments (doesn't exist in new schema)
           }
         }
       },
       orderBy: { joinedAt: 'asc' }
     });
 
+    // ✅ Create lightweight JWT (no organization context)
     const userPayload = userToPayload(user);
-    let token: string;
+    const token = await createToken(userPayload);
 
-    if (userOrganizations.length > 0) {
-      const defaultOrg = userOrganizations[0];
-      const userRole = defaultOrg.roles;
-
-      token = await createToken({
-        ...userPayload,
-        organizationId: defaultOrg.organizationId,
-        role: userRole as 'MEMBER' | 'ADMIN' | 'OWNER'
-      });
-    } else {
-      token = await createToken(userPayload);
-    }
-
+    // Update last login
     await prisma.user.update({
       where: { id: user.id },
       data: { lastLogin: new Date() }
@@ -174,6 +153,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       firstName: user.firstName, 
       lastName: user.lastName,
+      phone: user.phone,
       fullName: `${user.firstName} ${user.lastName}`,
       status: user.status, 
       isActive: user.isActive,
@@ -187,7 +167,7 @@ export async function POST(request: NextRequest) {
       message: 'Login successful',
       user: userResponse, 
       token: token, 
-      organizations: userOrganizations
+      organizations: userOrganizations // User can choose organization later
     });
 
     response.cookies.set('auth-token', token, getCookieOptions());

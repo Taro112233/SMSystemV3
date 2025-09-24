@@ -2,7 +2,7 @@
 
 ## 🎯 Project Overview
 
-InvenStock เป็นระบบ Multi-Tenant Inventory Management ที่ออกแบบสำหรับโรงพยาบาลและสถานพยาบาล โดยเน้นการจัดการสต็อกแบบ Department-Centric พร้อม Custom Role Management
+InvenStock เป็นระบบ Multi-Tenant Inventory Management ที่ออกแบบสำหรับโรงพยาบาลและสถานพยาบาล โดยเน้นการจัดการสต็อกแบบ Department-Centric
 
 ## 🏗️ Technical Architecture
 
@@ -106,6 +106,192 @@ interface TransferStatusEvent {
 - **Low Stock Alerts:** Real-time per department
 - **Transfer Notifications:** Immediate status updates
 
+## 🔐 Authentication Architecture Overview
+
+**JWT Strategy**: Lightweight user identity only → Real-time organization permission checking
+
+```typescript
+// JWT Payload (Minimal)
+{ userId, username, firstName, lastName, email, phone }
+
+// Organization Context (Dynamic)
+Check via: getUserOrgRole(userId, orgSlug) → { role, organizationId }
+```
+
+---
+
+### 📱 Frontend Page Patterns
+
+#### Pattern 1: Public Page (No Auth Required)
+```typescript
+// pages/login.tsx, pages/register.tsx, pages/landing.tsx
+export default function PublicPage() {
+  return Public content
+}
+```
+
+#### Pattern 2: Auth Required (No Organization)
+```typescript
+// pages/dashboard.tsx (organization selector)
+export default function DashboardPage() {
+  const { user, loading } = useAuth()
+  
+  if (loading) return 
+  if (!user) return 
+  
+  return 
+}
+```
+
+#### Pattern 3: Organization + Role Required
+```typescript
+// pages/org/[orgSlug]/products.tsx
+export default function ProductsPage() {
+  const { user, currentOrganization, userRole, switchOrganization } = useAuth()
+  const { orgSlug } = useParams()
+  
+  // Initialize organization context
+  useEffect(() => {
+    if (user && orgSlug && (!currentOrganization || currentOrganization.slug !== orgSlug)) {
+      switchOrganization(orgSlug)
+    }
+  }, [user, orgSlug, currentOrganization])
+  
+  // Loading states
+  if (!user) return 
+  if (!currentOrganization) return 
+  
+  // Permission check
+  if (!userRole || !['ADMIN', 'OWNER'].includes(userRole)) {
+    return 
+  }
+  
+  return 
+}
+```
+
+#### Pattern 4: Department Context (All Org Members)
+```typescript
+// pages/org/[orgSlug]/departments/[deptId]/stocks.tsx
+export default function DepartmentStocksPage() {
+  const { user, currentOrganization, userRole, switchOrganization } = useAuth()
+  const { orgSlug, deptId } = useParams()
+  
+  useEffect(() => {
+    if (user && orgSlug && (!currentOrganization || currentOrganization.slug !== orgSlug)) {
+      switchOrganization(orgSlug)
+    }
+  }, [user, orgSlug, currentOrganization])
+  
+  if (!user) return 
+  if (!currentOrganization) return 
+  if (!userRole) return 
+  
+  // All org members can access departments
+  return 
+}
+```
+
+---
+
+### 🔌 API Route Patterns
+
+#### Pattern 1: Public API (No Auth)
+```typescript
+// app/api/health/route.ts
+export async function GET() {
+  return NextResponse.json({ status: 'ok' })
+}
+```
+
+#### Pattern 2: User Auth Only
+```typescript
+// app/api/user/profile/route.ts
+import { getServerUser } from '@/lib/auth-server'
+
+export async function GET() {
+  const user = await getServerUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+  
+  return NextResponse.json({ user })
+}
+```
+
+#### Pattern 3: Organization Member Required
+```typescript
+// app/api/[orgSlug]/products/route.ts
+import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server'
+
+export async function GET(request: Request, { params }: { params: { orgSlug: string } }) {
+  const user = getUserFromHeaders(request.headers)
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+  
+  const access = await getUserOrgRole(user.userId, params.orgSlug)
+  if (!access) {
+    return NextResponse.json({ error: 'No access to organization' }, { status: 403 })
+  }
+  
+  // Business logic - all org members can read products
+  const products = await prisma.product.findMany({
+    where: { organizationId: access.organizationId }
+  })
+  
+  return NextResponse.json({ products })
+}
+```
+
+#### Pattern 4: Role-Based Permission Required
+```typescript
+// app/api/[orgSlug]/products/route.ts (POST - Create Product)
+import { requireOrgPermission } from '@/lib/auth-server'
+
+export async function POST(request: Request, { params }: { params: { orgSlug: string } }) {
+  const user = getUserFromHeaders(request.headers)
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+  
+  // Check permission (ADMIN or OWNER required)
+  try {
+    const access = await requireOrgPermission(user.userId, params.orgSlug, 'products.create')
+    
+    const body = await request.json()
+    const product = await prisma.product.create({
+      data: {
+        ...body,
+        organizationId: access.organizationId,
+        createdBy: user.userId
+      }
+    })
+    
+    return NextResponse.json({ product })
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 403 })
+  }
+}
+```
+
+#### Pattern 5: Helper Wrapper for Clean Code
+```typescript
+// app/api/[orgSlug]/admin-only/route.ts
+import { withOrgContext } from '@/lib/auth-server'
+
+export const POST = (request: Request, { params }: any) => 
+  withOrgContext(request, async (userId, orgId, userRole) => {
+    // Check if user is admin
+    if (!['ADMIN', 'OWNER'].includes(userRole)) {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+    
+    // Business logic here
+    return NextResponse.json({ success: true })
+  })
+```
+
 ## 🎨 Frontend Component Standards
 
 ### Page Structure
@@ -176,28 +362,6 @@ Extract logic to hooks
 Split complex forms into modules
 Pages orchestrate, components execute
 แยกไฟล์ module + คอมเมนต์ชื่อไฟล์ ด้านบนทุกไฟล์
-
-## 🔐 Security Implementation
-
-### Authentication Flow
-1. **Login:** JWT token with org memberships
-2. **Org Selection:** Validate user access to organization
-3. **Department Access:** Check dept-specific permissions
-4. **API Protection:** Middleware validates org context
-
-### Permission Validation
-```typescript
-// API route protection pattern
-export async function GET(request: Request, context: RouteContext) {
-  const { orgId, deptId } = context.params
-  const user = await authenticateUser(request)
-  
-  await validateOrgAccess(user.id, orgId)
-  await validateDeptPermission(user.id, orgId, deptId, 'stocks.read')
-  
-  // Proceed with business logic
-}
-```
 
 ### Data Isolation
 - **Row-level Security:** Enforced at database level
