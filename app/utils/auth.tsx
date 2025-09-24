@@ -1,5 +1,5 @@
-// app/utils/auth.tsx - FIXED REACT HOOKS AND TYPESCRIPT ERRORS
-// InvenStock - Username-based Authentication Hooks
+// app/utils/auth.tsx - CLEANED VERSION (JOIN BY CODE ONLY)
+// InvenStock - Username-based Authentication Hooks (No Invitation System)
 
 'use client';
 
@@ -10,11 +10,13 @@ import {
   OrganizationUser,
   LoginRequest,
   RegisterRequest,
+  JoinByCodeResponse,
   loginUser,
   registerUser,
   logoutUser,
   getCurrentUser,
   switchOrganization,
+  joinByCode,
   storeUserData,
   storeOrganizationData,
   getStoredUserData,
@@ -26,19 +28,20 @@ import {
   isMinimumRole
 } from './auth-client';
 
-// ===== AUTHENTICATION CONTEXT =====
+// ===== AUTHENTICATION CONTEXT (NO INVITATION) =====
 
 interface AuthContextType {
   user: User | null;
   currentOrganization: Organization | null;
   organizations: OrganizationUser[];
-  userRole: 'MEMBER' | 'ADMIN' | 'OWNER' | null;  // Current role in organization
+  userRole: 'MEMBER' | 'ADMIN' | 'OWNER' | null;
   loading: boolean;
   error: string | null;
   login: (credentials: LoginRequest) => Promise<void>;
   register: (userData: RegisterRequest) => Promise<{ requiresApproval: boolean }>;
   logout: () => Promise<void>;
   switchOrg: (organizationId: string) => Promise<void>;
+  joinOrganization: (inviteCode: string) => Promise<JoinByCodeResponse>; // ✅ Join by code
   refreshUser: () => Promise<void>;
   clearError: () => void;
   hasPermission: (permission: string) => boolean;
@@ -201,6 +204,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  // ✅ JOIN ORGANIZATION BY CODE (REPLACES INVITATION SYSTEM)
+  const joinOrganization = useCallback(async (inviteCode: string): Promise<JoinByCodeResponse> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await joinByCode(inviteCode);
+      
+      // Refresh user data to get updated organizations list
+      await refreshUser();
+      
+      console.log('Successfully joined organization:', response.organization.name);
+      return response;
+    } catch (err) {
+      const errorMessage = parseAuthError(err);
+      setError(errorMessage);
+      console.error('Failed to join organization:', errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Refresh user data
   const refreshUser = useCallback(async () => {
     try {
@@ -240,7 +266,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  // Initialize authentication state - MINIMAL FIX
+  // Initialize authentication state
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -292,6 +318,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     register,
     logout,
     switchOrg,
+    joinOrganization,     // ✅ Join by code function
     refreshUser,
     clearError,
     hasPermission: checkPermission,
@@ -405,7 +432,41 @@ export function useAvailableOrganizations(): OrganizationUser[] {
   return organizations.filter(org => org.isActive);
 }
 
-// ===== ROUTE PROTECTION HOOKS - FIXED HOOK RULES =====
+// ===== JOIN BY CODE HOOK =====
+
+export function useJoinByCode() {
+  const { joinOrganization } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const joinByCodeHandler = useCallback(async (code: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await joinOrganization(code);
+      return result;
+    } catch (err) {
+      const errorMessage = parseAuthError(err);
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [joinOrganization]);
+
+  const clearJoinError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  return {
+    joinByCode: joinByCodeHandler,
+    loading,
+    error,
+    clearError: clearJoinError,
+  };
+}
+
+// ===== ROUTE PROTECTION HOOKS =====
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -448,7 +509,7 @@ export function useRequireOrganization(): OrganizationState {
 
   useEffect(() => {
     if (!loading && !currentOrganization) {
-      window.location.href = '/select-organization';
+      window.location.href = '/dashboard'; // Go to org selector
     }
   }, [loading, currentOrganization]);
 
@@ -606,7 +667,7 @@ export function useOrganizationSwitcher() {
   };
 }
 
-// ===== AUTHENTICATION GUARDS - FIXED TO AVOID CONDITIONAL HOOKS =====
+// ===== AUTHENTICATION GUARDS =====
 
 interface WithAuthProps {
   fallback?: React.ComponentType;

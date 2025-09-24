@@ -1,5 +1,5 @@
-// app/utils/auth-client.ts - SIMPLIFIED 3-ROLE SYSTEM
-// InvenStock - Username-based Authentication Client
+// app/utils/auth-client.ts - CLEANED VERSION (JOIN BY CODE ONLY)
+// InvenStock - Username-based Authentication Client (No Invitation System)
 
 export interface User {
   id: string;
@@ -25,7 +25,11 @@ export interface Organization {
   logo?: string;
   status: string;
   timezone: string;
-  currency: string;
+  currency?: string;
+  
+  // Join by Code fields
+  inviteCode?: string;
+  inviteEnabled?: boolean;
 }
 
 export interface OrganizationUser {
@@ -69,6 +73,27 @@ export interface RegisterResponse {
   token?: string;
   organization?: Organization;
   requiresApproval: boolean;
+}
+
+export interface JoinByCodeRequest {
+  inviteCode: string;
+}
+
+export interface JoinByCodeResponse {
+  success: boolean;
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    memberCount: number;
+    userRole: 'MEMBER';
+    isOwner: boolean;
+    joinedAt: Date;
+    isActive: boolean;
+  };
+  message?: string;
+  nextSteps?: string[];
 }
 
 export interface AuthError {
@@ -150,7 +175,7 @@ export async function getCurrentUser(): Promise<{
 
 export async function switchOrganization(organizationId: string): Promise<{
   organization: Organization;
-  role: 'MEMBER' | 'ADMIN' | 'OWNER';  // Simple role instead of permissions array
+  role: 'MEMBER' | 'ADMIN' | 'OWNER';
 }> {
   const response = await fetch('/api/auth/switch-organization', {
     method: 'POST',
@@ -165,6 +190,103 @@ export async function switchOrganization(organizationId: string): Promise<{
 
   if (!response.ok) {
     throw new Error(data.error || 'Failed to switch organization');
+  }
+
+  return data;
+}
+
+// ===== JOIN BY CODE FUNCTIONS =====
+
+export async function joinByCode(inviteCode: string): Promise<JoinByCodeResponse> {
+  const response = await fetch('/api/organizations/join-by-code', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ inviteCode }),
+    credentials: 'include',
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to join organization');
+  }
+
+  return data;
+}
+
+export async function checkJoinCodeValidity(inviteCode: string): Promise<{
+  valid: boolean;
+  organization?: {
+    name: string;
+    description?: string;
+    memberCount: number;
+  };
+}> {
+  const response = await fetch(`/api/organizations/join-by-code?code=${encodeURIComponent(inviteCode)}`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    return { valid: false };
+  }
+
+  return {
+    valid: data.valid,
+    organization: data.organization
+  };
+}
+
+// ===== ORGANIZATION MANAGEMENT (FOR ADMIN/OWNER) =====
+
+export async function generateJoinCode(organizationId: string): Promise<{
+  inviteCode: string;
+  inviteEnabled: boolean;
+}> {
+  const response = await fetch(`/api/organizations/${organizationId}/join-code`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to generate join code');
+  }
+
+  return data;
+}
+
+export async function disableJoinCode(organizationId: string): Promise<void> {
+  const response = await fetch(`/api/organizations/${organizationId}/join-code`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to disable join code');
+  }
+}
+
+export async function getJoinCodeInfo(organizationId: string): Promise<{
+  inviteCode: string | null;
+  inviteEnabled: boolean;
+  memberCount: number;
+}> {
+  const response = await fetch(`/api/organizations/${organizationId}/join-code`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to get join code info');
   }
 
   return data;
@@ -286,6 +408,20 @@ export function validateRegisterData(data: Partial<RegisterRequest>): string[] {
   return errors;
 }
 
+export function validateJoinCodeFormat(code: string): { valid: boolean; error?: string } {
+  if (!code?.trim()) {
+    return { valid: false, error: 'Join code is required' };
+  }
+
+  // Validate format: ORG-XXXXXX
+  const codePattern = /^ORG-[A-Z0-9]{6}$/i;
+  if (!codePattern.test(code.trim())) {
+    return { valid: false, error: 'Invalid code format. Should be ORG-XXXXXX' };
+  }
+
+  return { valid: true };
+}
+
 // ===== ERROR HANDLING =====
 
 export function parseAuthError(error: unknown): string {
@@ -350,13 +486,13 @@ export function hasPermission(
     case 'products.update':
     case 'products.delete':
     case 'categories.create':
-    case 'users.invite':
+    case 'departments.create':
+    case 'departments.update':
     case 'transfers.approve':
+    case 'join_code.generate':         // ✅ Generate join codes
       return ['ADMIN', 'OWNER'].includes(userRole);
     
     // OWNER permissions
-    case 'departments.create':
-    case 'departments.update':
     case 'departments.delete':
     case 'organization.settings':
     case 'users.manage':

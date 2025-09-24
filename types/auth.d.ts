@@ -1,5 +1,5 @@
-// types/auth.d.ts - SIMPLIFIED 3-ROLE SYSTEM
-// InvenStock - Authentication Type Definitions (Updated)
+// types/auth.d.ts - CLEANED VERSION (NO INVITATION SYSTEM)
+// InvenStock - Authentication Type Definitions (Join by Code Only)
 
 export interface User {
   id: string;
@@ -17,6 +17,7 @@ export interface User {
   
   // Computed fields (ไม่อยู่ใน Database)
   fullName?: string;          // firstName + lastName
+  avatar?: string;            // For UI display
 }
 
 export interface Organization {
@@ -31,8 +32,13 @@ export interface Organization {
   createdAt: Date;
   updatedAt: Date;
   
-  // ❌ REMOVED: allowDepartments, currency, logo, primaryColor, website, address
-  // เหลือเฉพาะ fields ที่มีใน simplified schema
+  // Join by Code fields
+  inviteCode?: string;        // Organization join code
+  inviteEnabled?: boolean;    // Allow joining via code
+  
+  // Stats for API response
+  memberCount?: number;       // Count of active members
+  departmentCount?: number;   // Count of active departments
 }
 
 export interface OrganizationUser {
@@ -48,7 +54,75 @@ export interface OrganizationUser {
   user: User;
 }
 
-// Authentication Requests
+// ===== API RESPONSE INTERFACES =====
+export interface CompleteUserData {
+  user: {
+    id: string;
+    username: string;
+    email: string | null;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    phone: string | null;
+    status: string;
+    isActive: boolean;
+    emailVerified: boolean;
+    lastLogin: Date | null;
+    avatar: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  currentOrganization: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    status: string;
+    timezone: string;
+    memberCount: number;
+    departmentCount: number;
+    inviteCode?: string | null;      // Only for ADMIN/OWNER
+    inviteEnabled?: boolean;         // Only for ADMIN/OWNER
+  } | null;
+  organizations: Array<{
+    id: string;
+    organizationId: string;
+    role: string;
+    isOwner: boolean;
+    joinedAt: Date;
+    organization: {
+      id: string;
+      name: string;
+      slug: string;
+      memberCount: number;
+      departmentCount: number;
+    };
+  }>;
+  permissions: {
+    currentRole: string | null;
+    canManageOrganization: boolean;
+    canManageDepartments: boolean;
+    canCreateProducts: boolean;
+    canGenerateJoinCode: boolean;     // ✅ Join code permission
+    organizationPermissions: string[];
+  };
+  session: {
+    isTokenExpiringSoon: boolean;
+    timezone: string;
+    language: string;
+  };
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  code?: string;
+  timestamp?: string;
+  message?: string;
+}
+
+// ===== AUTHENTICATION INTERFACES =====
 export interface LoginRequest {
   username: string;           // Primary credential
   password: string;
@@ -60,7 +134,7 @@ export interface LoginResponse {
   user: User;
   token: string;
   organizations: OrganizationUser[];
-  currentOrganization?: Organization;  // If organizationId provided
+  currentOrganization?: Organization;
   message?: string;
 }
 
@@ -83,98 +157,115 @@ export interface RegisterResponse {
   message?: string;
 }
 
-// Multi-tenant Context - SIMPLIFIED
+// ===== JOIN BY CODE INTERFACES =====
+export interface JoinByCodeRequest {
+  inviteCode: string;         // Organization join code (ORG-XXXXXX format)
+}
+
+export interface JoinByCodeResponse {
+  success: boolean;
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    memberCount: number;
+    userRole: 'MEMBER';       // New joiners always start as MEMBER
+    isOwner: boolean;         // Always false for join by code
+    joinedAt: Date;
+    isActive: boolean;
+  };
+  message?: string;
+  nextSteps?: string[];       // Guidance for new members
+}
+
+export interface GenerateJoinCodeResponse {
+  success: boolean;
+  inviteCode: string;
+  inviteEnabled: boolean;
+  memberCount: number;
+}
+
+// ===== CONTEXT AND HOOKS =====
 export interface AuthContextType {
   user: User | null;
   currentOrganization: Organization | null;
   organizations: OrganizationUser[];
-  userRole: OrganizationRole | null;    // ✅ Organization role only
+  userRole: OrganizationRole | null;
   loading: boolean;
+  error: string | null;
   
   // Actions
-  login: (data: LoginRequest) => Promise<LoginResponse>;
-  register: (data: RegisterRequest) => Promise<RegisterResponse>;
+  login: (data: LoginRequest) => Promise<void>;
+  register: (data: RegisterRequest) => Promise<{ requiresApproval: boolean }>;
   logout: () => Promise<void>;
   switchOrganization: (organizationId: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  clearError: () => void;
   
   // Permission helpers
   hasPermission: (permission: string) => boolean;
   hasMinimumRole: (minimumRole: OrganizationRole) => boolean;
   
-  // ❌ REMOVED: currentDepartment, departmentPermissions
+  // Join by code
+  joinByCode: (code: string) => Promise<JoinByCodeResponse>;
+  
+  // Session info
+  isTokenExpiringSoon?: boolean;
 }
 
-// JWT Payload - Simplified
+// ===== JWT INTERFACES =====
 export interface JWTPayload {
   userId: string;
-  username: string;
   email?: string;
-  firstName: string;
-  lastName: string;
-  organizationId?: string;    // Current active organization
-  role?: OrganizationRole;    // Simple role in active org
+  username?: string;
+  firstName: string;          // Required field
+  lastName: string;           // Required field
+  organizationId?: string;
+  role?: OrganizationRole;
   iat?: number;
   exp?: number;
 }
 
-// Invitation Interface - Simplified
-export interface UserInvitation {
-  id: string;
-  organizationId: string;
-  inviterId: string;
-  inviteeId?: string;
-  inviteeEmail?: string;      // Optional
-  inviteeUsername?: string;   // Optional
-  role: OrganizationRole;     // ✅ Simple role assignment (organization level)
-  message?: string;
-  status: InvitationStatus;
-  expiresAt: Date;
-  respondedAt?: Date;
-  response?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  organization: Organization;
-  inviter: User;
-  invitee?: User;
-  
-  // ❌ REMOVED: departmentIds, departmentRole - ไม่มี department access control แล้ว
+export interface JWTUser {
+  userId: string;
+  email: string;
+  username?: string;
+  firstName: string;          // Required field
+  lastName: string;           // Required field
+  organizationId?: string;
+  role?: OrganizationRole;
+  iat?: number;
+  exp?: number;
 }
 
-// Department Interface - Simplified (Data Organization Only)
+// ===== DEPARTMENT INTERFACE (SIMPLIFIED) =====
 export interface Department {
   id: string;
   organizationId: string;
-  parentId?: string;          // For hierarchical structure
+  parentId?: string;
   name: string;
-  code: string;               // Short code (e.g., "ICU", "ER", "PHARMACY")
+  code: string;
   description?: string;
   color?: ColorTheme;
   icon?: IconType;
   isActive: boolean;
-  
-  // Audit fields
   createdBy: string;
   updatedBy?: string;
   createdAt: Date;
   updatedAt: Date;
-  
-  // Relations
   organization: Organization;
   parent?: Department;
   children?: Department[];
-  
-  // ❌ REMOVED: requiresAccess, departmentUsers - no access control
 }
 
-// Simple 3-Role System
+// ===== ENUMS =====
 export enum OrganizationRole {
-  MEMBER = 'MEMBER',  // ทำงานทั่วไป เบิก จ่าย แก้สต็อก ดูทุกแผนก
-  ADMIN = 'ADMIN',    // Member + CRUD สินค้า/แผนก + เชิญผู้ใช้
-  OWNER = 'OWNER'     // Admin + จัดการองค์กร + ตั้งค่าระบบ
+  MEMBER = 'MEMBER',  // Can access all departments, manage stocks
+  ADMIN = 'ADMIN',    // MEMBER + manage products/departments + generate join codes
+  OWNER = 'OWNER'     // ADMIN + organization settings + manage users
 }
 
-// Enums ตรงกับ Prisma Schema
 export enum UserStatus {
   PENDING = 'PENDING',
   ACTIVE = 'ACTIVE',
@@ -186,13 +277,6 @@ export enum OrganizationStatus {
   ACTIVE = 'ACTIVE',
   SUSPENDED = 'SUSPENDED',
   TRIAL = 'TRIAL'
-}
-
-export enum InvitationStatus {
-  PENDING = 'PENDING',
-  ACCEPTED = 'ACCEPTED',
-  DECLINED = 'DECLINED',
-  EXPIRED = 'EXPIRED'
 }
 
 export enum ColorTheme {
@@ -234,4 +318,35 @@ export enum IconType {
   CIRCLE = 'CIRCLE',
   SQUARE = 'SQUARE',
   TRIANGLE = 'TRIANGLE'
+}
+
+// ===== ERROR TYPES =====
+export interface ValidationError {
+  field: string;
+  message: string;
+}
+
+export interface AuthError {
+  code: string;
+  message: string;
+  details?: ValidationError[];
+}
+
+// ===== HOOK RETURN TYPES =====
+export interface UseAuthReturn extends AuthContextType {}
+
+export interface UseUserReturn {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+}
+
+export interface UseOrganizationReturn {
+  organization: Organization | null;
+  organizations: OrganizationUser[];
+  loading: boolean;
+  error: string | null;
+  switchOrganization: (orgId: string) => Promise<void>;
+  joinByCode: (code: string) => Promise<void>;
 }
