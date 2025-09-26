@@ -1,5 +1,5 @@
-// scripts/merge-seeds-updated.js - Hospital Pharmacy V3.0 Complete Seed Merger
-// ระบบรวม seed files ครบถ้วนสำหรับโรงพยาบาลเดียว 2 แผนก พร้อมระบบใบเบิก
+// scripts/merge-seeds.js - InvenStock Multi-Tenant Seed Merger V2.0
+// ระบบรวม seed files สำหรับ Multi-Tenant Inventory Management
 
 const fs = require("fs");
 const path = require("path");
@@ -7,34 +7,60 @@ const path = require("path");
 const SEEDS_DIR = path.join(__dirname, "../prisma/seeds");
 const OUTPUT_FILE = path.join(__dirname, "../prisma/seed.ts");
 
-// กำหนดลำดับการ seed
+// กำหนดลำดับการ seed ตาม dependencies
 const SEED_ORDER = {
-  "users.seed.ts": 1,
-  "unified-csv.seed.ts": 2,
+  "users.seed.ts": 1,           // สร้าง users ก่อน
+  "organizations.seed.ts": 2,   // สร้าง organizations และ departments
+  "demo-data.seed.ts": 3,       // สร้างข้อมูลตัวอย่าง (ถ้ามี)
 };
 
 function extractExportedFunction(content, filename) {
-  const functionMatch = content.match(
-    /export async function (\w+)\([^)]*\)\s*\{/
-  );
+  // Remove imports and exports to get clean function content
+  const lines = content.split('\n');
+  let functionContent = '';
+  let insideFunction = false;
+  let braceCount = 0;
+  let functionName = '';
 
-  if (!functionMatch) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Find exported function
+    const functionMatch = line.match(/export async function (\w+)\(/);
+    if (functionMatch) {
+      functionName = functionMatch[1];
+      insideFunction = true;
+      functionContent += line + '\n';
+      braceCount += (line.match(/\{/g) || []).length;
+      continue;
+    }
+
+    if (insideFunction) {
+      functionContent += line + '\n';
+      braceCount += (line.match(/\{/g) || []).length;
+      braceCount -= (line.match(/\}/g) || []).length;
+      
+      if (braceCount === 0) {
+        break;
+      }
+    }
+  }
+
+  if (!functionName) {
     console.warn(`⚠️  No exported function found in ${filename}`);
     return null;
   }
 
-  const functionName = functionMatch[1];
-
   return {
     name: functionName,
     sourceFile: filename,
-    content: content,
+    content: functionContent.replace('export ', ''), // Remove export keyword
   };
 }
 
 function mergeSeeds() {
-  console.log("🌱 Hospital Pharmacy V3.0 Seed Merger");
-  console.log("🏥 Single Hospital - 2 Departments");
+  console.log("🌱 InvenStock Multi-Tenant Seed Merger V2.0");
+  console.log("🏢 Multi-Organization Inventory Management System");
   
   if (!fs.existsSync(SEEDS_DIR)) {
     console.error(`❌ Seeds directory not found: ${SEEDS_DIR}`);
@@ -44,7 +70,7 @@ function mergeSeeds() {
   const seedFiles = fs
     .readdirSync(SEEDS_DIR)
     .filter((file) => file.endsWith(".seed.ts"))
-    .filter((file) => SEED_ORDER[file] && SEED_ORDER[file] < 900)
+    .filter((file) => SEED_ORDER[file])
     .sort((a, b) => {
       const orderA = SEED_ORDER[a] ?? 999;
       const orderB = SEED_ORDER[b] ?? 999;
@@ -52,11 +78,11 @@ function mergeSeeds() {
     });
 
   if (seedFiles.length === 0) {
-    console.error("❌ No active seed files found");
+    console.error("❌ No seed files found");
     process.exit(1);
   }
 
-  console.log(`📁 Found ${seedFiles.length} active seed files`);
+  console.log(`📁 Found ${seedFiles.length} seed files`);
 
   const extractedFunctions = [];
   const imports = [];
@@ -80,24 +106,25 @@ function mergeSeeds() {
   const hasUsersFunction = extractedFunctions.some(
     (f) => f.name === "seedUsers"
   );
-  const hasUnifiedCSVFunction = extractedFunctions.some(
-    (f) => f.name === "seedUnifiedCSV"
+  const hasOrganizationsFunction = extractedFunctions.some(
+    (f) => f.name === "seedOrganizations"
   );
-  const hasCompleteTransfersFunction = extractedFunctions.some(
-    (f) => f.name === "seedTransfersWithTransactions"
+  const hasDemoDataFunction = extractedFunctions.some(
+    (f) => f.name === "seedDemoData"
   );
 
   // Generate merged seed file
-  const mergedContent = generateCompleteSeed(extractedFunctions, imports, {
+  const mergedContent = generateInvenStockSeed(extractedFunctions, imports, {
     hasUsersFunction,
-    hasUnifiedCSVFunction,
-    hasCompleteTransfersFunction,
+    hasOrganizationsFunction,
+    hasDemoDataFunction,
   });
 
   // Write merged file
   try {
     fs.writeFileSync(OUTPUT_FILE, mergedContent, "utf8");
     console.log(`✅ Generated: ${OUTPUT_FILE}`);
+    console.log(`📊 Functions: ${extractedFunctions.length}`);
     console.log(`🚀 Ready to run: npm run db:setup`);
   } catch (error) {
     console.error("❌ Failed to write merged seed:", error.message);
@@ -105,28 +132,35 @@ function mergeSeeds() {
   }
 }
 
-function generateCompleteSeed(functions, imports, seedFlags) {
+function generateInvenStockSeed(functions, imports, seedFlags) {
   const {
     hasUsersFunction,
-    hasUnifiedCSVFunction,
-    hasCompleteTransfersFunction,
+    hasOrganizationsFunction,
+    hasDemoDataFunction,
   } = seedFlags;
 
-  return `// prisma/seed.ts - Hospital Pharmacy V3.0 Complete System Seed
-// Generated by scripts/merge-seeds-updated.js
+  return `// prisma/seed.ts - InvenStock Multi-Tenant System V2.0
+// Generated by scripts/merge-seeds.js
 // Do not edit manually - modify individual seed files instead
 
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../lib/auth";
+import { generateInviteCode } from "../lib/invite-code";
 
 ${imports.join("\n")}
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Starting Hospital Pharmacy V3.0 Seed...");
+  console.log("🌱 Starting InvenStock Multi-Tenant Seed...");
   
   try {
+    // Clear existing data in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log("🧹 Clearing existing data...");
+      await clearExistingData();
+    }
+
     // USER MANAGEMENT
     console.log("👥 Creating users...");
     
@@ -135,21 +169,28 @@ async function main() {
         ? `
     const userResult = await seedUsers(prisma);
     console.log(\`✅ Users: \${userResult.totalUsers}\`);
+    const adminUser = userResult.adminUser;
     `
         : `
+    console.log("👥 Creating basic users...");
     const hashedPassword = await hashPassword("admin123");
     
-    await prisma.user.upsert({
+    // Create system admin user
+    const adminUser = await prisma.user.upsert({
       where: { username: "admin" },
-      update: {},
+      update: {
+        password: hashedPassword, // Update password if exists
+      },
       create: {
         username: "admin",
         password: hashedPassword,
         firstName: "ผู้ดูแล",
         lastName: "ระบบ",
-        position: "System Administrator",
-        status: "APPROVED",
+        email: "admin@inventock.com",
+        phone: "0800000000",
+        status: "ACTIVE",
         isActive: true,
+        emailVerified: true,
       },
     });
     
@@ -157,66 +198,106 @@ async function main() {
     `
     }
 
-    // DATA IMPORT
-    console.log("📁 Importing data...");
+    // ORGANIZATION MANAGEMENT
+    console.log("🏢 Creating organizations...");
     
     ${
-      hasUnifiedCSVFunction
+      hasOrganizationsFunction
         ? `
-    const csvResult = await seedUnifiedCSV(prisma);
-    console.log(\`✅ Drugs: \${csvResult.drugs}, Stocks: \${csvResult.stocks}\`);
+    const orgResult = await seedOrganizations(prisma);
+    console.log(\`✅ Organizations: \${orgResult.totalOrganizations}, Departments: \${orgResult.totalDepartments}\`);
     `
         : `
-    const drug = await prisma.drug.upsert({
-      where: { hospitalDrugCode: "TH001" },
-      update: {},
-      create: {
-        hospitalDrugCode: "TH001",
-        name: "Paracetamol 500mg",
-        genericName: "Paracetamol",
-        dosageForm: "TAB",
-        strength: "500",
-        unit: "mg",
-        packageSize: "100",
-        pricePerBox: 120.00,
-        category: "GENERAL",
-        isActive: true,
-      },
+    console.log("🏢 Creating basic organization...");
+    
+    // Get admin user (should be available from previous step)
+    const currentAdmin = adminUser || await prisma.user.findUnique({
+      where: { username: "admin" }
     });
     
-    await prisma.stock.upsert({
+    if (!currentAdmin) {
+      throw new Error("Admin user not found");
+    }
+
+    // Create demo organization
+    const demoOrganization = await prisma.organization.upsert({
+      where: { slug: "demo-organization" },
+      update: {},
+      create: {
+        name: "องค์กรเดโม",
+        slug: "demo-organization",
+        description: "องค์กรสำหรับทดสอบระบบ InvenStock",
+        email: "demo@inventock.com",
+        phone: "0800000001",
+        status: "ACTIVE",
+        timezone: "Asia/Bangkok",
+        inviteCode: generateInviteCode(),
+        inviteEnabled: true,
+      },
+    });
+
+    // Make admin the owner
+    await prisma.organizationUser.upsert({
       where: {
-        drugId_department: {
-          drugId: drug.id,
-          department: "PHARMACY"
+        organizationId_userId: {
+          organizationId: demoOrganization.id,
+          userId: currentAdmin.id,
         }
       },
       update: {},
       create: {
-        drugId: drug.id,
-        department: "PHARMACY",
-        totalQuantity: 100,
-        reservedQty: 0,
-        minimumStock: 20,
-        totalValue: 8400,
+        organizationId: demoOrganization.id,
+        userId: currentAdmin.id,
+        roles: "OWNER",
+        isOwner: true,
+        isActive: true,
       },
     });
-    
-    console.log("✅ Essential data created");
+
+    // Create basic departments
+    await prisma.department.createMany({
+      data: [
+        {
+          organizationId: demoOrganization.id,
+          name: "แผนกหลัก",
+          code: "MAIN",
+          description: "แผนกหลักของระบบ",
+          color: "BLUE",
+          icon: "BUILDING",
+          isActive: true,
+          createdBy: currentAdmin.id,
+        },
+        {
+          organizationId: demoOrganization.id,
+          name: "คลังสินค้า",
+          code: "WAREHOUSE",
+          description: "คลังเก็บสินค้า",
+          color: "GREEN",
+          icon: "WAREHOUSE",
+          isActive: true,
+          createdBy: currentAdmin.id,
+        },
+      ],
+      skipDuplicates: true,
+    });
+
+    console.log("✅ Organizations: 1, Departments: 2");
     `
     }
 
-    // TRANSFER SYSTEM
-    console.log("🔄 Creating transfers...");
+    // DEMO DATA (always enabled for production readiness)
+    console.log("🎭 Creating complete dataset...");
     
     ${
-      hasCompleteTransfersFunction
+      hasDemoDataFunction
         ? `
-    const transferResult = await seedTransfersWithTransactions(prisma);
-    console.log(\`✅ Transfers: \${transferResult.totalTransfers}\`);
+    const demoResult = await seedDemoData(prisma);
+    console.log(\`✅ \${demoResult.message}\`);
     `
         : `
-    console.log("✅ Transfer system ready");
+    // Create additional users for full system
+    await createCompleteUserSet(prisma);
+    console.log("✅ Complete user set created");
     `
     }
 
@@ -224,11 +305,16 @@ async function main() {
     console.log("🔍 Verifying system...");
     const verification = await verifySystem(prisma);
     
-    console.log("="+"=".repeat(40));
-    console.log("🎉 Hospital Pharmacy V3.0 Ready!");
-    console.log(\`📊 Users: \${verification.users}, Drugs: \${verification.drugs}\`);
-    console.log(\`📦 Stocks: \${verification.stocks}, Transfers: \${verification.transfers}\`);
+    console.log("="+"=".repeat(50));
+    console.log("🎉 InvenStock Multi-Tenant System Ready!");
+    console.log(\`👥 Users: \${verification.users}\`);
+    console.log(\`🏢 Organizations: \${verification.organizations}\`);
+    console.log(\`🏬 Departments: \${verification.departments}\`);
+    console.log(\`📋 Org Memberships: \${verification.orgUsers}\`);
+    console.log(\`📊 Audit Logs: \${verification.auditLogs}\`);
+    console.log("="+"=".repeat(50));
     console.log("🚀 Next: npm run dev");
+    console.log("🔑 Admin Login: admin / admin123");
 
   } catch (error) {
     console.error("💥 Seed error:", error.message);
@@ -238,19 +324,68 @@ async function main() {
   }
 }
 
+async function clearExistingData() {
+  try {
+    // Clear in reverse dependency order
+    await prisma.auditLog.deleteMany({});
+    await prisma.department.deleteMany({});
+    await prisma.organizationUser.deleteMany({});
+    await prisma.organization.deleteMany({});
+    await prisma.user.deleteMany({});
+    
+    console.log("✅ Existing data cleared");
+  } catch (error) {
+    console.warn("⚠️  Could not clear data:", error.message);
+  }
+}
+
+async function createCompleteUserSet(prisma: PrismaClient) {
+  try {
+    const hashedPassword = await hashPassword("demo123");
+    
+    // Additional users for production readiness
+    await prisma.user.createMany({
+      data: [
+        {
+          username: "manager.hospital",
+          password: hashedPassword,
+          firstName: "ผู้จัดการ",
+          lastName: "โรงพยาบาล",
+          email: "manager@hospital.com",
+          status: "ACTIVE",
+          isActive: true,
+        },
+        {
+          username: "staff.pharmacy",
+          password: hashedPassword,
+          firstName: "พนักงาน",
+          lastName: "ร้านยา",
+          email: "staff@pharmacy.com", 
+          status: "ACTIVE",
+          isActive: true,
+        },
+      ],
+      skipDuplicates: true,
+    });
+  } catch (error) {
+    console.warn("⚠️  Could not create additional users:", error.message);
+  }
+}
+
 async function verifySystem(prisma: PrismaClient) {
   try {
-    const [users, drugs, stocks, transfers] = await Promise.all([
+    const [users, organizations, departments, orgUsers, auditLogs] = await Promise.all([
       prisma.user.count(),
-      prisma.drug.count(),
-      prisma.stock.count(),
-      prisma.transfer.count().catch(() => 0),
+      prisma.organization.count(),
+      prisma.department.count(),
+      prisma.organizationUser.count(),
+      prisma.auditLog.count(),
     ]);
 
-    return { users, drugs, stocks, transfers };
+    return { users, organizations, departments, orgUsers, auditLogs };
   } catch (error) {
     console.error("❌ Verification failed:", error.message);
-    return { users: 0, drugs: 0, stocks: 0, transfers: 0 };
+    return { users: 0, organizations: 0, departments: 0, orgUsers: 0, auditLogs: 0 };
   }
 }
 
@@ -264,7 +399,7 @@ main()
     await prisma.$disconnect();
   });
 
-export { prisma };`;
+export { prisma };`
 }
 
 // Execute if run directly

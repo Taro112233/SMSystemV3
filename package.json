@@ -4,31 +4,40 @@
   "private": true,
   "scripts": {
     "dev": "pnpm schema:merge && next dev",
-    "build": "pnpm db:generate && next build",
+    "build": "pnpm schema:merge && pnpm db:generate && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "pnpm db:generate",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    
     "db:generate": "pnpm schema:merge && prisma generate",
     "db:push": "pnpm schema:merge && prisma db push",
     "db:migrate": "pnpm schema:merge && prisma migrate dev",
     "db:migrate:prod": "pnpm schema:merge && prisma migrate deploy",
     "db:studio": "prisma studio",
-    "db:reset": "pnpm schema:merge && prisma db push --force-reset && pnpm seeds:merge && pnpm db:seed:run",
+    
     "schema:merge": "node scripts/merge-schemas.js",
     "schema:check": "node scripts/merge-schemas.js --check-only",
+    
     "seeds:merge": "node scripts/merge-seeds.js",
     "seeds:check": "node scripts/merge-seeds.js --check-only",
-    "db:seed": "pnpm seeds:merge && pnpm db:seed:run",
+    
+    "db:seed": "pnpm schema:merge && pnpm seeds:merge && pnpm db:seed:run",
     "db:seed:run": "tsx prisma/seed.ts",
     "db:seed:demo": "SEED_DEMO_DATA=true pnpm db:seed",
+    "db:seed:prod": "NODE_ENV=production pnpm db:seed",
+    
     "db:setup": "pnpm schema:merge && pnpm db:push && pnpm seeds:merge && pnpm db:seed:run",
     "db:setup:demo": "pnpm schema:merge && pnpm db:push && pnpm seeds:merge && SEED_DEMO_DATA=true pnpm db:seed:run",
-    "db:full-reset": "pnpm db:reset && pnpm db:setup:demo",
-    "db:reset:4models": "npx tsx scripts/reset-4-models.ts",
-    "db:fresh": "pnpm run db:reset:4models && pnpm run db:seed:csv"
+    "db:setup:fresh": "pnpm db:setup:demo",
+    
+    "db:reset": "pnpm schema:merge && prisma db push --force-reset && pnpm seeds:merge && pnpm db:seed:run",
+    "db:reset:demo": "pnpm schema:merge && prisma db push --force-reset && pnpm seeds:merge && SEED_DEMO_DATA=true pnpm db:seed:run",
+    
+    "db:full-reset": "pnpm db:reset:demo",
+    "db:fresh": "pnpm db:full-reset"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
