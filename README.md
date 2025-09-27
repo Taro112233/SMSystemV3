@@ -17,6 +17,10 @@ Directory structure:
     │   ├── layout.tsx
     │   ├── not-found.tsx
     │   ├── page.tsx
+    │   ├── [orgSlug]/
+    │   │   ├── page.tsx
+    │   │   └── [deptSlug]/
+    │   │       └── page.tsx
     │   ├── api/
     │   │   ├── arcjet/
     │   │   │   └── route.ts
@@ -43,9 +47,6 @@ Directory structure:
     │   │   └── page.tsx
     │   ├── login/
     │   │   └── page.tsx
-    │   ├── org/
-    │   │   └── [orgSlug]/
-    │   │       └── page.tsx
     │   ├── register/
     │   │   └── page.tsx
     │   └── utils/
