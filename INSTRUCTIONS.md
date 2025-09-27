@@ -7,7 +7,7 @@ InvenStock เป็นระบบ Multi-Tenant Inventory Management ที่�
 ## 🏗️ Technical Architecture
 
 ### Tech Stack
-- **Frontend:** Next.js 15 + TypeScript + TailwindCSS + Shadcn/UI
+- **Frontend:** Next.js 15 (ต้อง await params ก่อนใช้งาน) + TypeScript + TailwindCSS + Shadcn/UI
 - **Backend:** Next.js API Routes + Prisma ORM
 - **Database:** PostgreSQL with Row-level Security
 - **Authentication:** JWT + bcryptjs

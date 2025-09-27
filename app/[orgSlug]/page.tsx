@@ -1,5 +1,5 @@
-// app/[orgSlug]/page.tsx - UPDATED: Flat URL Structure
-// Organization page that shows only OrganizationOverview
+// app/[orgSlug]/page.tsx - UPDATED: Uses Real Department Data
+// Organization page that shows only OrganizationOverview with real department data
 
 "use client";
 
@@ -14,8 +14,8 @@ import { DashboardSidebar } from '../../components/OrganizationLayout';
 import { DashboardHeader } from '../../components/OrganizationLayout/OrganizationHeader';
 import { OrganizationOverview } from '../../components/OrganizationDashboard';
 
-// Import mock data
-import { departments, recentActivities } from '@/data/orgMockData';
+// Import mock data for activities (departments are now real)
+import { recentActivities } from '@/data/orgMockData';
 
 interface UserData {
   id: string;
@@ -33,6 +33,23 @@ interface OrganizationData {
   role: string;
 }
 
+interface DepartmentData {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  color: string;
+  icon: any;
+  isActive: boolean;
+  memberCount: number;
+  stockItems: number;
+  lowStock: number;
+  notifications: number;
+  manager: string;
+  lastActivity: string;
+  category: string;
+}
+
 const OrganizationPage = () => {
   const params = useParams();
   const orgSlug = params.orgSlug as string;
@@ -43,9 +60,41 @@ const OrganizationPage = () => {
   const [user, setUser] = useState<UserData | null>(null);
   const [organizationData, setOrganizationData] = useState<OrganizationData | null>(null);
   
+  // ✅ Add state for real departments data
+  const [departments, setDepartments] = useState<DepartmentData[]>([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+  
   // Dashboard state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // ✅ Function to load departments from API
+  const loadDepartments = async (orgSlug: string) => {
+  try {
+    setDepartmentsLoading(true);
+    console.log('Loading departments for:', orgSlug);
+    
+    const response = await fetch(`/api/${orgSlug}`, { // ✅ เปลี่ยนจาก /departments
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load organization data: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.success) {
+      setDepartments(data.departments);
+      console.log('Departments loaded:', data.departments.length, 'departments');
+    }
+  } catch (err) {
+    console.error('Failed to load departments:', err);
+    setDepartments([]);
+  } finally {
+    setDepartmentsLoading(false);
+  }
+};
 
   // Get user and organization data from API
   useEffect(() => {
@@ -97,6 +146,9 @@ const OrganizationPage = () => {
           role: data.data.permissions.currentRole
         });
 
+        // ✅ Load departments after organization data is set
+        await loadDepartments(orgSlug);
+
         console.log('✅ Page data loaded successfully');
         setLoading(false);
 
@@ -127,7 +179,7 @@ const OrganizationPage = () => {
       pendingTransfers: 15,
       activeUsers: 89,
       totalValue: '12.5M',
-      departments: departments.length
+      departments: departments.length // ✅ Use real departments count
     }
   } : null;
 
@@ -184,6 +236,7 @@ const OrganizationPage = () => {
                 <div>User: {user ? 'Found' : 'Not Found'}</div>
                 <div>Org Slug: {orgSlug}</div>
                 <div>Organization: {organization ? 'Found' : 'Not Found'}</div>
+                <div>Departments: {departments.length}</div>
                 <div>Error: {error || 'None'}</div>
               </div>
 
@@ -217,7 +270,7 @@ const OrganizationPage = () => {
       {/* Fixed Sidebar */}
       <DashboardSidebar
         organization={organization}
-        departments={departments}
+        departments={departments} // ✅ Use real departments data instead of mock
         selectedDepartment={null} // No department selected on org overview
         onSelectDepartment={handleSidebarDepartmentSelect} // Navigate to dept page
         collapsed={sidebarCollapsed}
@@ -234,19 +287,29 @@ const OrganizationPage = () => {
         />
 
         <main className="flex-1 p-6 overflow-y-auto bg-gray-50">
+          {/* Show loading indicator for departments if needed */}
+          {departmentsLoading && (
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm text-blue-700">กำลังโหลดข้อมูลแผนก...</span>
+              </div>
+            </div>
+          )}
+          
           {/* ALWAYS show OrganizationOverview for organization pages */}
           <OrganizationOverview
             organization={organization}
-            departments={departments}
-            recentActivities={recentActivities}
+            departments={departments} // ✅ Use real departments data
+            recentActivities={recentActivities} // Still using mock data for now
             onSelectDepartment={handleSelectDepartment} // Navigate to dept page
           />
         </main>
       </div>
 
-      {/* Success indicator */}
+      {/* Success indicator with departments count */}
       <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
-        ✅ {user.firstName} {user.lastName} | {organizationData?.role}
+        ✅ {user.firstName} {user.lastName} | {organizationData?.role} | Depts: {departments.length}
       </div>
     </div>
   );

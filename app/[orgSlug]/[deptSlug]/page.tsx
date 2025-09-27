@@ -1,4 +1,4 @@
-// app/[orgSlug]/[deptSlug]/page.tsx
+// app/[orgSlug]/[deptSlug]/page.tsx - UPDATED: Uses Real Department Data
 // Department-specific page with Direct API Pattern - FLAT URL STRUCTURE
 
 "use client";
@@ -13,9 +13,6 @@ import { Button } from '@/components/ui/button';
 import { DashboardSidebar } from '@/components/OrganizationLayout';
 import { DashboardHeader } from '@/components/OrganizationLayout/OrganizationHeader';
 import { DepartmentView } from '@/components/DepartmentDashboard';
-
-// Import mock data
-import { departments, recentActivities } from '@/data/orgMockData';
 
 interface UserData {
   id: string;
@@ -37,9 +34,9 @@ interface DepartmentData {
   id: string;
   name: string;
   code: string;
-  icon: any;
+  description: string;
   color: string;
-  description?: string;
+  icon: any;
   isActive: boolean;
   memberCount: number;
   stockItems: number;
@@ -62,9 +59,49 @@ const DepartmentPage = () => {
   const [organizationData, setOrganizationData] = useState<OrganizationData | null>(null);
   const [departmentData, setDepartmentData] = useState<DepartmentData | null>(null);
   
+  // ✅ Add state for all departments (for sidebar)
+  const [departments, setDepartments] = useState<DepartmentData[]>([]);
+  
   // Dashboard state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // ✅ Function to load all departments
+  const loadDepartments = async (orgSlug: string) => {
+    try {
+      console.log('🔍 Loading all departments for sidebar...');
+      
+      const response = await fetch(`/api/${orgSlug}/departments`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ Failed to load departments for sidebar');
+        return [];
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ All departments loaded:', data.departments.length);
+        return data.departments;
+      } else {
+        console.warn('⚠️ Departments API returned error:', data.error);
+        return [];
+      }
+    } catch (err) {
+      console.error('❌ Failed to load departments:', err);
+      return [];
+    }
+  };
+
+  // ✅ Function to find specific department
+  const findDepartmentBySlug = (departments: DepartmentData[], deptSlug: string): DepartmentData | null => {
+    return departments.find(dept => 
+      dept.code.toLowerCase() === deptSlug.toLowerCase() ||
+      dept.name.toLowerCase().includes(deptSlug.toLowerCase())
+    ) || null;
+  };
 
   // Get user, organization and department data from API
   useEffect(() => {
@@ -116,11 +153,12 @@ const DepartmentPage = () => {
           role: data.data.permissions.currentRole
         });
 
-        // Find department from mock data (in production, this would be an API call)
-        const foundDepartment = departments.find(dept => 
-          dept.code.toLowerCase() === deptSlug.toLowerCase() ||
-          dept.name.toLowerCase().includes(deptSlug.toLowerCase())
-        );
+        // ✅ Load all departments from API instead of using mock data
+        const allDepartments = await loadDepartments(orgSlug);
+        setDepartments(allDepartments);
+
+        // ✅ Find specific department from real data instead of mock
+        const foundDepartment = findDepartmentBySlug(allDepartments, deptSlug);
 
         if (!foundDepartment) {
           console.log('❌ Department not found:', deptSlug);
@@ -161,7 +199,7 @@ const DepartmentPage = () => {
       pendingTransfers: 15,
       activeUsers: 89,
       totalValue: '12.5M',
-      departments: departments.length
+      departments: departments.length // ✅ Use real departments count
     }
   } : null;
 
@@ -206,6 +244,7 @@ const DepartmentPage = () => {
                 <div>Dept Slug: {deptSlug}</div>
                 <div>Organization: {organization ? 'Found' : 'Not Found'}</div>
                 <div>Department: {departmentData ? 'Found' : 'Not Found'}</div>
+                <div>All Departments: {departments.length}</div>
                 <div>Error: {error || 'None'}</div>
               </div>
 
@@ -240,7 +279,7 @@ const DepartmentPage = () => {
       {/* Fixed Sidebar */}
       <DashboardSidebar
         organization={organization}
-        departments={departments}
+        departments={departments} // ✅ Use real departments data instead of mock
         selectedDepartment={departmentData} // Set current department as selected
         onSelectDepartment={(dept) => {
           // Navigate to department page when selecting from sidebar (flat URL)
