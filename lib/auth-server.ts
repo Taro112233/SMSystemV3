@@ -1,4 +1,4 @@
-// lib/auth-server.ts - DYNAMIC ORGANIZATION CHECKING
+// lib/auth-server.ts - DYNAMIC ORGANIZATION CHECKING + MIDDLEWARE SUPPORT
 // InvenStock - Server-side User Verification Utilities (Next.js 15 Compatible)
 
 import { cookies } from 'next/headers';
@@ -112,14 +112,19 @@ export async function getUserOrgRole(
 }
 
 /**
- * ✅ Validate user has access to organization
+ * ✅ Validate user has access to organization (for middleware use)
  */
 export async function validateOrgAccess(
   userId: string,
   orgSlug: string
 ): Promise<boolean> {
-  const access = await getUserOrgRole(userId, orgSlug);
-  return access !== null;
+  try {
+    const access = await getUserOrgRole(userId, orgSlug);
+    return access !== null;
+  } catch (error) {
+    console.error('Organization access validation failed:', error);
+    return false;
+  }
 }
 
 /**

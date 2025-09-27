@@ -35,11 +35,11 @@ prisma/schemas/
 ### Department-Centric Design
 ```typescript
 // ✅ Correct: Department-specific endpoints
-/api/[orgId]/departments/[deptId]/stocks
-/api/[orgId]/departments/[deptId]/transfers
+/api/[orgSlug]/departments/[deptId]/stocks
+/api/[orgSlug]/departments/[deptId]/transfers
 
 // ❌ Avoid: Global stock endpoints
-/api/[orgId]/stocks (should not exist)
+/api/[orgSlug]/stocks (should not exist)
 ```
 
 ### Permission Implementation
@@ -120,13 +120,42 @@ Check via: getUserOrgRole(userId, orgSlug) → { role, organizationId }
 
 ---
 
-### 📱 Frontend Page Patterns
+## 🛡️ **UPDATED: Security & Middleware Architecture**
+
+### **Middleware Security (MVP Level)**
+```typescript
+// middleware.ts - Simplified 3-step protection
+1. ✅ Skip static files
+2. ✅ Check public routes → pass immediately
+3. ✅ Arcjet protection (auth endpoints only - /api/auth/*)
+4. ✅ JWT authentication → redirect /login if no token
+5. ✅ Route validation → redirect /not-found if invalid route
+6. ✅ Pass user headers to pages/APIs
+```
+
+### **Security Flow**
+```typescript
+// Three-layer security approach
+Layer 1: Middleware (Authentication + Route validation)
+Layer 2: API (/api/auth/me - Organization access validation)  
+Layer 3: Page (Direct API calls, no useAuth context dependency)
+```
+
+### **Key Security Features**
+- **Bypass Prevention:** Cannot access org pages without proper authentication
+- **Route Validation:** Invalid routes automatically redirect to /not-found
+- **Selective Protection:** Arcjet only on critical auth endpoints (performance optimized)
+- **Real-time Access Control:** Database checks for every organization access
+
+---
+
+### 📱 **UPDATED: Frontend Page Patterns**
 
 #### Pattern 1: Public Page (No Auth Required)
 ```typescript
 // pages/login.tsx, pages/register.tsx, pages/landing.tsx
 export default function PublicPage() {
-  return Public content
+  return <PublicContent />
 }
 ```
 
@@ -136,37 +165,59 @@ export default function PublicPage() {
 export default function DashboardPage() {
   const { user, loading } = useAuth()
   
-  if (loading) return 
-  if (!user) return 
+  if (loading) return <LoadingState />
+  if (!user) return <RedirectToLogin />
   
-  return 
+  return <OrganizationSelector />
 }
 ```
 
-#### Pattern 3: Organization + Role Required
+#### Pattern 3: **NEW - Organization Page (Direct API Pattern)**
 ```typescript
-// pages/org/[orgSlug]/products.tsx
-export default function ProductsPage() {
-  const { user, currentOrganization, userRole, switchOrganization } = useAuth()
-  const { orgSlug } = useParams()
+// app/org/[orgSlug]/page.tsx - RECOMMENDED PATTERN
+export default function OrganizationPage() {
+  const params = useParams()
+  const orgSlug = params.orgSlug as string
   
-  // Initialize organization context
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null)
+  const [organizationData, setOrganizationData] = useState(null)
+
   useEffect(() => {
-    if (user && orgSlug && (!currentOrganization || currentOrganization.slug !== orgSlug)) {
-      switchOrganization(orgSlug)
+    const loadPageData = async () => {
+      // ✅ Direct API call (no useAuth context dependency)
+      const response = await fetch(`/api/auth/me?orgSlug=${orgSlug}`)
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/login')
+          return
+        }
+        throw new Error('Failed to load user data')
+      }
+
+      const data = await response.json()
+      
+      // Check organization access
+      if (!data.data.currentOrganization || data.data.currentOrganization.slug !== orgSlug) {
+        setError('No access to this organization')
+        return
+      }
+
+      setUser(data.data.user)
+      setOrganizationData(data.data.currentOrganization)
     }
-  }, [user, orgSlug, currentOrganization])
-  
-  // Loading states
-  if (!user) return 
-  if (!currentOrganization) return 
-  
-  // Permission check
-  if (!userRole || !['ADMIN', 'OWNER'].includes(userRole)) {
-    return 
-  }
-  
-  return 
+    
+    loadPageData()
+  }, [orgSlug])
+
+  // Render dashboard with full sidebar layout
+  return (
+    <div className="h-screen bg-gray-50 flex">
+      <DashboardSidebar />
+      <MainContent />
+    </div>
+  )
 }
 ```
 
@@ -174,27 +225,17 @@ export default function ProductsPage() {
 ```typescript
 // pages/org/[orgSlug]/departments/[deptId]/stocks.tsx
 export default function DepartmentStocksPage() {
-  const { user, currentOrganization, userRole, switchOrganization } = useAuth()
-  const { orgSlug, deptId } = useParams()
+  // ✅ Use same Direct API pattern as Organization Page
+  const response = await fetch(`/api/auth/me?orgSlug=${orgSlug}`)
   
-  useEffect(() => {
-    if (user && orgSlug && (!currentOrganization || currentOrganization.slug !== orgSlug)) {
-      switchOrganization(orgSlug)
-    }
-  }, [user, orgSlug, currentOrganization])
-  
-  if (!user) return 
-  if (!currentOrganization) return 
-  if (!userRole) return 
-  
-  // All org members can access departments
-  return 
+  // Validate access and render department content
+  return <DepartmentDashboard />
 }
 ```
 
 ---
 
-### 🔌 API Route Patterns
+### 🔌 **UPDATED: API Route Patterns**
 
 #### Pattern 1: Public API (No Auth)
 ```typescript
@@ -219,7 +260,48 @@ export async function GET() {
 }
 ```
 
-#### Pattern 3: Organization Member Required
+#### Pattern 3: **UPDATED - /api/auth/me with Organization Context**
+```typescript
+// app/api/auth/me/route.ts - Enhanced with org context
+export async function GET(request: NextRequest) {
+  const user = await getServerUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
+  // Get organization context from query params
+  const { searchParams } = new URL(request.url)
+  const orgSlug = searchParams.get('orgSlug')
+
+  let currentOrganization = null
+  let permissions = {}
+
+  if (orgSlug) {
+    // Real-time database check for organization access
+    const access = await getUserOrgRole(user.userId, orgSlug)
+    if (access) {
+      currentOrganization = await getOrganizationBySlug(orgSlug)
+      permissions = {
+        currentRole: access.role,
+        canManageOrganization: access.role === 'OWNER',
+        // ... other permissions
+      }
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      user,
+      currentOrganization,
+      permissions,
+      organizations: await getUserOrganizations(user.userId)
+    }
+  })
+}
+```
+
+#### Pattern 4: Organization Member Required
 ```typescript
 // app/api/[orgSlug]/products/route.ts
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server'
@@ -244,7 +326,7 @@ export async function GET(request: Request, { params }: { params: { orgSlug: str
 }
 ```
 
-#### Pattern 4: Role-Based Permission Required
+#### Pattern 5: Role-Based Permission Required
 ```typescript
 // app/api/[orgSlug]/products/route.ts (POST - Create Product)
 import { requireOrgPermission } from '@/lib/auth-server'
@@ -275,49 +357,59 @@ export async function POST(request: Request, { params }: { params: { orgSlug: st
 }
 ```
 
-#### Pattern 5: Helper Wrapper for Clean Code
-```typescript
-// app/api/[orgSlug]/admin-only/route.ts
-import { withOrgContext } from '@/lib/auth-server'
+---
 
-export const POST = (request: Request, { params }: any) => 
-  withOrgContext(request, async (userId, orgId, userRole) => {
-    // Check if user is admin
-    if (!['ADMIN', 'OWNER'].includes(userRole)) {
-      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
-    }
-    
-    // Business logic here
-    return NextResponse.json({ success: true })
-  })
+## 🎨 **UPDATED: Frontend Component Standards**
+
+### **Page Structure & Safety**
+```typescript
+// ✅ NEW - Safe component props handling
+interface ComponentProps {
+  stats?: {
+    totalProducts?: number;
+    lowStockItems?: number;
+    // Always use optional props to prevent undefined errors
+  };
+}
+
+export const Component = ({ stats = {} }: ComponentProps) => {
+  // Provide default values
+  const safeStats = {
+    totalProducts: stats.totalProducts || 0,
+    lowStockItems: stats.lowStockItems || 0,
+  }
+  
+  return <div>{safeStats.totalProducts}</div>
+}
 ```
 
-## 🎨 Frontend Component Standards
-
-### Page Structure
-🎨 Responsive Design
-typescript// Desktop-first, mobile-compatible
+### **🎨 Responsive Design**
+```typescript
+// Desktop-first, mobile-compatible
 <div className="grid grid-cols-3 lg:grid-cols-2 md:grid-cols-1">
 
 // Touch-friendly sizes
 const BUTTON_HEIGHT = 'h-11'  // 44px minimum
-🧩 Component Modularity
-File Structure
+```
+
+### **🧩 Component Modularity**
+```
 components/
 ├── ui/           # Base components
 ├── layout/       # Layouts, headers, nav
 ├── forms/        # Form modules
 ├── data-display/ # Tables, cards
 └── features/     # Business components
-Size Rules
+```
 
-Max 200 lines per component
-Max 8 props - use composition
-Extract logic to custom hooks
+### **Size Rules**
+- Max 200 lines per component
+- Max 8 props - use composition
+- Extract logic to custom hooks
 
-Component Patterns
+### **Component Patterns**
 ```typescript
-typescript// ✅ Page = orchestrator only
+// ✅ Page = orchestrator only
 export default function StocksPage() {
   return (
     <PageLayout>
@@ -340,7 +432,7 @@ forms/TransferForm/
 └── ItemSelection.tsx
 ```
 
-📁 Module Component Creation
+### **📁 Module Component Creation**
 เมื่อสร้าง module component ให้แยกไฟล์และใส่คอมเมนต์ระบุไฟล์ที่ด้านบนทุกไฟล์
 ```typescript
 // components/forms/TransferForm/index.tsx
@@ -356,17 +448,15 @@ forms/TransferForm/
 // StockTable/StockRow - Individual table row
 ```
 
-🎯 Key Rules
-Desktop-first, mobile-compatible
-Extract logic to hooks
-Split complex forms into modules
-Pages orchestrate, components execute
-แยกไฟล์ module + คอมเมนต์ชื่อไฟล์ ด้านบนทุกไฟล์
+### **🎯 Key Rules**
+- Desktop-first, mobile-compatible
+- Extract logic to hooks
+- Split complex forms into modules
+- Pages orchestrate, components execute
+- แยกไฟล์ module + คอมเมนต์ชื่อไฟล์ ด้านบนทุกไฟล์
+- **Always provide default values for props to prevent undefined errors**
 
-### Data Isolation
-- **Row-level Security:** Enforced at database level
-- **API Filtering:** All queries include org context
-- **Frontend Guards:** Permission-based UI rendering
+---
 
 ## 📈 Performance & Monitoring
 
@@ -381,29 +471,30 @@ Pages orchestrate, components execute
 - **Database Connections:** Monitor pool usage
 - **Security Events:** Log authentication failures
 
+---
 
-## 📋 Development Guidelines
+## 📋 **UPDATED: Development Guidelines**
 
-### API Design Patterns
+### **API Design Patterns**
 ```typescript
 // ✅ Multi-tenant API structure
-/api/[orgId]/departments/[deptId]/stocks
-/api/[orgId]/departments/[deptId]/transfers
-/api/[orgId]/products
-/api/[orgId]/users
+/api/[orgSlug]/departments/[deptId]/stocks
+/api/[orgSlug]/departments/[deptId]/transfers
+/api/[orgSlug]/products
+/api/[orgSlug]/users
 
 // ✅ Always include org context validation
 export async function GET(
   request: Request,
-  { params }: { params: { orgId: string; deptId: string } }
+  { params }: { params: { orgSlug: string; deptId: string } }
 ) {
-  const user = await authenticateUser(request)
-  await validateOrgAccess(user.id, params.orgId)
+  const user = getUserFromHeaders(request.headers)
+  const access = await getUserOrgRole(user.userId, params.orgSlug)
   // Business logic here
 }
 ```
 
-### Component Architecture
+### **Component Architecture**
 ```typescript
 // ✅ Permission-aware components
 interface BaseComponentProps {
@@ -417,7 +508,7 @@ interface DepartmentComponentProps extends BaseComponentProps {
 }
 ```
 
-### Error Handling
+### **Error Handling**
 ```typescript
 // ✅ Structured error responses
 interface APIError {
@@ -435,6 +526,37 @@ const ErrorCodes = {
   TRANSFER_INVALID_STATE: 'TRANSFER_INVALID_STATE'
 }
 ```
+
+---
+
+## 🚀 **Key Architecture Benefits**
+
+### **🔒 Security Excellence**
+- **Multi-layer Protection:** Middleware + API + UI layers
+- **Bypass Prevention:** Cannot access organization pages without proper authentication
+- **Real-time Access Control:** Database checks for every organization access
+- **Selective Protection:** Arcjet only on critical endpoints (performance optimized)
+
+### **⚡ Performance Optimized**
+- **Lightweight JWT:** Only user identity, no organization context
+- **Direct API Pattern:** No useAuth context dependency issues
+- **Selective Security:** Protection only where needed
+- **Safe Component Props:** Prevents undefined errors and crashes
+
+### **🏢 Multi-tenant Ready**
+- **Organization Isolation:** Complete data separation
+- **Dynamic Permissions:** Real-time role checking
+- **Multiple Membership:** Users can belong to multiple organizations
+- **Organization Switching:** No re-login required
+
+### **🛠️ Developer Experience**
+- **Clear Error Handling:** Comprehensive error states and debug info
+- **Consistent Patterns:** Reusable patterns for all organization pages
+- **Safe Development:** Default values prevent runtime errors
+- **Easy Debugging:** Debug info displayed in error states
+
+---
+
 ## 🚀 Deployment Guide
 
 ### Environment Configuration
@@ -456,3 +578,4 @@ ARCJET_KEY="ajkey_01k4fqfvdzeb1sw7sectgh005x"
 # Application Configuration
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NODE_ENV="development"
+```

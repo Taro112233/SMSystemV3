@@ -1,4 +1,4 @@
-// components/OrganizationDashboard/OrganizationStats.tsx
+// components/OrganizationDashboard/OrganizationStats.tsx - FIXED SAFE PROPS
 // OrganizationOverview/OrganizationStats - Main organization statistics cards
 
 import React from 'react';
@@ -6,37 +6,45 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Package, AlertTriangle, FileText, Users } from 'lucide-react';
 
 interface OrganizationStatsProps {
-  stats: {
-    totalProducts: number;
-    lowStockItems: number;
-    pendingTransfers: number;
-    activeUsers: number;
+  stats?: {
+    totalProducts?: number;
+    lowStockItems?: number;
+    pendingTransfers?: number;
+    activeUsers?: number;
   };
 }
 
-export const OrganizationStats = ({ stats }: OrganizationStatsProps) => {
+export const OrganizationStats = ({ stats = {} }: OrganizationStatsProps) => {
+  // Provide default values to prevent undefined errors
+  const safeStats = {
+    totalProducts: stats.totalProducts || 0,
+    lowStockItems: stats.lowStockItems || 0,
+    pendingTransfers: stats.pendingTransfers || 0,
+    activeUsers: stats.activeUsers || 0,
+  };
+
   const statCards = [
     {
       label: 'สินค้าทั้งหมด',
-      value: stats.totalProducts.toLocaleString(),
+      value: safeStats.totalProducts.toLocaleString(),
       icon: Package,
       color: 'text-blue-500'
     },
     {
       label: 'ใกล้หมด',
-      value: stats.lowStockItems,
+      value: safeStats.lowStockItems,
       icon: AlertTriangle,
       color: 'text-orange-500'
     },
     {
       label: 'รอดำเนินการ',
-      value: stats.pendingTransfers,
+      value: safeStats.pendingTransfers,
       icon: FileText,
       color: 'text-blue-500'
     },
     {
       label: 'ผู้ใช้งาน',
-      value: stats.activeUsers,
+      value: safeStats.activeUsers,
       icon: Users,
       color: 'text-green-500'
     }

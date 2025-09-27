@@ -1,71 +1,57 @@
-// middleware.ts - SIMPLIFIED ORGANIZATION CONTEXT
+// middleware.ts - SIMPLIFIED SECURITY (MVP Level)
 // InvenStock - Multi-Tenant Inventory Management System
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from './lib/auth';
-import arcjet, { detectBot, shield, tokenBucket, slidingWindow } from "@arcjet/next";
+import arcjet, { detectBot, shield, tokenBucket } from "@arcjet/next";
 
-// ===== ARCJET SECURITY CONFIGURATION =====
-const aj = arcjet({
+// ===== ARCJET SECURITY (AUTH ENDPOINTS ONLY) =====
+const ajAuth = arcjet({
   key: process.env.ARCJET_KEY!,
   rules: [
     shield({ mode: "LIVE" }),
     detectBot({
       mode: "LIVE",
-      allow: [
-        "CATEGORY:SEARCH_ENGINE",
-        "CATEGORY:MONITOR",
-      ],
-    }),
-    slidingWindow({
-      mode: "LIVE",
-      interval: "1m",
-      max: 100,
+      allow: ["CATEGORY:SEARCH_ENGINE", "CATEGORY:MONITOR"],
     }),
     tokenBucket({
       mode: "LIVE",
       characteristics: ["ip.src"],
-      refillRate: 10,
-      interval: "1m",
-      capacity: 20,
+      refillRate: 3,        // 3 attempts per 5 minutes
+      interval: "5m",
+      capacity: 5,
     }),
   ],
 });
 
 // ===== ROUTE CONFIGURATIONS =====
 const publicRoutes = [
+  '/',
   '/login',
   '/register',
-  '/forgot-password',
-  '/'
+  '/not-found'
 ];
 
 const publicApiRoutes = [
   '/api/auth/login',
   '/api/auth/register',
-  '/api/auth/forgot-password',
-  '/api/auth/reset-password',
   '/api/health',
-  '/api/status',
   '/api/arcjet'
 ];
 
-const sensitiveApiRoutes = [
+const authEndpoints = [
   '/api/auth/login',
-  '/api/auth/register',
-  '/api/auth/forgot-password'
+  '/api/auth/register'
 ];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const clientIp = request.headers.get('x-forwarded-for') || 
-                   request.headers.get('x-real-ip') || 
-                   'unknown';
+  const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
 
   console.log(`🔍 Middleware: ${pathname} from ${clientIp}`);
 
-  // Skip static files
+  // ===== SKIP STATIC FILES =====
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
@@ -79,81 +65,58 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ===== ARCJET SECURITY CHECK =====
+  // ===== STEP 3: ARCJET PROTECTION (AUTH ENDPOINTS ONLY) =====
   try {
-    const isSensitive = sensitiveApiRoutes.some(route => pathname.startsWith(route));
+    const isAuthEndpoint = authEndpoints.some(route => pathname.startsWith(route));
     
-    const decision = await aj.protect(request, {
-      requested: isSensitive ? 3 : 1
-    });
-
-    if (decision.isDenied()) {
-      if (decision.reason.isRateLimit()) {
-        console.log(`⛔ Rate limit exceeded for ${pathname} from IP: ${clientIp}`);
-        return NextResponse.json(
-          { 
-            error: "Too Many Requests",
-            message: "Please wait before trying again",
-            retryAfter: isSensitive ? 300 : 60
-          },
-          { 
-            status: 429, 
-            headers: { 'Retry-After': String(isSensitive ? 300 : 60) }
-          }
-        );
-      } 
+    if (isAuthEndpoint) {
+      console.log(`🔐 Applying Arcjet protection to: ${pathname}`);
       
-      if (decision.reason.isBot()) {
-        console.log(`🤖 Bot blocked for ${pathname} from IP: ${clientIp}`);
+      const decision = await ajAuth.protect(request, { requested: 1 });
+
+      if (decision.isDenied()) {
+        if (decision.reason.isRateLimit()) {
+          console.log(`⛔ Auth rate limit exceeded from IP: ${clientIp}`);
+          return NextResponse.json(
+            { 
+              success: false,
+              error: "Too many authentication attempts",
+              retryAfter: 300
+            },
+            { status: 429, headers: { 'Retry-After': '300' } }
+          );
+        } 
+        
+        console.log(`🛡️ Auth request blocked from IP: ${clientIp}`);
         return NextResponse.json(
-          { error: "Access Denied", message: "Automated access not allowed" },
+          { success: false, error: "Access denied" },
           { status: 403 }
         );
       }
-      
-      if (decision.reason.isShield()) {
-        console.log(`🛡️ Shield blocked for ${pathname} from IP: ${clientIp}`);
-        return NextResponse.json(
-          { error: "Security Violation", message: "Request blocked by security filter" },
-          { status: 403 }
-        );
-      }
-
-      return NextResponse.json(
-        { error: "Access Denied", message: "Request not allowed" },
-        { status: 403 }
-      );
     }
-
   } catch (arcjetError) {
     console.error('🚨 Arcjet protection failed:', arcjetError);
     // Fail open for availability
   }
 
-  // ===== AUTHENTICATION FLOW =====
-  
-  // Allow public routes
-  if (publicRoutes.includes(pathname)) {
+  // ===== STEP 1: CHECK IF ROUTE REQUIRES AUTH =====
+  const isPublicRoute = publicRoutes.includes(pathname);
+  const isPublicApi = publicApiRoutes.some(route => pathname.startsWith(route));
+
+  if (isPublicRoute || isPublicApi) {
     console.log(`✅ Public route: ${pathname}`);
     return NextResponse.next();
   }
 
-  // Allow public API routes
-  if (publicApiRoutes.some(route => pathname.startsWith(route))) {
-    console.log(`✅ Public API route: ${pathname}`);
-    return NextResponse.next();
-  }
-
-  // Get token from cookie
+  // ===== STEP 1: AUTH REQUIRED - CHECK TOKEN =====
   const token = request.cookies.get('auth-token')?.value;
 
-  // No token - redirect to login
   if (!token) {
-    console.log(`❌ No token, redirecting to login`);
+    console.log(`❌ No token for ${pathname}, redirecting to login`);
     
     if (pathname.startsWith('/api/')) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
@@ -162,56 +125,22 @@ export async function middleware(request: NextRequest) {
   }
 
   // Verify token
+  let payload;
   try {
-    const payload = await verifyToken(token);
+    payload = await verifyToken(token);
 
     if (!payload || !payload.userId) {
-      console.log(`❌ Invalid token payload`);
       throw new Error('Invalid token');
     }
 
     console.log(`✅ User authenticated: ${payload.userId}`);
-
-    // ✅ Add user info to request headers (no org context from JWT)
-    if (pathname.startsWith('/api/')) {
-      const requestHeaders = new Headers(request.headers);
-      requestHeaders.set('x-user-id', payload.userId);
-      requestHeaders.set('x-user-email', payload.email || '');
-      requestHeaders.set('x-username', payload.username);
-
-      return NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      });
-    }
-
-    // ✅ Extract organization slug from URL and add to headers
-    const orgMatch = pathname.match(/^\/org\/([^\/]+)/);
-    if (orgMatch) {
-      const requestedOrgSlug = orgMatch[1];
-      console.log(`📂 Organization route: ${requestedOrgSlug}`);
-      
-      const requestHeaders = new Headers(request.headers);
-      requestHeaders.set('x-user-id', payload.userId);
-      requestHeaders.set('x-current-org', requestedOrgSlug);
-
-      return NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      });
-    }
-
-    return NextResponse.next();
-
   } catch (error) {
-    console.error('❌ Token verification failed:', error);
+    console.log(`❌ Token verification failed for ${pathname}`);
 
     // Clear invalid token
     const response = pathname.startsWith('/api/')
       ? NextResponse.json(
-          { error: 'Invalid or expired token' },
+          { success: false, error: 'Invalid or expired token' },
           { status: 401 }
         )
       : NextResponse.redirect(new URL('/login', request.url));
@@ -219,6 +148,46 @@ export async function middleware(request: NextRequest) {
     response.cookies.delete('auth-token');
     return response;
   }
+
+  // ===== STEP 2: CHECK IF VALID ROUTE EXISTS =====
+  // Organization routes pattern: /org/[orgSlug]/...
+  const orgMatch = pathname.match(/^\/org\/([^\/]+)/);
+  
+  // Valid app routes (add more as needed)
+  const validRoutes = [
+    '/dashboard',
+    '/profile',
+    '/settings'
+  ];
+
+  const isValidSingleRoute = validRoutes.includes(pathname);
+  const isValidOrgRoute = orgMatch !== null;
+  const isValidApiRoute = pathname.startsWith('/api/');
+
+  if (!isValidSingleRoute && !isValidOrgRoute && !isValidApiRoute) {
+    console.log(`❌ Invalid route: ${pathname}, redirecting to not-found`);
+    return NextResponse.redirect(new URL('/not-found', request.url));
+  }
+
+  // ===== PASS USER DATA TO HEADERS =====
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-user-id', payload.userId);
+  requestHeaders.set('x-username', payload.username);
+  requestHeaders.set('x-user-email', payload.email || '');
+
+  // For organization routes, add org context
+  if (orgMatch) {
+    const orgSlug = orgMatch[1];
+    requestHeaders.set('x-current-org', orgSlug);
+    requestHeaders.set('x-org-check-required', 'true');
+    console.log(`📂 Organization route: ${orgSlug}`);
+  }
+
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {
