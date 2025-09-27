@@ -22,6 +22,8 @@ Directory structure:
     │   │   └── [deptSlug]/
     │   │       └── page.tsx
     │   ├── api/
+    │   │   ├── [orgSlug]/
+    │   │   │   └── route.ts
     │   │   ├── arcjet/
     │   │   │   └── route.ts
     │   │   ├── auth/
@@ -137,6 +139,7 @@ Directory structure:
     │   ├── auth-server.ts
     │   ├── auth.ts
     │   ├── config.ts
+    │   ├── department-helpers.ts
     │   ├── invite-code.ts
     │   ├── prisma.ts
     │   ├── security-logger.ts
