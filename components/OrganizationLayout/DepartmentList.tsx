@@ -1,5 +1,6 @@
 // components/OrganizationLayout/DepartmentList.tsx
 // DashboardSidebar/DepartmentList - Simple department navigation without grouping
+// ✅ NO CHANGES NEEDED - Navigation handled by parent component via onSelectDepartment prop
 
 import React from 'react';
 import { Button } from '@/components/ui/button';

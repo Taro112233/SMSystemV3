@@ -1,10 +1,12 @@
 // components/OrganizationLayout/SidebarNavigation.tsx
 // DashboardSidebar/SidebarNavigation - Main navigation menu and search
+// ✅ UPDATED: Back button navigation for flat URL structure
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, ArrowLeft, Home, BarChart3, Settings } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface SidebarNavigationProps {
   collapsed: boolean;
@@ -17,6 +19,12 @@ export const SidebarNavigation = ({
   searchTerm, 
   onSearchChange 
 }: SidebarNavigationProps) => {
+  const router = useRouter();
+  
+  const handleBackClick = () => {
+    router.push('/dashboard');
+  };
+
   return (
     <>
       {!collapsed && (
@@ -25,6 +33,7 @@ export const SidebarNavigation = ({
           <Button 
             variant="ghost" 
             className="w-full justify-start mb-4 text-sm h-9"
+            onClick={handleBackClick}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             กลับไปเลือกองค์กร

@@ -26,17 +26,21 @@ prisma/schemas/
 
 ## 🏢 Multi-Tenant Architecture Rules
 
-### Organization Context
-- **URL Pattern:** `/org/[orgSlug]/...`
+### Organization Context - **UPDATED: Flat URL Structure**
+- **URL Pattern:** `/{orgSlug}/...` (แบบ Flat Structure)
 - **Data Isolation:** Row-level security enforced
 - **User Access:** Multiple organization membership allowed
 - **Tab Management:** Each tab maintains separate org context
 
-### Department-Centric Design
+### Department-Centric Design - **UPDATED: Flat URL Structure**
 ```typescript
-// ✅ Correct: Department-specific endpoints
-/api/[orgSlug]/departments/[deptId]/stocks
-/api/[orgSlug]/departments/[deptId]/transfers
+// ✅ Correct: Flat URL structure for department-specific endpoints
+/{orgSlug}/{deptSlug}/stocks
+/{orgSlug}/{deptSlug}/transfers
+
+// API endpoints
+/api/[orgSlug]/[deptSlug]/stocks
+/api/[orgSlug]/[deptSlug]/transfers
 
 // ❌ Avoid: Global stock endpoints
 /api/[orgSlug]/stocks (should not exist)
@@ -122,21 +126,22 @@ Check via: getUserOrgRole(userId, orgSlug) → { role, organizationId }
 
 ## 🛡️ **UPDATED: Security & Middleware Architecture**
 
-### **Middleware Security (MVP Level)**
+### **Middleware Security (MVP Level) - Flat URL Structure**
 ```typescript
-// middleware.ts - Simplified 3-step protection
+// middleware.ts - Enhanced for flat URL structure
 1. ✅ Skip static files
 2. ✅ Check public routes → pass immediately
 3. ✅ Arcjet protection (auth endpoints only - /api/auth/*)
 4. ✅ JWT authentication → redirect /login if no token
-5. ✅ Route validation → redirect /not-found if invalid route
-6. ✅ Pass user headers to pages/APIs
+5. ✅ Flat URL route validation → redirect /not-found if invalid route
+6. ✅ Parse orgSlug and deptSlug from flat URL
+7. ✅ Pass user headers to pages/APIs
 ```
 
 ### **Security Flow**
 ```typescript
 // Three-layer security approach
-Layer 1: Middleware (Authentication + Route validation)
+Layer 1: Middleware (Authentication + Flat URL validation)
 Layer 2: API (/api/auth/me - Organization access validation)  
 Layer 3: Page (Direct API calls, no useAuth context dependency)
 ```
@@ -146,10 +151,11 @@ Layer 3: Page (Direct API calls, no useAuth context dependency)
 - **Route Validation:** Invalid routes automatically redirect to /not-found
 - **Selective Protection:** Arcjet only on critical auth endpoints (performance optimized)
 - **Real-time Access Control:** Database checks for every organization access
+- **Flat URL Parsing:** Extract orgSlug and deptSlug from clean URLs
 
 ---
 
-### 📱 **UPDATED: Frontend Page Patterns**
+### 📱 **UPDATED: Frontend Page Patterns - Flat URL Structure**
 
 #### Pattern 1: Public Page (No Auth Required)
 ```typescript
@@ -172,9 +178,9 @@ export default function DashboardPage() {
 }
 ```
 
-#### Pattern 3: **NEW - Organization Page (Direct API Pattern)**
+#### Pattern 3: **UPDATED - Organization Page (Flat URL Pattern)**
 ```typescript
-// app/org/[orgSlug]/page.tsx - RECOMMENDED PATTERN
+// app/[orgSlug]/page.tsx - Flat URL structure
 export default function OrganizationPage() {
   const params = useParams()
   const orgSlug = params.orgSlug as string
@@ -221,21 +227,28 @@ export default function OrganizationPage() {
 }
 ```
 
-#### Pattern 4: Department Context (All Org Members)
+#### Pattern 4: **UPDATED - Department Context (Flat URL Pattern)**
 ```typescript
-// pages/org/[orgSlug]/departments/[deptId]/stocks.tsx
-export default function DepartmentStocksPage() {
+// app/[orgSlug]/[deptSlug]/page.tsx - Flat department URL
+export default function DepartmentPage() {
+  const params = useParams()
+  const orgSlug = params.orgSlug as string
+  const deptSlug = params.deptSlug as string
+  
   // ✅ Use same Direct API pattern as Organization Page
   const response = await fetch(`/api/auth/me?orgSlug=${orgSlug}`)
   
   // Validate access and render department content
   return <DepartmentDashboard />
 }
+
+// app/[orgSlug]/[deptSlug]/stocks/page.tsx - Department stocks
+// app/[orgSlug]/[deptSlug]/transfers/page.tsx - Department transfers
 ```
 
 ---
 
-### 🔌 **UPDATED: API Route Patterns**
+### 🔌 **UPDATED: API Route Patterns - Flat URL Structure**
 
 #### Pattern 1: Public API (No Auth)
 ```typescript
@@ -301,9 +314,9 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-#### Pattern 4: Organization Member Required
+#### Pattern 4: **UPDATED - Organization Member Required (Flat API)**
 ```typescript
-// app/api/[orgSlug]/products/route.ts
+// app/api/[orgSlug]/products/route.ts - Flat API structure
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server'
 
 export async function GET(request: Request, { params }: { params: { orgSlug: string } }) {
@@ -326,34 +339,31 @@ export async function GET(request: Request, { params }: { params: { orgSlug: str
 }
 ```
 
-#### Pattern 5: Role-Based Permission Required
+#### Pattern 5: **UPDATED - Department API (Flat Structure)**
 ```typescript
-// app/api/[orgSlug]/products/route.ts (POST - Create Product)
+// app/api/[orgSlug]/[deptSlug]/stocks/route.ts - Flat department API
 import { requireOrgPermission } from '@/lib/auth-server'
 
-export async function POST(request: Request, { params }: { params: { orgSlug: string } }) {
+export async function GET(
+  request: Request, 
+  { params }: { params: { orgSlug: string; deptSlug: string } }
+) {
   const user = getUserFromHeaders(request.headers)
   if (!user) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
   }
   
-  // Check permission (ADMIN or OWNER required)
-  try {
-    const access = await requireOrgPermission(user.userId, params.orgSlug, 'products.create')
-    
-    const body = await request.json()
-    const product = await prisma.product.create({
-      data: {
-        ...body,
-        organizationId: access.organizationId,
-        createdBy: user.userId
-      }
-    })
-    
-    return NextResponse.json({ product })
-  } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 403 })
+  // Check organization access
+  const access = await getUserOrgRole(user.userId, params.orgSlug)
+  if (!access) {
+    return NextResponse.json({ error: 'No access to organization' }, { status: 403 })
   }
+  
+  // Get department and stocks
+  const department = await getDepartmentBySlug(access.organizationId, params.deptSlug)
+  const stocks = await getDepartmentStocks(department.id)
+  
+  return NextResponse.json({ stocks, department })
 }
 ```
 
@@ -473,20 +483,20 @@ forms/TransferForm/
 
 ---
 
-## 📋 **UPDATED: Development Guidelines**
+## 📋 **UPDATED: Development Guidelines - Flat URL Structure**
 
-### **API Design Patterns**
+### **API Design Patterns - Flat Structure**
 ```typescript
-// ✅ Multi-tenant API structure
-/api/[orgSlug]/departments/[deptId]/stocks
-/api/[orgSlug]/departments/[deptId]/transfers
+// ✅ Flat multi-tenant API structure
 /api/[orgSlug]/products
 /api/[orgSlug]/users
+/api/[orgSlug]/[deptSlug]/stocks
+/api/[orgSlug]/[deptSlug]/transfers
 
 // ✅ Always include org context validation
 export async function GET(
   request: Request,
-  { params }: { params: { orgSlug: string; deptId: string } }
+  { params }: { params: { orgSlug: string; deptSlug?: string } }
 ) {
   const user = getUserFromHeaders(request.headers)
   const access = await getUserOrgRole(user.userId, params.orgSlug)
@@ -527,13 +537,37 @@ const ErrorCodes = {
 }
 ```
 
+### **Navigation Patterns - Flat URL Structure**
+```typescript
+// ✅ Navigation helpers for flat URLs
+export class OrgNavigation {
+  constructor(private orgSlug: string) {}
+  
+  // Organization routes
+  dashboard() { return `/${this.orgSlug}`; }
+  settings() { return `/${this.orgSlug}/settings`; }
+  members() { return `/${this.orgSlug}/members`; }
+  departments() { return `/${this.orgSlug}/departments`; }
+  
+  // Department routes (flat structure)
+  dept(deptSlug: string) { return `/${this.orgSlug}/${deptSlug}`; }
+  deptStocks(deptSlug: string) { return `/${this.orgSlug}/${deptSlug}/stocks`; }
+  deptTransfers(deptSlug: string) { return `/${this.orgSlug}/${deptSlug}/transfers`; }
+  deptProducts(deptSlug: string) { return `/${this.orgSlug}/${deptSlug}/products`; }
+}
+
+// Usage example
+const nav = new OrgNavigation('siriraj-hospital');
+nav.deptStocks('opd'); // → /siriraj-hospital/opd/stocks
+```
+
 ---
 
 ## 🚀 **Key Architecture Benefits**
 
 ### **🔒 Security Excellence**
 - **Multi-layer Protection:** Middleware + API + UI layers
-- **Bypass Prevention:** Cannot access organization pages without proper authentication
+- **Bypass Prevention:** Cannot access org pages without proper authentication
 - **Real-time Access Control:** Database checks for every organization access
 - **Selective Protection:** Arcjet only on critical endpoints (performance optimized)
 
@@ -542,18 +576,21 @@ const ErrorCodes = {
 - **Direct API Pattern:** No useAuth context dependency issues
 - **Selective Security:** Protection only where needed
 - **Safe Component Props:** Prevents undefined errors and crashes
+- **Flat URL Structure:** Shorter URLs, faster parsing, better UX
 
 ### **🏢 Multi-tenant Ready**
 - **Organization Isolation:** Complete data separation
 - **Dynamic Permissions:** Real-time role checking
 - **Multiple Membership:** Users can belong to multiple organizations
 - **Organization Switching:** No re-login required
+- **Clean URLs:** /{orgSlug}/{deptSlug} pattern
 
 ### **🛠️ Developer Experience**
 - **Clear Error Handling:** Comprehensive error states and debug info
 - **Consistent Patterns:** Reusable patterns for all organization pages
 - **Safe Development:** Default values prevent runtime errors
 - **Easy Debugging:** Debug info displayed in error states
+- **Intuitive URLs:** Easy to understand and remember
 
 ---
 

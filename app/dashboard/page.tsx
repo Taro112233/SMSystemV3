@@ -95,7 +95,7 @@ const OrganizationSelector = () => {
 
   const handleOrganizationClick = (slug: string) => {
     // Redirect to organization
-    window.location.href = `/org/${slug}`;
+    window.location.href = `/${slug}`;
   };
 
   const handleRefresh = () => {

@@ -1,5 +1,5 @@
-// app/org/[orgSlug]/dept/[deptSlug]/page.tsx
-// Department-specific page with Direct API Pattern - FIXED IMPORTS
+// app/[orgSlug]/[deptSlug]/page.tsx
+// Department-specific page with Direct API Pattern - FLAT URL STRUCTURE
 
 "use client";
 
@@ -9,12 +9,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, AlertTriangle, Home, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// Import dashboard components - FIXED PATHS
+// Import dashboard components
 import { DashboardSidebar } from '@/components/OrganizationLayout';
 import { DashboardHeader } from '@/components/OrganizationLayout/OrganizationHeader';
 import { DepartmentView } from '@/components/DepartmentDashboard';
 
-// Import mock data - CORRECT PATH BASED ON ORIGINAL CODE
+// Import mock data
 import { departments, recentActivities } from '@/data/orgMockData';
 
 interface UserData {
@@ -211,7 +211,7 @@ const DepartmentPage = () => {
 
               <div className="space-y-2">
                 <Button 
-                  onClick={() => router.push(`/org/${orgSlug}`)}
+                  onClick={() => router.push(`/${orgSlug}`)}
                   className="w-full"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
@@ -243,9 +243,9 @@ const DepartmentPage = () => {
         departments={departments}
         selectedDepartment={departmentData} // Set current department as selected
         onSelectDepartment={(dept) => {
-          // Navigate to department page when selecting from sidebar
+          // Navigate to department page when selecting from sidebar (flat URL)
           const deptCode = dept.code.toLowerCase();
-          router.push(`/org/${orgSlug}/dept/${deptCode}`);
+          router.push(`/${orgSlug}/${deptCode}`);
         }}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}

@@ -1,5 +1,5 @@
 // components/OrganizationLayout/OrganizationHeader.tsx
-// DashboardHeader - Breadcrumb navigation bar
+// DashboardHeader - Breadcrumb navigation bar (FLAT URL STRUCTURE)
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export const DashboardHeader = ({
             
             <BreadcrumbItem>
               {selectedDepartment ? (
-                <BreadcrumbLink href={`/org/${organization.slug}`}>
+                <BreadcrumbLink href={`/${organization.slug}`}>
                   {organization.name}
                 </BreadcrumbLink>
               ) : (

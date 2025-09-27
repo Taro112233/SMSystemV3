@@ -1,5 +1,6 @@
 // components/OrganizationDashboard/DepartmentOverview.tsx
 // OrganizationOverview/DepartmentOverview - Grid of departments with stats and click handler
+// ✅ UPDATED: Navigation handled by parent component via onSelectDepartment prop
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';

@@ -1,4 +1,4 @@
-// middleware.ts - SIMPLIFIED SECURITY (MVP Level)
+// middleware.ts - FLAT URL STRUCTURE SUPPORT
 // InvenStock - Multi-Tenant Inventory Management System
 
 import { NextResponse } from 'next/server';
@@ -45,6 +45,13 @@ const authEndpoints = [
   '/api/auth/register'
 ];
 
+// ===== VALID SINGLE ROUTES =====
+const validSingleRoutes = [
+  '/dashboard',
+  '/profile',
+  '/settings'
+];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
@@ -65,7 +72,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ===== STEP 3: ARCJET PROTECTION (AUTH ENDPOINTS ONLY) =====
+  // ===== ARCJET PROTECTION (AUTH ENDPOINTS ONLY) =====
   try {
     const isAuthEndpoint = authEndpoints.some(route => pathname.startsWith(route));
     
@@ -99,7 +106,7 @@ export async function middleware(request: NextRequest) {
     // Fail open for availability
   }
 
-  // ===== STEP 1: CHECK IF ROUTE REQUIRES AUTH =====
+  // ===== CHECK IF ROUTE REQUIRES AUTH =====
   const isPublicRoute = publicRoutes.includes(pathname);
   const isPublicApi = publicApiRoutes.some(route => pathname.startsWith(route));
 
@@ -108,7 +115,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ===== STEP 1: AUTH REQUIRED - CHECK TOKEN =====
+  // ===== AUTH REQUIRED - CHECK TOKEN =====
   const token = request.cookies.get('auth-token')?.value;
 
   if (!token) {
@@ -149,21 +156,34 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // ===== STEP 2: CHECK IF VALID ROUTE EXISTS =====
-  // Organization routes pattern: /org/[orgSlug]/...
-  const orgMatch = pathname.match(/^\/org\/([^\/]+)/);
+  // ===== ROUTE VALIDATION FOR FLAT URL STRUCTURE =====
   
-  // Valid app routes (add more as needed)
-  const validRoutes = [
-    '/dashboard',
-    '/profile',
-    '/settings'
-  ];
-
-  const isValidSingleRoute = validRoutes.includes(pathname);
-  const isValidOrgRoute = orgMatch !== null;
+  // Check valid single routes
+  const isValidSingleRoute = validSingleRoutes.includes(pathname);
   const isValidApiRoute = pathname.startsWith('/api/');
+  
+  // ✅ UPDATED: Flat URL pattern matching
+  // Pattern: /[orgSlug] or /[orgSlug]/[deptSlug]
+  const flatUrlMatch = pathname.match(/^\/([^\/]+)(?:\/([^\/]+))?$/);
+  
+  let isValidOrgRoute = false;
+  let orgSlug = null;
+  let deptSlug = null;
+  
+  if (flatUrlMatch) {
+    orgSlug = flatUrlMatch[1];
+    deptSlug = flatUrlMatch[2]; // Optional department slug
+    
+    // Validate that this is not a reserved route
+    const reservedRoutes = ['dashboard', 'profile', 'settings', 'api', '_next', 'login', 'register'];
+    
+    if (!reservedRoutes.includes(orgSlug)) {
+      isValidOrgRoute = true;
+      console.log(`📂 Flat organization route detected:`, { orgSlug, deptSlug });
+    }
+  }
 
+  // Check if route is valid
   if (!isValidSingleRoute && !isValidOrgRoute && !isValidApiRoute) {
     console.log(`❌ Invalid route: ${pathname}, redirecting to not-found`);
     return NextResponse.redirect(new URL('/not-found', request.url));
@@ -176,11 +196,16 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set('x-user-email', payload.email || '');
 
   // For organization routes, add org context
-  if (orgMatch) {
-    const orgSlug = orgMatch[1];
+  if (isValidOrgRoute && orgSlug) {
     requestHeaders.set('x-current-org', orgSlug);
     requestHeaders.set('x-org-check-required', 'true');
-    console.log(`📂 Organization route: ${orgSlug}`);
+    
+    if (deptSlug) {
+      requestHeaders.set('x-current-dept', deptSlug);
+      console.log(`🏢 Department context: ${orgSlug}/${deptSlug}`);
+    } else {
+      console.log(`🏢 Organization context: ${orgSlug}`);
+    }
   }
 
   return NextResponse.next({

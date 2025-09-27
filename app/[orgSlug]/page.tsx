@@ -1,4 +1,4 @@
-// app/org/[orgSlug]/page.tsx - UPDATED: Organization Overview Only
+// app/[orgSlug]/page.tsx - UPDATED: Flat URL Structure
 // Organization page that shows only OrganizationOverview
 
 "use client";
@@ -10,11 +10,11 @@ import { Loader2, AlertTriangle, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Import dashboard components
-import { DashboardSidebar } from '../../../components/OrganizationLayout';
-import { DashboardHeader } from '../../../components/OrganizationLayout/OrganizationHeader';
-import { OrganizationOverview } from '../../../components/OrganizationDashboard';
+import { DashboardSidebar } from '../../components/OrganizationLayout';
+import { DashboardHeader } from '../../components/OrganizationLayout/OrganizationHeader';
+import { OrganizationOverview } from '../../components/OrganizationDashboard';
 
-// Import mock data - CORRECT PATH
+// Import mock data
 import { departments, recentActivities } from '@/data/orgMockData';
 
 interface UserData {
@@ -133,16 +133,16 @@ const OrganizationPage = () => {
 
   // Handle department selection from OrganizationOverview
   const handleSelectDepartment = (dept: any) => {
-    // Navigate to department-specific page
+    // Navigate to department-specific page (flat URL)
     const deptCode = dept.code.toLowerCase();
-    router.push(`/org/${orgSlug}/dept/${deptCode}`);
+    router.push(`/${orgSlug}/${deptCode}`);
   };
 
   // Handle department selection from sidebar
   const handleSidebarDepartmentSelect = (dept: any) => {
-    // Navigate to department-specific page
+    // Navigate to department-specific page (flat URL)
     const deptCode = dept.code.toLowerCase();
-    router.push(`/org/${orgSlug}/dept/${deptCode}`);
+    router.push(`/${orgSlug}/${deptCode}`);
   };
 
   // Show loading state
