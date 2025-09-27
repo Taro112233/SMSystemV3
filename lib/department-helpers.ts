@@ -1,4 +1,4 @@
-// lib/department-helpers.ts
+// lib/department-helpers.ts - SIMPLIFIED STRING-BASED APPROACH
 // Helper functions for mapping department data from database to frontend
 
 import { 
@@ -9,50 +9,67 @@ import {
 } from 'lucide-react';
 
 /**
- * Map IconType enum from database to Lucide React component
+ * ✅ SIMPLIFIED: Map IconType enum to icon string identifier
+ * Returns string instead of React component to avoid serialization issues
  */
-export function mapIconTypeToComponent(iconType: string | null) {
-  const iconMap = {
-    // Department Icons
-    BUILDING: Building,
-    HOSPITAL: Hospital,
-    PHARMACY: Pill,
-    WAREHOUSE: Warehouse,
-    LABORATORY: TestTube,
-    
-    // Product Category Icons
-    PILL: Pill,
-    BOTTLE: Package,
-    SYRINGE: Activity,
-    BANDAGE: Shield,
-    STETHOSCOPE: Stethoscope,
-    
-    // Role Icons
-    CROWN: Crown,
-    SHIELD: Shield,
-    PERSON: Users,
-    EYE: Eye,
-    GEAR: Settings, // ✅ Fixed: Use Settings instead of Gear
-    
-    // General Icons
-    BOX: Box,
-    FOLDER: Folder,
-    TAG: Tag,
-    STAR: Star,
-    HEART: Heart,
-    CIRCLE: Circle,
-    SQUARE: Square,
-    TRIANGLE: Triangle,
-  };
+export function mapIconTypeToString(iconType: string | null | undefined): string {
+  if (!iconType) {
+    return 'BUILDING';
+  }
+  
+  const validIcons = [
+    'BUILDING', 'HOSPITAL', 'PHARMACY', 'WAREHOUSE', 'LABORATORY',
+    'PILL', 'BOTTLE', 'SYRINGE', 'BANDAGE', 'STETHOSCOPE',
+    'CROWN', 'SHIELD', 'PERSON', 'EYE', 'GEAR',
+    'BOX', 'FOLDER', 'TAG', 'STAR', 'HEART', 'CIRCLE', 'SQUARE', 'TRIANGLE'
+  ];
 
-  return iconMap[iconType as keyof typeof iconMap] || Building;
+  const normalizedIcon = iconType.toUpperCase();
+  return validIcons.includes(normalizedIcon) ? normalizedIcon : 'BUILDING';
 }
 
 /**
- * Map ColorTheme enum from database to Tailwind CSS classes
+ * ✅ Get React component from icon string (for frontend use)
  */
-export function mapColorThemeToTailwind(colorTheme: string | null): string {
-  const colorMap = {
+export function getIconComponent(iconString: string) {
+  const iconMap: Record<string, any> = {
+    'BUILDING': Building,
+    'HOSPITAL': Hospital,
+    'PHARMACY': Pill,
+    'WAREHOUSE': Warehouse,
+    'LABORATORY': TestTube,
+    'PILL': Pill,
+    'BOTTLE': Package,
+    'SYRINGE': Activity,
+    'BANDAGE': Shield,
+    'STETHOSCOPE': Stethoscope,
+    'CROWN': Crown,
+    'SHIELD': Shield,
+    'PERSON': Users,
+    'EYE': Eye,
+    'GEAR': Settings,
+    'BOX': Box,
+    'FOLDER': Folder,
+    'TAG': Tag,
+    'STAR': Star,
+    'HEART': Heart,
+    'CIRCLE': Circle,
+    'SQUARE': Square,
+    'TRIANGLE': Triangle,
+  };
+  
+  return iconMap[iconString] || Building;
+}
+
+/**
+ * ✅ Map ColorTheme enum with validation
+ */
+export function mapColorThemeToTailwind(colorTheme: string | null | undefined): string {
+  if (!colorTheme) {
+    return 'bg-gray-500';
+  }
+  
+  const colorMap: Record<string, string> = {
     BLUE: 'bg-blue-500',
     GREEN: 'bg-green-500',
     RED: 'bg-red-500',
@@ -67,13 +84,14 @@ export function mapColorThemeToTailwind(colorTheme: string | null): string {
     EMERALD: 'bg-emerald-500',
   };
 
-  return colorMap[colorTheme as keyof typeof colorMap] || 'bg-gray-500';
+  const normalizedColor = colorTheme.toUpperCase();
+  return colorMap[normalizedColor] || 'bg-gray-500';
 }
 
 /**
  * Get department category based on icon and name
  */
-export function getDepartmentCategory(iconType: string | null, name: string): string {
+export function getDepartmentCategory(iconType: string | null | undefined, name: string): string {
   const clinicalKeywords = ['icu', 'opd', 'ipd', 'er', 'surgery', 'ward', 'clinic'];
   const supportKeywords = ['lab', 'pharmacy', 'admin', 'finance', 'hr'];
   
@@ -91,28 +109,32 @@ export function getDepartmentCategory(iconType: string | null, name: string): st
 }
 
 /**
- * Transform database department to frontend format
+ * Database Department interface
  */
 export interface DatabaseDepartment {
   id: string;
   name: string;
   code: string;
-  description?: string | null;
-  color?: string | null;
-  icon?: string | null;
-  parentId?: string | null;
+  description: string | null;
+  color: string | null;
+  icon: string | null;
+  parentId: string | null;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
 }
 
+/**
+ * ✅ SIMPLIFIED: Frontend Department interface with string-based icon
+ */
 export interface FrontendDepartment {
   id: string;
   name: string;
   code: string;
   description: string;
   color: string;
-  icon: any; // React component
+  icon: string;               // ✅ String instead of React component
   isActive: boolean;
   memberCount: number;
   stockItems: number;
@@ -123,6 +145,9 @@ export interface FrontendDepartment {
   category: string;
 }
 
+/**
+ * ✅ SIMPLIFIED: Transform department data using string-based approach
+ */
 export function transformDepartmentData(dept: DatabaseDepartment): FrontendDepartment {
   return {
     id: dept.id,
@@ -130,9 +155,8 @@ export function transformDepartmentData(dept: DatabaseDepartment): FrontendDepar
     code: dept.code,
     description: dept.description || `แผนก ${dept.name}`,
     color: mapColorThemeToTailwind(dept.color),
-    icon: mapIconTypeToComponent(dept.icon),
-    isActive: true,
-    // Default values for stats (will be calculated later when other models exist)
+    icon: mapIconTypeToString(dept.icon),        // ✅ Returns string
+    isActive: dept.isActive,
     memberCount: 0,
     stockItems: 0,
     lowStock: 0,
@@ -174,7 +198,28 @@ export function getAvailableIcons() {
     { value: 'STETHOSCOPE', label: 'เครื่องมือแพทย์', component: Stethoscope },
     { value: 'PERSON', label: 'บุคคล', component: Users },
     { value: 'SHIELD', label: 'โล่', component: Shield },
-    { value: 'GEAR', label: 'เฟือง', component: Settings }, // ✅ Fixed
+    { value: 'GEAR', label: 'เฟือง', component: Settings },
     { value: 'BOX', label: 'กล่อง', component: Box },
   ];
+}
+
+/**
+ * Type guard functions
+ */
+export function isValidColorTheme(color: string): boolean {
+  const validColors = [
+    'BLUE', 'GREEN', 'RED', 'YELLOW', 'PURPLE', 'PINK',
+    'INDIGO', 'TEAL', 'ORANGE', 'GRAY', 'SLATE', 'EMERALD'
+  ];
+  return validColors.includes(color.toUpperCase());
+}
+
+export function isValidIconType(icon: string): boolean {
+  const validIcons = [
+    'BUILDING', 'HOSPITAL', 'PHARMACY', 'WAREHOUSE', 'LABORATORY',
+    'PILL', 'BOTTLE', 'SYRINGE', 'BANDAGE', 'STETHOSCOPE',
+    'CROWN', 'SHIELD', 'PERSON', 'EYE', 'GEAR',
+    'BOX', 'FOLDER', 'TAG', 'STAR', 'HEART', 'CIRCLE', 'SQUARE', 'TRIANGLE'
+  ];
+  return validIcons.includes(icon.toUpperCase());
 }

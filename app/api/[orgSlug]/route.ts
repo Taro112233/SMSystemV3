@@ -1,10 +1,10 @@
-// app/api/[orgSlug]/route.ts
+// app/api/[orgSlug]/route.ts - FIXED TYPE SAFETY
 // Organization API - Get organization data with departments list
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole, getOrganizationBySlug } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
-import { mapIconTypeToComponent, mapColorThemeToTailwind } from '@/lib/department-helpers';
+import { transformDepartmentData } from '@/lib/department-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -37,7 +37,7 @@ export async function GET(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // Get departments for this organization
+    // ✅ FIXED: Include isActive in select and proper type handling
     const departments = await prisma.department.findMany({
       where: {
         organizationId: access.organizationId,
@@ -51,36 +51,21 @@ export async function GET(
         color: true,
         icon: true,
         parentId: true,
+        isActive: true,        // ✅ FIXED: Add isActive to select
         createdAt: true,
         updatedAt: true,
         createdBy: true,
       },
       orderBy: [
-        { parentId: 'asc' }, // Parent departments first
+        { parentId: 'asc' },   // Parent departments first
         { name: 'asc' }
       ]
     });
 
     console.log(`✅ Found ${departments.length} departments`);
 
-    // Transform departments to match frontend interface
-    const transformedDepartments = departments.map(dept => ({
-      id: dept.id,
-      name: dept.name,
-      code: dept.code,
-      description: dept.description || `แผนก ${dept.name}`,
-      color: mapColorThemeToTailwind(dept.color),
-      icon: mapIconTypeToComponent(dept.icon),
-      isActive: true,
-      // Default values for stats (will be calculated later when other models exist)
-      memberCount: 0,
-      stockItems: 0,
-      lowStock: 0,
-      notifications: 0,
-      manager: 'ไม่ระบุ',
-      lastActivity: dept.updatedAt.toISOString(),
-      category: dept.parentId ? 'clinical' : 'main'
-    }));
+    // ✅ FIXED: Use helper function for safe transformation
+    const transformedDepartments = departments.map(dept => transformDepartmentData(dept));
 
     // Get organization member count
     const memberCount = await prisma.organizationUser.count({
@@ -119,7 +104,7 @@ export async function GET(
       userRole: access.role,
       stats: {
         totalDepartments: departments.length,
-        activeDepartments: departments.filter(d => d.isActive).length,
+        activeDepartments: departments.filter(d => d.isActive).length,  // ✅ FIXED: Now isActive exists
         totalMembers: memberCount,
         // TODO: Add more stats when product/stock models exist
         totalProducts: 0,
