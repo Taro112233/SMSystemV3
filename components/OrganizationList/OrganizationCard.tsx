@@ -21,6 +21,7 @@ interface Organization {
   };
   notifications: number;
   isActive: boolean;
+  status?: string; // Organization status (ACTIVE, SUSPENDED, TRIAL)
 }
 
 interface OrganizationCardProps {
@@ -47,6 +48,40 @@ export const OrganizationCard = ({ organization: org, onClick }: OrganizationCar
     }
   };
 
+  const getStatusBadge = (status?: string, isActive: boolean = true) => {
+    if (!isActive || status === 'SUSPENDED') {
+      return (
+        <Badge variant="destructive" className="text-xs">
+          ระงับ
+        </Badge>
+      );
+    }
+    
+    if (status === 'TRIAL') {
+      return (
+        <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">
+          ทดลอง
+        </Badge>
+      );
+    }
+    
+    if (status === 'ACTIVE') {
+      return (
+        <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+          ใช้งาน
+        </Badge>
+      );
+    }
+    
+    return null;
+  };
+
+  // Truncate description to max 50 characters
+  const truncateText = (text: string, maxLength: number = 50) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  };
+
   return (
     <Card
       className={`
@@ -56,33 +91,30 @@ export const OrganizationCard = ({ organization: org, onClick }: OrganizationCar
       onClick={() => org.isActive && onClick()}
     >
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 ${org.color} rounded-xl flex items-center justify-center text-white font-bold text-lg`}>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className={`w-12 h-12 ${org.color} rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
               {org.logo}
             </div>
             <div className="flex-1 min-w-0">
               <CardTitle className="text-base leading-tight truncate">{org.name}</CardTitle>
-              <p className="text-sm text-gray-500 truncate">{org.description}</p>
+              <p className="text-sm text-gray-500 truncate" title={org.description}>
+                {truncateText(org.description)}
+              </p>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-1">
-              {getRoleIcon(org.userRole)}
-              <span className="text-xs text-gray-600">{getRoleText(org.userRole)}</span>
-            </div>
-            {org.notifications > 0 && (
-              <Badge variant="destructive" className="h-5 text-xs px-1">
-                {org.notifications}
-              </Badge>
-            )}
+          
+          {/* Organization Status Badge - Top Right */}
+          <div className="flex-shrink-0 ml-2">
+            {getStatusBadge(org.status, org.isActive)}
           </div>
         </div>
         
-        {!org.isActive && (
-          <div className="mt-2">
-            <Badge variant="secondary" className="text-xs">
-              ระงับการใช้งาน
+        {/* Notifications Only */}
+        {org.notifications > 0 && (
+          <div className="flex justify-end mt-2">
+            <Badge variant="destructive" className="h-5 text-xs px-1">
+              {org.notifications}
             </Badge>
           </div>
         )}
@@ -124,11 +156,15 @@ export const OrganizationCard = ({ organization: org, onClick }: OrganizationCar
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end pt-3 border-t border-gray-100">
+        {/* Footer - User Position in Organization */}
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+          <div className="flex items-center gap-1 text-xs text-gray-600">
+            {getRoleIcon(org.userRole)}
+            <span>ตำแหน่ง: {getRoleText(org.userRole)}</span>
+          </div>
+          
           {org.isActive && (
             <div className="flex items-center gap-1 text-xs text-blue-600">
-              <span>เข้าสู่ระบบ</span>
               <ChevronRight className="w-3 h-3" />
             </div>
           )}

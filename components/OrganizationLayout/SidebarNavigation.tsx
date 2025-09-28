@@ -6,7 +6,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, ArrowLeft, Home, BarChart3, Settings } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams, usePathname } from 'next/navigation';
 
 interface SidebarNavigationProps {
   collapsed: boolean;
@@ -20,9 +20,29 @@ export const SidebarNavigation = ({
   onSearchChange 
 }: SidebarNavigationProps) => {
   const router = useRouter();
+  const params = useParams();
+  const pathname = usePathname();
+  const orgSlug = params.orgSlug as string;
+
+  // Check which page is currently active
+  const isOverviewActive = pathname === `/${orgSlug}`;
+  const isReportsActive = pathname === `/${orgSlug}/reports`;
+  const isSettingsActive = pathname === `/${orgSlug}/settings`;
   
   const handleBackClick = () => {
     router.push('/dashboard');
+  };
+
+  const handleOverviewClick = () => {
+    router.push(`/${orgSlug}`);
+  };
+
+  const handleReportsClick = () => {
+    router.push(`/${orgSlug}/reports`);
+  };
+
+  const handleSettingsClick = () => {
+    router.push(`/${orgSlug}/settings`);
   };
 
   return (
@@ -61,24 +81,27 @@ export const SidebarNavigation = ({
         )}
         
         <Button 
-          variant="secondary" 
+          variant={isOverviewActive ? "secondary" : "ghost"}
           className={`${collapsed ? 'w-full justify-center' : 'w-full justify-start'} h-9`}
+          onClick={handleOverviewClick}
         >
           <Home className="w-4 h-4" />
           {!collapsed && <span className="ml-2">ภาพรวมองค์กร</span>}
         </Button>
         
         <Button 
-          variant="ghost" 
+          variant={isReportsActive ? "secondary" : "ghost"}
           className={`${collapsed ? 'w-full justify-center' : 'w-full justify-start'} h-9`}
+          onClick={handleReportsClick}
         >
           <BarChart3 className="w-4 h-4" />
           {!collapsed && <span className="ml-2">รายงาน</span>}
         </Button>
         
         <Button 
-          variant="ghost" 
+          variant={isSettingsActive ? "secondary" : "ghost"}
           className={`${collapsed ? 'w-full justify-center' : 'w-full justify-start'} h-9`}
+          onClick={handleSettingsClick}
         >
           <Settings className="w-4 h-4" />
           {!collapsed && <span className="ml-2">ตั้งค่า</span>}

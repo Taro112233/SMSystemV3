@@ -1,4 +1,4 @@
-// app/[orgSlug]/page.tsx - Updated Organization Page (Using Real Data)
+// app/[orgSlug]/page.tsx - Updated Organization Page (Real Data Only)
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -60,56 +60,15 @@ export default function OrganizationPage() {
           stats: {
             totalProducts: transformedDepartments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.stockItems, 0),
             lowStockItems: transformedDepartments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.lowStock, 0),
-            pendingTransfers: 15, // TODO: Get from transfers API
+            pendingTransfers: 0, // Will be calculated from real transfers API later
             activeUsers: transformedDepartments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.memberCount, 0),
-            totalValue: '12.5M', // TODO: Calculate from stock values
+            totalValue: '0', // Will be calculated from real stock values later
             departments: transformedDepartments.length
           }
         };
 
-        // Mock recent activities (TODO: Replace with real data from audit log)
-        const recentActivities = [
-          {
-            id: '1',
-            type: 'stock_adjustment',
-            title: 'ปรับปรุงสต็อก Paracetamol 500mg',
-            department: 'คลังยาหลัก',
-            user: 'ดร.สมชาย วิชัยดิษฐ',
-            timestamp: '10 นาทีที่แล้ว',
-            icon: 'Package',
-            color: 'bg-blue-500'
-          },
-          {
-            id: '2',
-            type: 'transfer_completed',
-            title: 'โอนย้าย Ibuprofen เสร็จสิ้น',
-            department: 'ห้องฉุกเฉิน',
-            user: 'พยาบาลมาลี',
-            timestamp: '25 นาทีที่แล้ว',
-            icon: 'ArrowRight',
-            color: 'bg-green-500'
-          },
-          {
-            id: '3',
-            type: 'low_stock_alert',
-            title: 'แจ้งเตือนสต็อกต่ำ Amoxicillin',
-            department: 'ห้องผู้ป่วยนอก',
-            user: 'ระบบ',
-            timestamp: '1 ชั่วโมงที่แล้ว',
-            icon: 'AlertTriangle',
-            color: 'bg-orange-500'
-          },
-          {
-            id: '4',
-            type: 'user_added',
-            title: 'เพิ่มผู้ใช้ใหม่',
-            department: 'ห้องปฏิบัติการ',
-            user: 'ผู้ดูแลระบบ',
-            timestamp: '2 ชั่วโมงที่แล้ว',
-            icon: 'UserPlus',
-            color: 'bg-purple-500'
-          }
-        ];
+        // Empty recent activities array - will be populated from audit log API later
+        const recentActivities: any[] = [];
 
         setPageData({
           organization,

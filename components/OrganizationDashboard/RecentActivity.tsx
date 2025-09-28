@@ -1,13 +1,13 @@
 // components/OrganizationDashboard/RecentActivity.tsx
-// OrganizationOverview/RecentActivity - Activity feed with status indicators
+// OrganizationOverview/RecentActivity - Activity feed with status indicators and empty state
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Clock, Dot } from 'lucide-react';
+import { Clock, Dot, Activity, AlertCircle } from 'lucide-react';
 
 interface RecentActivityProps {
-  activities: Array<{
-    id: number;
+  activities?: Array<{
+    id: number | string;
     type: string;
     icon: any;
     title: string;
@@ -18,7 +18,7 @@ interface RecentActivityProps {
   }>;
 }
 
-export const RecentActivity = ({ activities }: RecentActivityProps) => {
+export const RecentActivity = ({ activities = [] }: RecentActivityProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -31,6 +31,30 @@ export const RecentActivity = ({ activities }: RecentActivityProps) => {
         return 'bg-gray-100 text-gray-600';
     }
   };
+
+  // ✅ Empty state when no activities
+  if (!activities || activities.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>กิจกรรมล่าสุด</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Activity className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              ยังไม่มีกิจกรรม
+            </h3>
+            <p className="text-gray-600">
+              เมื่อมีการเคลื่อนไหวในระบบ กิจกรรมจะแสดงที่นี่
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

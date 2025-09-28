@@ -1,12 +1,13 @@
-// components/OrganizationDashboard/DepartmentOverview.tsx - FIXED ICON RENDERING
+// components/OrganizationDashboard/DepartmentOverview.tsx - With Empty State
 // OrganizationOverview/DepartmentOverview - Grid of departments with stats and click handler
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ChevronRight, Building, Plus } from 'lucide-react';
 import { 
-  Building, Hospital, Warehouse, TestTube, Pill,
+  Hospital, Warehouse, TestTube, Pill,
   Activity, Stethoscope, Users, Package, Shield,
   Circle, Square, Triangle, Star, Heart, Crown,
   Eye, Settings, Folder, Tag, Box
@@ -82,8 +83,8 @@ export const DepartmentOverview = ({
     }
   };
 
-  // ✅ Safety check for departments array
-  if (!departments || !Array.isArray(departments)) {
+  // ✅ Empty state for no departments
+  if (!departments || !Array.isArray(departments) || departments.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -93,8 +94,23 @@ export const DepartmentOverview = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            ไม่พบข้อมูลแผนก
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Building className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              ยังไม่มีแผนก
+            </h3>
+            <p className="text-gray-600 mb-4">
+              เริ่มต้นการจัดการสต็อกโดยการสร้างแผนกแรกขององค์กร
+            </p>
+            <Button 
+              className="bg-blue-500 hover:bg-blue-600"
+              onClick={() => console.log('Create department clicked')}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              สร้างแผนกแรก
+            </Button>
           </div>
         </CardContent>
       </Card>

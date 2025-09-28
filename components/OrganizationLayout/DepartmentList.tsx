@@ -1,4 +1,4 @@
-// components/OrganizationLayout/DepartmentList.tsx - Fixed Version with Real Data
+// components/OrganizationLayout/DepartmentList.tsx - Simplified Version without Categories
 // DashboardSidebar/DepartmentList - Department navigation using real API data
 
 import React from 'react';
@@ -77,20 +77,6 @@ export const DepartmentList = ({
     );
   }
 
-  // Group departments by category
-  const departmentsByCategory = departments.reduce((acc, dept) => {
-    const category = dept.category || 'support';
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(dept);
-    return acc;
-  }, {} as Record<string, FrontendDepartment[]>);
-
-  const categoryLabels = {
-    'main': 'หลัก',
-    'clinical': 'แผนกรักษา',
-    'support': 'สนับสนุน'
-  };
-
   return (
     <div className="space-y-1">
       {!collapsed && (
@@ -99,23 +85,13 @@ export const DepartmentList = ({
         </div>
       )}
 
-      {/* Render departments by category */}
-      {Object.entries(departmentsByCategory).map(([category, depts]) => (
-        <div key={category}>
-          {!collapsed && depts.length > 0 && (
-            <div className="px-3 py-1 text-xs font-medium text-gray-400">
-              {categoryLabels[category as keyof typeof categoryLabels] || category}
-            </div>
-          )}
-          {depts.map(renderDepartmentButton)}
-        </div>
-      ))}
+      {/* Render all departments in a simple list */}
+      {departments.map(renderDepartmentButton)}
       
       {/* Debug info in development */}
       {process.env.NODE_ENV === 'development' && departments.length > 0 && !collapsed && (
         <div className="px-3 py-1 text-xs text-gray-400 border-t mt-2 pt-2">
           <div>Total: {departments.length} departments</div>
-          <div>Categories: {Object.keys(departmentsByCategory).join(', ')}</div>
         </div>
       )}
     </div>

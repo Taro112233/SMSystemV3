@@ -164,7 +164,6 @@ Directory structure:
         ├── auth.d.ts
         └── cookie.d.ts
 
-
 # InvenStock Development Instructions
 
 ## 🎯 Project Overview
@@ -174,7 +173,7 @@ InvenStock เป็นระบบ Multi-Tenant Inventory Management ที่�
 ## 🏗️ Technical Architecture
 
 ### Tech Stack
-- **Frontend:** Next.js 15 + TypeScript + TailwindCSS + Shadcn/UI
+- **Frontend:** Next.js 15 (ต้อง await params ก่อนใช้งาน) + TypeScript + TailwindCSS + Shadcn/UI
 - **Backend:** Next.js API Routes + Prisma ORM
 - **Database:** PostgreSQL with Row-level Security
 - **Authentication:** JWT + bcryptjs
@@ -714,7 +713,6 @@ export class OrgNavigation {
   dashboard() { return `/${this.orgSlug}`; }
   settings() { return `/${this.orgSlug}/settings`; }
   members() { return `/${this.orgSlug}/members`; }
-  departments() { return `/${this.orgSlug}/departments`; }
   
   // Department routes (flat structure)
   dept(deptSlug: string) { return `/${this.orgSlug}/${deptSlug}`; }

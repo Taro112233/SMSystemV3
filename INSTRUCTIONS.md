@@ -547,7 +547,6 @@ export class OrgNavigation {
   dashboard() { return `/${this.orgSlug}`; }
   settings() { return `/${this.orgSlug}/settings`; }
   members() { return `/${this.orgSlug}/members`; }
-  departments() { return `/${this.orgSlug}/departments`; }
   
   // Department routes (flat structure)
   dept(deptSlug: string) { return `/${this.orgSlug}/${deptSlug}`; }
