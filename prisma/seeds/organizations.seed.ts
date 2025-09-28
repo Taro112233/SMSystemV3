@@ -188,7 +188,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: sirirajHospital.id,
       name: "คลังยาหลัก",
-      code: "MAIN_PHARM",
+      slug: "MAIN_PHARM",
       description: "คลังยาหลักของโรงพยาบาล จัดเก็บยาทุกประเภท",
       color: "BLUE",
       icon: "WAREHOUSE",
@@ -198,7 +198,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: sirirajHospital.id,
       name: "ห้องฉุกเฉิน",
-      code: "ER",
+      slug: "ER",
       description: "แผนกฉุกเฉินและการแพทย์ฉุกเฉิน ดูแลผู้ป่วยฉุกเฉิน 24 ชั่วโมง",
       color: "RED",
       icon: "HOSPITAL",
@@ -208,7 +208,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: sirirajHospital.id,
       name: "หอผู้ป่วยใน",
-      code: "IPD",
+      slug: "IPD",
       description: "หอผู้ป่วยในทั่วไป ดูแลผู้ป่วยที่ต้องพักรักษาในโรงพยาบาล",
       color: "GREEN",
       icon: "BUILDING",
@@ -218,7 +218,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: sirirajHospital.id,
       name: "ผู้ป่วยนอก",
-      code: "OPD",
+      slug: "OPD",
       description: "แผนกผู้ป่วยนอก บริการตรวจรักษาทั่วไป",
       color: "PURPLE",
       icon: "PERSON",
@@ -228,7 +228,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: sirirajHospital.id,
       name: "ห้องผ่าตัด",
-      code: "OR",
+      slug: "OR",
       description: "ห้องผ่าตัดและอุปกรณ์การแพทย์ สำหรับการผ่าตัดทุกประเภท",
       color: "ORANGE",
       icon: "HEART",
@@ -238,7 +238,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: sirirajHospital.id,
       name: "หน่วยแรงดัน",
-      code: "ICU",
+      slug: "ICU",
       description: "หน่วยแรงดันผู้ป่วยวิกฤต",
       color: "INDIGO",
       icon: "STETHOSCOPE",
@@ -248,7 +248,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: sirirajHospital.id,
       name: "ห้องปฏิบัติการ",
-      code: "LAB",
+      slug: "LAB",
       description: "ห้องปฏิบัติการตรวจวิเคราะห์ทางการแพทย์",
       color: "TEAL",
       icon: "LABORATORY",
@@ -262,7 +262,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: cityPharmacy.id,
       name: "ห้องจ่ายยา",
-      code: "DISPENSE",
+      slug: "DISPENSE",
       description: "ห้องจ่ายยาให้ผู้ป่วยและลูกค้าทั่วไป",
       color: "TEAL",
       icon: "PHARMACY",
@@ -272,7 +272,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: cityPharmacy.id,
       name: "คลังสินค้า",
-      code: "STORAGE",
+      slug: "STORAGE",
       description: "คลังเก็บยาและอุปกรณ์การแพทย์",
       color: "GRAY",
       icon: "BOX",
@@ -282,7 +282,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: cityPharmacy.id,
       name: "ห้องปรึกษา",
-      code: "CONSULT",
+      slug: "CONSULT",
       description: "ห้องให้คำปรึกษาทางเภสัชกรรม",
       color: "BLUE",
       icon: "PERSON",
@@ -296,7 +296,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: demoClinic.id,
       name: "ห้องตรวจ",
-      code: "EXAM",
+      slug: "EXAM",
       description: "ห้องตรวจผู้ป่วยทั่วไป",
       color: "GREEN",
       icon: "STETHOSCOPE",
@@ -306,7 +306,7 @@ export async function seedOrganizations(prisma: PrismaClient): Promise<Organizat
     {
       organizationId: demoClinic.id,
       name: "ห้องยา",
-      code: "PHARMACY",
+      slug: "PHARMACY",
       description: "ห้องเก็บและจ่ายยา",
       color: "PINK",
       icon: "PILL",
@@ -433,7 +433,7 @@ export async function createDepartment(
   data: {
     organizationId: string;
     name: string;
-    code: string;
+    slug: string;
     description?: string;
     color?: string;
     icon?: string;
@@ -444,7 +444,7 @@ export async function createDepartment(
     data: {
       organizationId: data.organizationId,
       name: data.name,
-      code: data.code.toUpperCase(),
+      slug: data.slug.toUpperCase(),
       description: data.description,
       color: (data.color as any) || "BLUE",
       icon: (data.icon as any) || "FOLDER",

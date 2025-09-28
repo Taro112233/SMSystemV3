@@ -67,7 +67,7 @@ model Department {
   
   // Department Details
   name           String
-  code           String       // Short code (e.g., "ICU", "OPD", "PHARMACY")
+  slug           String       // Short slug (e.g., "ICU", "OPD", "PHARMACY")
   description    String?
   color          ColorTheme?
   icon           IconType?
@@ -88,7 +88,7 @@ model Department {
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
   
-  @@unique([organizationId, code])
+  @@unique([organizationId, slug])
   @@index([parentId])
   @@index([isActive])
   @@map("departments")
