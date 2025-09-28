@@ -18,6 +18,7 @@ Directory structure:
     │   ├── not-found.tsx
     │   ├── page.tsx
     │   ├── [orgSlug]/
+    │   │   ├── layout.tsx
     │   │   ├── page.tsx
     │   │   └── [deptSlug]/
     │   │       └── page.tsx
