@@ -1,10 +1,10 @@
-// app/api/[orgSlug]/route.ts - FIXED TYPE SAFETY
+// app/api/[orgSlug]/route.ts - FIXED FOR SEEDED DATA
 // Organization API - Get organization data with departments list
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole, getOrganizationBySlug } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
-import { transformDepartmentData } from '@/lib/department-helpers';
+import { mapColorThemeToTailwind, getDepartmentCategory } from '@/lib/department-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -31,13 +31,33 @@ export async function GET(
 
     console.log(`✅ User has access with role: ${access.role}`);
 
-    // Get organization details
-    const organization = await getOrganizationBySlug(orgSlug);
+    // Get organization details with invite code fields
+    const organization = await prisma.organization.findUnique({
+      where: { 
+        slug: orgSlug,
+        status: 'ACTIVE'
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        status: true,
+        timezone: true,
+        email: true,
+        phone: true,
+        createdAt: true,
+        updatedAt: true,
+        inviteCode: true,      // ✅ Include invite code fields
+        inviteEnabled: true,   // ✅ Include invite enabled field
+      },
+    });
+    
     if (!organization) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // ✅ FIXED: Include isActive in select and proper type handling
+    // ✅ FIXED: Use correct field names from seeded data
     const departments = await prisma.department.findMany({
       where: {
         organizationId: access.organizationId,
@@ -46,15 +66,16 @@ export async function GET(
       select: {
         id: true,
         name: true,
-        code: true,
+        slug: true,              // ✅ Use 'slug' from schema
         description: true,
         color: true,
         icon: true,
         parentId: true,
-        isActive: true,        // ✅ FIXED: Add isActive to select
+        isActive: true,
         createdAt: true,
         updatedAt: true,
         createdBy: true,
+        organizationId: true,    // Include for validation
       },
       orderBy: [
         { parentId: 'asc' },   // Parent departments first
@@ -62,10 +83,31 @@ export async function GET(
       ]
     });
 
-    console.log(`✅ Found ${departments.length} departments`);
+    console.log(`✅ Found ${departments.length} departments for ${orgSlug}`);
 
-    // ✅ FIXED: Use helper function for safe transformation
-    const transformedDepartments = departments.map(dept => transformDepartmentData(dept));
+    // ✅ Transform departments with seeded data context
+    const transformedDepartments = departments.map(dept => ({
+      id: dept.id,
+      name: dept.name,
+      code: dept.slug,                    // Map slug to code for frontend compatibility
+      slug: dept.slug,                    // Keep original slug
+      description: dept.description || `แผนก ${dept.name}`,
+      color: mapColorThemeToTailwind(dept.color),
+      icon: dept.icon || 'BUILDING',      // Keep as string, will be converted in frontend
+      isActive: dept.isActive,
+      parentId: dept.parentId,
+      
+      // Add mock stats for now (will be replaced with real data later)
+      memberCount: Math.floor(Math.random() * 20) + 5,
+      stockItems: Math.floor(Math.random() * 200) + 50,
+      lowStock: Math.floor(Math.random() * 10),
+      notifications: Math.floor(Math.random() * 5),
+      manager: 'ไม่ระบุ',
+      lastActivity: dept.updatedAt.toISOString(),
+      category: getDepartmentCategory(dept.icon, dept.name),
+      createdAt: dept.createdAt,
+      updatedAt: dept.updatedAt,
+    }));
 
     // Get organization member count
     const memberCount = await prisma.organizationUser.count({
@@ -92,8 +134,8 @@ export async function GET(
       
       // Include invite code info for ADMIN/OWNER
       ...((['ADMIN', 'OWNER'].includes(access.role)) && {
-        inviteCode: null, // Will be populated when organization has invite code
-        inviteEnabled: false,
+        inviteCode: organization.inviteCode,
+        inviteEnabled: organization.inviteEnabled,
       })
     };
 
@@ -104,7 +146,7 @@ export async function GET(
       userRole: access.role,
       stats: {
         totalDepartments: departments.length,
-        activeDepartments: departments.filter(d => d.isActive).length,  // ✅ FIXED: Now isActive exists
+        activeDepartments: departments.filter(d => d.isActive).length,
         totalMembers: memberCount,
         // TODO: Add more stats when product/stock models exist
         totalProducts: 0,
@@ -147,23 +189,23 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { name, code, description, color, icon, parentId } = body;
+    const { name, slug, description, color, icon, parentId } = body;
 
     // Validate required fields
-    if (!name || !code) {
-      return NextResponse.json({ error: 'Name and code are required' }, { status: 400 });
+    if (!name || !slug) {
+      return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 });
     }
 
-    // Check if code already exists in this organization
+    // Check if slug already exists in this organization
     const existingDept = await prisma.department.findFirst({
       where: {
         organizationId: access.organizationId,
-        code: code.toUpperCase(),
+        slug: slug.toUpperCase(),
       }
     });
 
     if (existingDept) {
-      return NextResponse.json({ error: 'Department code already exists' }, { status: 409 });
+      return NextResponse.json({ error: 'Department slug already exists' }, { status: 409 });
     }
 
     // Create department
@@ -171,7 +213,7 @@ export async function POST(
       data: {
         organizationId: access.organizationId,
         name: name.trim(),
-        code: code.toUpperCase().trim(),
+        slug: slug.toUpperCase().trim(),
         description: description?.trim(),
         color: color || 'BLUE',
         icon: icon || 'BUILDING',
@@ -182,7 +224,7 @@ export async function POST(
       select: {
         id: true,
         name: true,
-        code: true,
+        slug: true,
         description: true,
         color: true,
         icon: true,
@@ -200,13 +242,13 @@ export async function POST(
         payload: {
           departmentId: department.id,
           departmentName: department.name,
-          departmentCode: department.code,
+          departmentSlug: department.slug,
           timestamp: new Date().toISOString()
         }
       }
     });
 
-    console.log(`✅ Department created: ${department.name} (${department.code})`);
+    console.log(`✅ Department created: ${department.name} (${department.slug})`);
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,5 @@
-// app/[orgSlug]/[deptSlug]/page.tsx - UPDATED: Uses Real Department Data
-// Department-specific page with Direct API Pattern - FLAT URL STRUCTURE
+// app/[orgSlug]/[deptSlug]/page.tsx - UPDATED FOR SEEDED DATA
+// Department-specific page with seeded department data
 
 "use client";
 
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { DashboardSidebar } from '@/components/OrganizationLayout';
 import { DashboardHeader } from '@/components/OrganizationLayout/OrganizationHeader';
 import { DepartmentView } from '@/components/DepartmentDashboard';
+import { findDepartmentBySlug } from '@/lib/department-helpers';
 
 interface UserData {
   id: string;
@@ -34,9 +35,10 @@ interface DepartmentData {
   id: string;
   name: string;
   code: string;
+  slug: string;
   description: string;
   color: string;
-  icon: any;
+  icon: string;
   isActive: boolean;
   memberCount: number;
   stockItems: number;
@@ -58,50 +60,11 @@ const DepartmentPage = () => {
   const [user, setUser] = useState<UserData | null>(null);
   const [organizationData, setOrganizationData] = useState<OrganizationData | null>(null);
   const [departmentData, setDepartmentData] = useState<DepartmentData | null>(null);
-  
-  // ✅ Add state for all departments (for sidebar)
   const [departments, setDepartments] = useState<DepartmentData[]>([]);
   
   // Dashboard state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // ✅ Function to load all departments
-  const loadDepartments = async (orgSlug: string) => {
-    try {
-      console.log('🔍 Loading all departments for sidebar...');
-      
-      const response = await fetch(`/api/${orgSlug}/departments`, {
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        console.warn('⚠️ Failed to load departments for sidebar');
-        return [];
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        console.log('✅ All departments loaded:', data.departments.length);
-        return data.departments;
-      } else {
-        console.warn('⚠️ Departments API returned error:', data.error);
-        return [];
-      }
-    } catch (err) {
-      console.error('❌ Failed to load departments:', err);
-      return [];
-    }
-  };
-
-  // ✅ Function to find specific department
-  const findDepartmentBySlug = (departments: DepartmentData[], deptSlug: string): DepartmentData | null => {
-    return departments.find(dept => 
-      dept.code.toLowerCase() === deptSlug.toLowerCase() ||
-      dept.name.toLowerCase().includes(deptSlug.toLowerCase())
-    ) || null;
-  };
 
   // Get user, organization and department data from API
   useEffect(() => {
@@ -113,30 +76,30 @@ const DepartmentPage = () => {
         console.log('🔍 Loading department page data for:', { orgSlug, deptSlug });
 
         // Get current user with organization context
-        const response = await fetch(`/api/auth/me?orgSlug=${orgSlug}`, {
+        const userResponse = await fetch(`/api/auth/me?orgSlug=${orgSlug}`, {
           credentials: 'include',
         });
 
-        if (!response.ok) {
-          if (response.status === 401) {
+        if (!userResponse.ok) {
+          if (userResponse.status === 401) {
             console.log('❌ Unauthorized, redirecting to login');
             router.push('/login');
             return;
           }
-          throw new Error(`Failed to load user data: ${response.status}`);
+          throw new Error(`Failed to load user data: ${userResponse.status}`);
         }
 
-        const data = await response.json();
+        const userData = await userResponse.json();
 
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to load user data');
+        if (!userData.success) {
+          throw new Error(userData.error || 'Failed to load user data');
         }
 
-        console.log('✅ User data loaded:', data.data.user.username);
-        console.log('✅ Current organization:', data.data.currentOrganization?.name);
+        console.log('✅ User data loaded:', userData.data.user.username);
+        console.log('✅ Current organization:', userData.data.currentOrganization?.name);
 
         // Check if user has access to this organization
-        if (!data.data.currentOrganization || data.data.currentOrganization.slug !== orgSlug) {
+        if (!userData.data.currentOrganization || userData.data.currentOrganization.slug !== orgSlug) {
           console.log('❌ No access to organization:', orgSlug);
           setError('No access to this organization');
           setLoading(false);
@@ -144,24 +107,40 @@ const DepartmentPage = () => {
         }
 
         // Set user and organization data
-        setUser(data.data.user);
+        setUser(userData.data.user);
         setOrganizationData({
-          id: data.data.currentOrganization.id,
-          name: data.data.currentOrganization.name,
-          slug: data.data.currentOrganization.slug,
-          description: data.data.currentOrganization.description,
-          role: data.data.permissions.currentRole
+          id: userData.data.currentOrganization.id,
+          name: userData.data.currentOrganization.name,
+          slug: userData.data.currentOrganization.slug,
+          description: userData.data.currentOrganization.description,
+          role: userData.data.permissions.currentRole
         });
 
-        // ✅ Load all departments from API instead of using mock data
-        const allDepartments = await loadDepartments(orgSlug);
-        setDepartments(allDepartments);
+        // ✅ Load departments from organization API
+        console.log('🔍 Loading departments for organization...');
+        const deptResponse = await fetch(`/api/${orgSlug}`, {
+          credentials: 'include',
+        });
 
-        // ✅ Find specific department from real data instead of mock
-        const foundDepartment = findDepartmentBySlug(allDepartments, deptSlug);
+        if (!deptResponse.ok) {
+          throw new Error(`Failed to load departments: ${deptResponse.status}`);
+        }
+
+        const deptData = await deptResponse.json();
+        
+        if (!deptData.success) {
+          throw new Error(deptData.error || 'Failed to load departments');
+        }
+
+        setDepartments(deptData.departments);
+        console.log('✅ Departments loaded:', deptData.departments.length);
+
+        // ✅ Find specific department using helper function
+        const foundDepartment = findDepartmentBySlug(deptData.departments, deptSlug);
 
         if (!foundDepartment) {
           console.log('❌ Department not found:', deptSlug);
+          console.log('Available departments:', deptData.departments.map((d: any) => ({ slug: d.slug, code: d.code, name: d.name })));
           setError(`Department '${deptSlug}' not found`);
           setLoading(false);
           return;
@@ -199,7 +178,7 @@ const DepartmentPage = () => {
       pendingTransfers: 15,
       activeUsers: 89,
       totalValue: '12.5M',
-      departments: departments.length // ✅ Use real departments count
+      departments: departments.length
     }
   } : null;
 
@@ -245,6 +224,7 @@ const DepartmentPage = () => {
                 <div>Organization: {organization ? 'Found' : 'Not Found'}</div>
                 <div>Department: {departmentData ? 'Found' : 'Not Found'}</div>
                 <div>All Departments: {departments.length}</div>
+                <div>Available Dept Slugs: {departments.map(d => d.slug).join(', ')}</div>
                 <div>Error: {error || 'None'}</div>
               </div>
 
@@ -279,11 +259,11 @@ const DepartmentPage = () => {
       {/* Fixed Sidebar */}
       <DashboardSidebar
         organization={organization}
-        departments={departments} // ✅ Use real departments data instead of mock
-        selectedDepartment={departmentData} // Set current department as selected
+        departments={departments}
+        selectedDepartment={departmentData}
         onSelectDepartment={(dept) => {
-          // Navigate to department page when selecting from sidebar (flat URL)
-          const deptCode = dept.code.toLowerCase();
+          // ✅ Navigate using slug for URL consistency
+          const deptCode = dept.slug.toLowerCase();
           router.push(`/${orgSlug}/${deptCode}`);
         }}
         collapsed={sidebarCollapsed}
@@ -296,18 +276,17 @@ const DepartmentPage = () => {
       <div className={`flex-1 flex flex-col ${sidebarCollapsed ? 'ml-16' : 'ml-80'} transition-all duration-200`}>
         <DashboardHeader
           organization={organization}
-          selectedDepartment={departmentData} // Pass department to header for breadcrumb
+          selectedDepartment={departmentData}
         />
 
         <main className="flex-1 p-6 overflow-y-auto bg-gray-50">
-          {/* Always show DepartmentView for department pages */}
           <DepartmentView department={departmentData} />
         </main>
       </div>
 
       {/* Success indicator with department info */}
       <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
-        ✅ {user.firstName} {user.lastName} | {organizationData?.role} | {departmentData.name}
+        ✅ {user.firstName} {user.lastName} | {organizationData?.role} | {departmentData.name} ({departmentData.slug})
       </div>
     </div>
   );
