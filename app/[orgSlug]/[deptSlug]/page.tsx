@@ -1,295 +1,96 @@
-// app/[orgSlug]/[deptSlug]/page.tsx - UPDATED FOR SEEDED DATA
-// Department-specific page with seeded department data
-
+// app/[orgSlug]/[deptSlug]/page.tsx - Updated Department Page (No Mock Data)
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, AlertTriangle, Home, ArrowLeft } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { DepartmentView } from '@/components/DepartmentDashboard';
+import { findDepartmentBySlug, transformDepartmentData, type FrontendDepartment } from '@/lib/department-helpers';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// Import dashboard components
-import { DashboardSidebar } from '@/components/OrganizationLayout';
-import { DashboardHeader } from '@/components/OrganizationLayout/OrganizationHeader';
-import { DepartmentView } from '@/components/DepartmentDashboard';
-import { findDepartmentBySlug } from '@/lib/department-helpers';
-
-interface UserData {
-  id: string;
-  username: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-}
-
-interface OrganizationData {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  role: string;
-}
-
-interface DepartmentData {
-  id: string;
-  name: string;
-  code: string;
-  slug: string;
-  description: string;
-  color: string;
-  icon: string;
-  isActive: boolean;
-  memberCount: number;
-  stockItems: number;
-  lowStock: number;
-  notifications: number;
-  manager: string;
-  lastActivity: string;
-  category: string;
-}
-
-const DepartmentPage = () => {
+export default function DepartmentPage() {
   const params = useParams();
   const orgSlug = params.orgSlug as string;
   const deptSlug = params.deptSlug as string;
-  const router = useRouter();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<UserData | null>(null);
-  const [organizationData, setOrganizationData] = useState<OrganizationData | null>(null);
-  const [departmentData, setDepartmentData] = useState<DepartmentData | null>(null);
-  const [departments, setDepartments] = useState<DepartmentData[]>([]);
-  
-  // Dashboard state
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [departmentData, setDepartmentData] = useState<FrontendDepartment | null>(null);
 
-  // Get user, organization and department data from API
   useEffect(() => {
-    const loadPageData = async () => {
+    const loadDepartmentData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        console.log('🔍 Loading department page data for:', { orgSlug, deptSlug });
+        console.log('🔍 Loading department data for:', deptSlug);
 
-        // Get current user with organization context
-        const userResponse = await fetch(`/api/auth/me?orgSlug=${orgSlug}`, {
+        // Load departments from organization API
+        const response = await fetch(`/api/${orgSlug}`, {
           credentials: 'include',
         });
 
-        if (!userResponse.ok) {
-          if (userResponse.status === 401) {
-            console.log('❌ Unauthorized, redirecting to login');
-            router.push('/login');
-            return;
-          }
-          throw new Error(`Failed to load user data: ${userResponse.status}`);
+        if (!response.ok) {
+          throw new Error(`Failed to load organization data: ${response.status}`);
         }
 
-        const userData = await userResponse.json();
-
-        if (!userData.success) {
-          throw new Error(userData.error || 'Failed to load user data');
-        }
-
-        console.log('✅ User data loaded:', userData.data.user.username);
-        console.log('✅ Current organization:', userData.data.currentOrganization?.name);
-
-        // Check if user has access to this organization
-        if (!userData.data.currentOrganization || userData.data.currentOrganization.slug !== orgSlug) {
-          console.log('❌ No access to organization:', orgSlug);
-          setError('No access to this organization');
-          setLoading(false);
-          return;
-        }
-
-        // Set user and organization data
-        setUser(userData.data.user);
-        setOrganizationData({
-          id: userData.data.currentOrganization.id,
-          name: userData.data.currentOrganization.name,
-          slug: userData.data.currentOrganization.slug,
-          description: userData.data.currentOrganization.description,
-          role: userData.data.permissions.currentRole
-        });
-
-        // ✅ Load departments from organization API
-        console.log('🔍 Loading departments for organization...');
-        const deptResponse = await fetch(`/api/${orgSlug}`, {
-          credentials: 'include',
-        });
-
-        if (!deptResponse.ok) {
-          throw new Error(`Failed to load departments: ${deptResponse.status}`);
-        }
-
-        const deptData = await deptResponse.json();
+        const data = await response.json();
         
-        if (!deptData.success) {
-          throw new Error(deptData.error || 'Failed to load departments');
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to load organization data');
         }
 
-        setDepartments(deptData.departments);
-        console.log('✅ Departments loaded:', deptData.departments.length);
-
-        // ✅ Find specific department using helper function
-        const foundDepartment = findDepartmentBySlug(deptData.departments, deptSlug);
+        // Transform departments and find the specific one
+        const transformedDepartments = data.departments.map(transformDepartmentData);
+        const foundDepartment = findDepartmentBySlug(transformedDepartments, deptSlug);
 
         if (!foundDepartment) {
-          console.log('❌ Department not found:', deptSlug);
-          console.log('Available departments:', deptData.departments.map((d: any) => ({ slug: d.slug, code: d.code, name: d.name })));
-          setError(`Department '${deptSlug}' not found`);
+          setError(`ไม่พบแผนก: ${deptSlug}`);
           setLoading(false);
           return;
         }
 
         setDepartmentData(foundDepartment);
         console.log('✅ Department data loaded:', foundDepartment.name);
-        console.log('✅ Page data loaded successfully');
         setLoading(false);
 
       } catch (err) {
-        console.error('❌ Failed to load page data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load page');
+        console.error('❌ Failed to load department data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load department data');
         setLoading(false);
       }
     };
 
     if (orgSlug && deptSlug) {
-      loadPageData();
+      loadDepartmentData();
     }
-  }, [orgSlug, deptSlug, router]);
-
-  // Create organization object for components
-  const organization = organizationData ? {
-    id: organizationData.id,
-    name: organizationData.name,
-    slug: organizationData.slug,
-    description: organizationData.description || `องค์กร ${organizationData.name}`,
-    logo: organizationData.name.substring(0, 2).toUpperCase(),
-    color: 'bg-blue-500',
-    userRole: organizationData.role,
-    stats: {
-      totalProducts: 1247,
-      lowStockItems: 23,
-      pendingTransfers: 15,
-      activeUsers: 89,
-      totalValue: '12.5M',
-      departments: departments.length
-    }
-  } : null;
+  }, [orgSlug, deptSlug]);
 
   // Show loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center h-96">
         <div className="text-center space-y-4">
-          <div className="flex justify-center">
-            <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-gray-900">กำลังโหลด</h3>
-            <p className="text-gray-600">กำลังโหลดข้อมูลแผนก...</p>
-          </div>
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
+          <p className="text-gray-600">กำลังโหลดข้อมูลแผนก...</p>
         </div>
       </div>
     );
   }
 
   // Show error state
-  if (error || !user || !organization || !departmentData) {
+  if (error || !departmentData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <div className="space-y-4">
-              <div className="flex justify-center">
-                <AlertTriangle className="w-16 h-16 text-red-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                ไม่สามารถเข้าถึงได้
-              </h3>
-              <p className="text-gray-600">
-                {error || 'ไม่พบข้อมูลแผนก'}
-              </p>
-              
-              {/* Debug info */}
-              <div className="text-xs text-gray-500 bg-gray-100 p-3 rounded">
-                <div>User: {user ? 'Found' : 'Not Found'}</div>
-                <div>Org Slug: {orgSlug}</div>
-                <div>Dept Slug: {deptSlug}</div>
-                <div>Organization: {organization ? 'Found' : 'Not Found'}</div>
-                <div>Department: {departmentData ? 'Found' : 'Not Found'}</div>
-                <div>All Departments: {departments.length}</div>
-                <div>Available Dept Slugs: {departments.map(d => d.slug).join(', ')}</div>
-                <div>Error: {error || 'None'}</div>
-              </div>
-
-              <div className="space-y-2">
-                <Button 
-                  onClick={() => router.push(`/${orgSlug}`)}
-                  className="w-full"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  กลับไปองค์กร
-                </Button>
-                
-                <Button 
-                  onClick={() => router.push('/dashboard')}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <Home className="w-4 h-4 mr-2" />
-                  กลับหน้าหลัก
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="text-center py-12">
+        <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">ไม่พบข้อมูลแผนก</h2>
+        <p className="text-gray-600 mb-4">{error || `ไม่พบแผนก: ${deptSlug}`}</p>
+        <Button onClick={() => window.history.back()}>
+          กลับไปหน้าก่อนหน้า
+        </Button>
       </div>
     );
   }
 
-  // Show department dashboard
-  return (
-    <div className="h-screen bg-gray-50 flex">
-      {/* Fixed Sidebar */}
-      <DashboardSidebar
-        organization={organization}
-        departments={departments}
-        selectedDepartment={departmentData}
-        onSelectDepartment={(dept) => {
-          // ✅ Navigate using slug for URL consistency
-          const deptCode = dept.slug.toLowerCase();
-          router.push(`/${orgSlug}/${deptCode}`);
-        }}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-      />
-
-      {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col ${sidebarCollapsed ? 'ml-16' : 'ml-80'} transition-all duration-200`}>
-        <DashboardHeader
-          organization={organization}
-          selectedDepartment={departmentData}
-        />
-
-        <main className="flex-1 p-6 overflow-y-auto bg-gray-50">
-          <DepartmentView department={departmentData} />
-        </main>
-      </div>
-
-      {/* Success indicator with department info */}
-      <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
-        ✅ {user.firstName} {user.lastName} | {organizationData?.role} | {departmentData.name} ({departmentData.slug})
-      </div>
-    </div>
-  );
-};
-
-export default DepartmentPage;
+  return <DepartmentView department={departmentData} />;
+}

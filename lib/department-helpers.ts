@@ -1,4 +1,4 @@
-// lib/department-helpers.ts - UPDATED FOR SEEDED DATA
+// lib/department-helpers.ts - Department Helper Functions
 // Helper functions for mapping department data from database to frontend
 
 import { 
@@ -9,7 +9,49 @@ import {
 } from 'lucide-react';
 
 /**
- * ✅ Map ColorTheme enum with validation (matches seeded data)
+ * Database Department type (from API) - Updated to match API response format
+ */
+interface DatabaseDepartment {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  color: string | null;
+  icon: string | null;
+  isActive: boolean;
+  parentId: string | null;
+  createdAt: Date | string;    // API may return string dates
+  updatedAt: Date | string;    // API may return string dates
+}
+
+/**
+ * Frontend Department type (for components)
+ */
+interface FrontendDepartment {
+  id: string;
+  name: string;
+  code: string;
+  slug: string;
+  description: string;
+  color: string;
+  icon: string;
+  isActive: boolean;
+  parentId?: string;
+  
+  // Additional frontend fields (calculated or mock)
+  memberCount: number;
+  stockItems: number;
+  lowStock: number;
+  notifications: number;
+  manager: string;
+  lastActivity: string;
+  category: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * ✅ Map ColorTheme enum to Tailwind classes
  */
 export function mapColorThemeToTailwind(colorTheme: string | null | undefined): string {
   if (!colorTheme) {
@@ -36,7 +78,7 @@ export function mapColorThemeToTailwind(colorTheme: string | null | undefined): 
 }
 
 /**
- * ✅ Get React component from icon string (matches seeded data)
+ * ✅ Get React component from icon string
  */
 export function getIconComponent(iconString: string) {
   const iconMap: Record<string, any> = {
@@ -65,91 +107,52 @@ export function getIconComponent(iconString: string) {
     'TRIANGLE': Triangle,
   };
   
-  return iconMap[iconString] || Building;
+  return iconMap[iconString.toUpperCase()] || Building;
 }
 
 /**
- * Get department category based on slug and name (matches seeded data)
+ * Get department category from icon and name
  */
-export function getDepartmentCategory(iconType: string | null | undefined, name: string): string {
-  const slug = name.toLowerCase();
+export function getDepartmentCategory(icon: string, name: string): string {
+  const clinicalIcons = ['HOSPITAL', 'STETHOSCOPE', 'HEART', 'PILL'];
+  const mainIcons = ['WAREHOUSE', 'BUILDING'];
   
-  // Clinical keywords from seeded data
-  const clinicalKeywords = ['icu', 'ipd', 'opd', 'ห้องฉุกเฉิน', 'ผู้ป่วย', 'ห้องผ่าตัด', 'ห้องตรวจ'];
-  const supportKeywords = ['ห้องปฏิบัติการ', 'lab', 'คลัง', 'ห้องยา', 'pharmacy'];
-  const mainKeywords = ['คลังยาหลัก', 'main'];
+  if (clinicalIcons.includes(icon.toUpperCase())) return 'clinical';
+  if (mainIcons.includes(icon.toUpperCase())) return 'main';
   
-  if (mainKeywords.some(keyword => slug.includes(keyword))) {
-    return 'main';
-  }
+  // Fallback to name matching
+  const clinicalKeywords = ['ฉุกเฉิน', 'ผู้ป่วย', 'ผ่าตัด', 'แรงดัน', 'หอ'];
+  const mainKeywords = ['คลัง', 'หลัก', 'จ่าย'];
   
-  if (clinicalKeywords.some(keyword => slug.includes(keyword))) {
-    return 'clinical';
-  }
-  
-  if (supportKeywords.some(keyword => slug.includes(keyword))) {
-    return 'support';
-  }
+  const nameLower = name.toLowerCase();
+  if (clinicalKeywords.some(keyword => nameLower.includes(keyword))) return 'clinical';
+  if (mainKeywords.some(keyword => nameLower.includes(keyword))) return 'main';
   
   return 'support';
 }
 
 /**
- * Database Department interface (from seeded data structure)
- */
-export interface DatabaseDepartment {
-  id: string;
-  name: string;
-  slug: string;                   // This is what we have in seeded data
-  description: string | null;
-  color: string | null;
-  icon: string | null;
-  parentId: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy: string;
-  organizationId: string;
-}
-
-/**
- * Frontend Department interface
- */
-export interface FrontendDepartment {
-  id: string;
-  name: string;
-  code: string;                   // Map from slug for frontend compatibility
-  slug: string;                   // Original slug
-  description: string;
-  color: string;
-  icon: string;
-  isActive: boolean;
-  parentId: string | null;
-  memberCount: number;
-  stockItems: number;
-  lowStock: number;
-  notifications: number;
-  manager: string;
-  lastActivity: string;
-  category: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-/**
- * ✅ Transform department data from seeded database structure
+ * ✅ Transform database department to frontend format (handles null values + string dates)
  */
 export function transformDepartmentData(dept: DatabaseDepartment): FrontendDepartment {
+  // Handle date conversion safely
+  const getISOString = (dateValue: any): string => {
+    if (!dateValue) return new Date().toISOString();
+    if (typeof dateValue === 'string') return dateValue;
+    if (dateValue instanceof Date) return dateValue.toISOString();
+    return new Date().toISOString();
+  };
+
   return {
     id: dept.id,
     name: dept.name,
     code: dept.slug,                                    // Map slug to code for frontend
     slug: dept.slug,                                    // Keep original slug
     description: dept.description || `แผนก ${dept.name}`,
-    color: mapColorThemeToTailwind(dept.color),
-    icon: dept.icon || 'BUILDING',                      // Keep as string
+    color: mapColorThemeToTailwind(dept.color),         // Handles null values
+    icon: dept.icon || 'BUILDING',                      // Default icon if null
     isActive: dept.isActive,
-    parentId: dept.parentId,
+    parentId: dept.parentId || undefined,               // Convert null to undefined
     
     // Mock data for now (will be replaced with real stock/user data later)
     memberCount: Math.floor(Math.random() * 20) + 5,
@@ -157,30 +160,28 @@ export function transformDepartmentData(dept: DatabaseDepartment): FrontendDepar
     lowStock: Math.floor(Math.random() * 10),
     notifications: Math.floor(Math.random() * 5),
     manager: 'ไม่ระบุ',
-    lastActivity: dept.updatedAt.toISOString(),
-    category: getDepartmentCategory(dept.icon, dept.name),
-    createdAt: dept.createdAt,
-    updatedAt: dept.updatedAt,
+    lastActivity: getISOString(dept.updatedAt),          // Safe date conversion
+    category: getDepartmentCategory(dept.icon || 'BUILDING', dept.name),
+    createdAt: dept.createdAt instanceof Date ? dept.createdAt : new Date(dept.createdAt),
+    updatedAt: dept.updatedAt instanceof Date ? dept.updatedAt : new Date(dept.updatedAt),
   };
 }
 
 /**
- * ✅ Find department by slug in frontend (for navigation)
+ * ✅ Find department by slug in frontend array
  */
 export function findDepartmentBySlug(departments: FrontendDepartment[], deptSlug: string): FrontendDepartment | null {
+  if (!departments || !Array.isArray(departments)) {
+    console.warn('Invalid departments array:', departments);
+    return null;
+  }
+
   // Try exact slug match first
   let found = departments.find(dept => dept.slug.toLowerCase() === deptSlug.toLowerCase());
   
   // Fallback to code match
   if (!found) {
     found = departments.find(dept => dept.code.toLowerCase() === deptSlug.toLowerCase());
-  }
-  
-  // Fallback to name includes (for flexibility)
-  if (!found) {
-    found = departments.find(dept => 
-      dept.name.toLowerCase().includes(deptSlug.toLowerCase())
-    );
   }
   
   return found || null;
@@ -246,31 +247,6 @@ export function isValidIconType(icon: string): boolean {
 }
 
 /**
- * ✅ Get department display info for specific seeded departments
+ * ✅ Export types for TypeScript
  */
-export function getDepartmentDisplayInfo(slug: string): { 
-  thaiName: string; 
-  shortCode: string; 
-  category: string 
-} {
-  const departmentMap: Record<string, { thaiName: string; shortCode: string; category: string }> = {
-    'MAIN_PHARM': { thaiName: 'คลังยาหลัก', shortCode: 'MAIN', category: 'main' },
-    'ER': { thaiName: 'ห้องฉุกเฉิน', shortCode: 'ER', category: 'clinical' },
-    'IPD': { thaiName: 'หอผู้ป่วยใน', shortCode: 'IPD', category: 'clinical' },
-    'OPD': { thaiName: 'ผู้ป่วยนอก', shortCode: 'OPD', category: 'clinical' },
-    'OR': { thaiName: 'ห้องผ่าตัด', shortCode: 'OR', category: 'clinical' },
-    'ICU': { thaiName: 'หน่วยแรงดัน', shortCode: 'ICU', category: 'clinical' },
-    'LAB': { thaiName: 'ห้องปฏิบัติการ', shortCode: 'LAB', category: 'support' },
-    'DISPENSE': { thaiName: 'ห้องจ่ายยา', shortCode: 'DISP', category: 'main' },
-    'STORAGE': { thaiName: 'คลังสินค้า', shortCode: 'STOR', category: 'support' },
-    'CONSULT': { thaiName: 'ห้องปรึกษา', shortCode: 'CONS', category: 'support' },
-    'EXAM': { thaiName: 'ห้องตรวจ', shortCode: 'EXAM', category: 'clinical' },
-    'PHARMACY': { thaiName: 'ห้องยา', shortCode: 'PHARM', category: 'support' },
-  };
-
-  return departmentMap[slug.toUpperCase()] || { 
-    thaiName: slug, 
-    shortCode: slug.substring(0, 4).toUpperCase(), 
-    category: 'support' 
-  };
-}
+export type { DatabaseDepartment, FrontendDepartment };

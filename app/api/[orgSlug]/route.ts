@@ -1,10 +1,10 @@
-// app/api/[orgSlug]/route.ts - FIXED FOR SEEDED DATA
+// app/api/[orgSlug]/route.ts - Fixed API Route with Real Data Transform
 // Organization API - Get organization data with departments list
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromHeaders, getUserOrgRole, getOrganizationBySlug } from '@/lib/auth-server';
+import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
-import { mapColorThemeToTailwind, getDepartmentCategory } from '@/lib/department-helpers';
+import { transformDepartmentData } from '@/lib/department-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -48,8 +48,8 @@ export async function GET(
         phone: true,
         createdAt: true,
         updatedAt: true,
-        inviteCode: true,      // ✅ Include invite code fields
-        inviteEnabled: true,   // ✅ Include invite enabled field
+        inviteCode: true,
+        inviteEnabled: true,
       },
     });
     
@@ -57,7 +57,7 @@ export async function GET(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // ✅ FIXED: Use correct field names from seeded data
+    // Get departments for this organization
     const departments = await prisma.department.findMany({
       where: {
         organizationId: access.organizationId,
@@ -66,7 +66,7 @@ export async function GET(
       select: {
         id: true,
         name: true,
-        slug: true,              // ✅ Use 'slug' from schema
+        slug: true,
         description: true,
         color: true,
         icon: true,
@@ -75,7 +75,7 @@ export async function GET(
         createdAt: true,
         updatedAt: true,
         createdBy: true,
-        organizationId: true,    // Include for validation
+        organizationId: true,
       },
       orderBy: [
         { parentId: 'asc' },   // Parent departments first
@@ -85,55 +85,30 @@ export async function GET(
 
     console.log(`✅ Found ${departments.length} departments for ${orgSlug}`);
 
-    // ✅ Transform departments with seeded data context
-    const transformedDepartments = departments.map(dept => ({
+    // Transform departments from database format to frontend format
+    const transformedDepartments = departments.map(dept => transformDepartmentData({
       id: dept.id,
       name: dept.name,
-      code: dept.slug,                    // Map slug to code for frontend compatibility
-      slug: dept.slug,                    // Keep original slug
-      description: dept.description || `แผนก ${dept.name}`,
-      color: mapColorThemeToTailwind(dept.color),
-      icon: dept.icon || 'BUILDING',      // Keep as string, will be converted in frontend
+      slug: dept.slug,
+      description: dept.description,
+      color: dept.color,
+      icon: dept.icon,
       isActive: dept.isActive,
       parentId: dept.parentId,
-      
-      // Add mock stats for now (will be replaced with real data later)
-      memberCount: Math.floor(Math.random() * 20) + 5,
-      stockItems: Math.floor(Math.random() * 200) + 50,
-      lowStock: Math.floor(Math.random() * 10),
-      notifications: Math.floor(Math.random() * 5),
-      manager: 'ไม่ระบุ',
-      lastActivity: dept.updatedAt.toISOString(),
-      category: getDepartmentCategory(dept.icon, dept.name),
       createdAt: dept.createdAt,
-      updatedAt: dept.updatedAt,
+      updatedAt: dept.updatedAt
     }));
 
-    // Get organization member count
+    // Count organization members
     const memberCount = await prisma.organizationUser.count({
-      where: {
-        organizationId: access.organizationId,
-        isActive: true
-      }
+      where: { organizationId: access.organizationId }
     });
 
-    // Prepare organization response
+    // Prepare organization data (conditionally include invite code for ADMIN/OWNER)
     const organizationData = {
-      id: organization.id,
-      name: organization.name,
-      slug: organization.slug,
-      description: organization.description,
-      status: organization.status,
-      timezone: organization.timezone,
-      email: organization.email,
-      phone: organization.phone,
-      createdAt: organization.createdAt,
-      updatedAt: organization.updatedAt,
+      ...organization,
       memberCount,
-      departmentCount: departments.length,
-      
-      // Include invite code info for ADMIN/OWNER
-      ...((['ADMIN', 'OWNER'].includes(access.role)) && {
+      ...(['ADMIN', 'OWNER'].includes(access.role) && {
         inviteCode: organization.inviteCode,
         inviteEnabled: organization.inviteEnabled,
       })
@@ -189,18 +164,19 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { name, slug, description, color, icon, parentId } = body;
-
+    
     // Validate required fields
+    const { name, slug, description, color, icon } = body;
+    
     if (!name || !slug) {
       return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 });
     }
 
-    // Check if slug already exists in this organization
+    // Check if department slug already exists in this organization
     const existingDept = await prisma.department.findFirst({
       where: {
         organizationId: access.organizationId,
-        slug: slug.toUpperCase(),
+        slug: slug
       }
     });
 
@@ -208,53 +184,41 @@ export async function POST(
       return NextResponse.json({ error: 'Department slug already exists' }, { status: 409 });
     }
 
-    // Create department
-    const department = await prisma.department.create({
+    // Create new department
+    const newDepartment = await prisma.department.create({
       data: {
-        organizationId: access.organizationId,
-        name: name.trim(),
-        slug: slug.toUpperCase().trim(),
-        description: description?.trim(),
+        name,
+        slug,
+        description: description || `แผนก ${name}`,
         color: color || 'BLUE',
         icon: icon || 'BUILDING',
-        parentId: parentId || null,
-        isActive: true,
-        createdBy: user.userId,
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        color: true,
-        icon: true,
-        isActive: true,
-        createdAt: true,
-      }
-    });
-
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
         organizationId: access.organizationId,
-        userId: user.userId,
-        action: 'departments.create',
-        payload: {
-          departmentId: department.id,
-          departmentName: department.name,
-          departmentSlug: department.slug,
-          timestamp: new Date().toISOString()
-        }
+        createdBy: user.userId,
+        isActive: true
       }
     });
 
-    console.log(`✅ Department created: ${department.name} (${department.slug})`);
+    console.log(`✅ Created new department: ${newDepartment.name} (${newDepartment.slug})`);
+
+    // Transform for frontend
+    const transformedDept = transformDepartmentData({
+      id: newDepartment.id,
+      name: newDepartment.name,
+      slug: newDepartment.slug,
+      description: newDepartment.description,
+      color: newDepartment.color,
+      icon: newDepartment.icon,
+      isActive: newDepartment.isActive,
+      parentId: newDepartment.parentId,
+      createdAt: newDepartment.createdAt,
+      updatedAt: newDepartment.updatedAt
+    });
 
     return NextResponse.json({
       success: true,
-      department,
+      department: transformedDept,
       message: 'Department created successfully'
-    }, { status: 201 });
+    });
 
   } catch (error) {
     console.error('Create department error:', error);

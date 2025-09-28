@@ -1,15 +1,15 @@
-// components/OrganizationLayout/DepartmentList.tsx - STRING-BASED ICON APPROACH
-// DashboardSidebar/DepartmentList - Simple department navigation with safe icon rendering
+// components/OrganizationLayout/DepartmentList.tsx - Fixed Version with Real Data
+// DashboardSidebar/DepartmentList - Department navigation using real API data
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getIconComponent } from '@/lib/department-helpers';
+import { getIconComponent, type FrontendDepartment } from '@/lib/department-helpers';
 
 interface DepartmentListProps {
-  departments: any[];
-  selectedDepartment: any;
-  onSelectDepartment: (dept: any) => void;
+  departments: FrontendDepartment[];
+  selectedDepartment: FrontendDepartment | null;
+  onSelectDepartment: (dept: FrontendDepartment) => void;
   collapsed: boolean;
 }
 
@@ -20,21 +20,20 @@ export const DepartmentList = ({
   collapsed 
 }: DepartmentListProps) => {
   
-  // ✅ Safe icon rendering using string-based approach
-  const renderIcon = (dept: any) => {
+  // ✅ Safe icon rendering using department-helpers
+  const renderIcon = (dept: FrontendDepartment) => {
     try {
-      // dept.icon is now a string (e.g., "BUILDING", "HOSPITAL")
       const IconComponent = getIconComponent(dept.icon || 'BUILDING');
       return <IconComponent className="w-3 h-3 text-white" />;
     } catch (error) {
       console.error('Error rendering department icon:', error, dept);
-      // Import Building directly as fallback
+      // Fallback to Building icon
       const { Building } = require('lucide-react');
       return <Building className="w-3 h-3 text-white" />;
     }
   };
 
-  const renderDepartmentButton = (dept: any) => {
+  const renderDepartmentButton = (dept: FrontendDepartment) => {
     const isSelected = selectedDepartment?.id === dept.id;
     
     return (
@@ -78,6 +77,20 @@ export const DepartmentList = ({
     );
   }
 
+  // Group departments by category
+  const departmentsByCategory = departments.reduce((acc, dept) => {
+    const category = dept.category || 'support';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(dept);
+    return acc;
+  }, {} as Record<string, FrontendDepartment[]>);
+
+  const categoryLabels = {
+    'main': 'หลัก',
+    'clinical': 'แผนกรักษา',
+    'support': 'สนับสนุน'
+  };
+
   return (
     <div className="space-y-1">
       {!collapsed && (
@@ -86,13 +99,23 @@ export const DepartmentList = ({
         </div>
       )}
 
-      {/* All Departments */}
-      {departments.map(renderDepartmentButton)}
+      {/* Render departments by category */}
+      {Object.entries(departmentsByCategory).map(([category, depts]) => (
+        <div key={category}>
+          {!collapsed && depts.length > 0 && (
+            <div className="px-3 py-1 text-xs font-medium text-gray-400">
+              {categoryLabels[category as keyof typeof categoryLabels] || category}
+            </div>
+          )}
+          {depts.map(renderDepartmentButton)}
+        </div>
+      ))}
       
       {/* Debug info in development */}
-      {process.env.NODE_ENV === 'development' && departments.length > 0 && (
-        <div className="px-3 py-1 text-xs text-gray-400">
-          Sample: {departments[0]?.name} - Icon: {departments[0]?.icon} - Color: {departments[0]?.color}
+      {process.env.NODE_ENV === 'development' && departments.length > 0 && !collapsed && (
+        <div className="px-3 py-1 text-xs text-gray-400 border-t mt-2 pt-2">
+          <div>Total: {departments.length} departments</div>
+          <div>Categories: {Object.keys(departmentsByCategory).join(', ')}</div>
         </div>
       )}
     </div>
