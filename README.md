@@ -37,12 +37,9 @@ Directory structure:
     │   │   │   └── register/
     │   │   │       └── route.ts
     │   │   ├── dashboard/
-    │   │   │   └── organizations/
-    │   │   │       └── route.ts
+    │   │   │   └── route.ts
     │   │   ├── organizations/
-    │   │   │   ├── route.ts
-    │   │   │   └── join-by-code/
-    │   │   │       └── route.ts
+    │   │   │   └── route.ts
     │   │   └── security/
     │   │       └── monitoring/
     │   │           └── route.ts
