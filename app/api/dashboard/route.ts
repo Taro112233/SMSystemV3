@@ -1,5 +1,5 @@
-// app/api/dashboard/organizations/route.ts - FIXED FOR NEW SCHEMA
-// Dashboard Organizations API - Get user's organizations with stats
+// app/api/dashboard/route.ts
+// Dashboard API - Get user's organizations with stats
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // ✅ FIXED: Updated organization select to match new schema
+    // Updated organization select to match new schema
     const organizationUsers = await prisma.organizationUser.findMany({
       where: {
         userId: user.userId,
@@ -31,11 +31,11 @@ export async function GET(request: NextRequest) {
             phone: true,
             status: true,
             timezone: true,
-            inviteCode: true,      // ✅ new field
-            inviteEnabled: true,   // ✅ new field
+            inviteCode: true,
+            inviteEnabled: true,
             createdAt: true,
             updatedAt: true,
-            // Count departments (if departments exist in new schema)
+            // Count departments
             departments: {
               select: { id: true },
               where: { isActive: true }
@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
               select: { id: true },
               where: { isActive: true }
             }
-            // ❌ REMOVED: allowDepartments (doesn't exist in new schema)
           }
         }
       },
@@ -104,7 +103,7 @@ export async function GET(request: NextRequest) {
           notifications: 0, // TODO: Count notifications
           isActive: org.status === 'ACTIVE',
           
-          // ✅ NEW: Include invite code info (for admins/owners)
+          // Include invite code info (for admins/owners)
           inviteInfo: (orgUser.roles === 'ADMIN' || orgUser.roles === 'OWNER') ? {
             inviteCode: org.inviteCode,
             inviteEnabled: org.inviteEnabled

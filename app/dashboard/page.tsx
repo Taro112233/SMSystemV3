@@ -64,7 +64,7 @@ const OrganizationSelector = () => {
       setIsLoading(true);
       setError('');
 
-      const response = await fetch('/api/dashboard/organizations', {
+      const response = await fetch('/api/dashboard', {
         credentials: 'include',
       });
 
