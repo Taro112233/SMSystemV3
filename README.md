@@ -24,7 +24,21 @@ Directory structure:
     │   │       └── page.tsx
     │   ├── api/
     │   │   ├── [orgSlug]/
-    │   │   │   └── route.ts
+    │   │   │   ├── route.ts
+    │   │   │   ├── departments/
+    │   │   │   │   ├── route.ts
+    │   │   │   │   └── [deptId]/
+    │   │   │   │       └── route.ts
+    │   │   │   ├── members/
+    │   │   │   │   ├── route.ts
+    │   │   │   │   └── [userId]/
+    │   │   │   │       ├── route.ts
+    │   │   │   │       └── role/
+    │   │   │   │           └── route.ts
+    │   │   │   └── settings/
+    │   │   │       ├── route.ts
+    │   │   │       └── generate-invite-code/
+    │   │   │           └── route.ts
     │   │   ├── arcjet/
     │   │   │   └── route.ts
     │   │   ├── auth/
@@ -79,6 +93,28 @@ Directory structure:
     │   │   ├── JoinOrganizationModal.tsx
     │   │   ├── OrganizationCard.tsx
     │   │   └── OrganizationGrid.tsx
+    │   ├── SettingsManagement/
+    │   │   ├── index.tsx
+    │   │   ├── DepartmentSettings/
+    │   │   │   ├── DepartmentCard.tsx
+    │   │   │   ├── DepartmentForm.tsx
+    │   │   │   ├── DepartmentFormFields.tsx
+    │   │   │   ├── DepartmentList.tsx
+    │   │   │   └── index.tsx
+    │   │   ├── MembersSettings/
+    │   │   │   ├── index.tsx
+    │   │   │   ├── InviteCodeSection.tsx
+    │   │   │   ├── MemberCard.tsx
+    │   │   │   ├── MembersList.tsx
+    │   │   │   └── RoleManager.tsx
+    │   │   ├── OrganizationSettings/
+    │   │   │   ├── index.tsx
+    │   │   │   ├── OrganizationForm.tsx
+    │   │   │   └── OrganizationInfo.tsx
+    │   │   └── shared/
+    │   │       ├── ConfirmDialog.tsx
+    │   │       ├── SettingsCard.tsx
+    │   │       └── SettingsSection.tsx
     │   └── ui/
     │       ├── accordion.tsx
     │       ├── alert-dialog.tsx
