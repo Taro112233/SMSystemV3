@@ -1,4 +1,4 @@
-// middleware.ts - FLAT URL STRUCTURE SUPPORT
+// middleware.ts - UPDATED: Support Reserved Org Pages (Settings, Members, Reports)
 // InvenStock - Multi-Tenant Inventory Management System
 
 import { NextResponse } from 'next/server';
@@ -18,7 +18,7 @@ const ajAuth = arcjet({
     tokenBucket({
       mode: "LIVE",
       characteristics: ["ip.src"],
-      refillRate: 3,        // 3 attempts per 5 minutes
+      refillRate: 3,
       interval: "5m",
       capacity: 5,
     }),
@@ -50,6 +50,15 @@ const validSingleRoutes = [
   '/dashboard',
   '/profile',
   '/settings'
+];
+
+// ✅ NEW: Reserved Organization-Level Pages
+const reservedOrgPages = [
+  'settings',   // Organization settings
+  'members',    // Members management
+  'reports',    // Organization reports
+  'products',   // Organization products (if global)
+  'transfers'   // Organization transfers (if global)
 ];
 
 export async function middleware(request: NextRequest) {
@@ -103,7 +112,6 @@ export async function middleware(request: NextRequest) {
     }
   } catch (arcjetError) {
     console.error('🚨 Arcjet protection failed:', arcjetError);
-    // Fail open for availability
   }
 
   // ===== CHECK IF ROUTE REQUIRES AUTH =====
@@ -144,7 +152,6 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.log(`❌ Token verification failed for ${pathname}`);
 
-    // Clear invalid token
     const response = pathname.startsWith('/api/')
       ? NextResponse.json(
           { success: false, error: 'Invalid or expired token' },
@@ -162,24 +169,38 @@ export async function middleware(request: NextRequest) {
   const isValidSingleRoute = validSingleRoutes.includes(pathname);
   const isValidApiRoute = pathname.startsWith('/api/');
   
-  // ✅ UPDATED: Flat URL pattern matching
-  // Pattern: /[orgSlug] or /[orgSlug]/[deptSlug]
+  // ✅ UPDATED: Flat URL pattern matching with reserved org pages support
+  // Pattern: /[orgSlug] or /[orgSlug]/[secondSegment]
   const flatUrlMatch = pathname.match(/^\/([^\/]+)(?:\/([^\/]+))?$/);
   
   let isValidOrgRoute = false;
   let orgSlug = null;
-  let deptSlug = null;
+  let secondSegment = null;
   
   if (flatUrlMatch) {
     orgSlug = flatUrlMatch[1];
-    deptSlug = flatUrlMatch[2]; // Optional department slug
+    secondSegment = flatUrlMatch[2];
     
-    // Validate that this is not a reserved route
-    const reservedRoutes = ['dashboard', 'profile', 'settings', 'api', '_next', 'login', 'register'];
+    // ✅ UPDATED: Reserved top-level routes
+    const reservedRoutes = [
+      'dashboard', 'profile', 'settings', 
+      'api', '_next', 'login', 'register',
+      'not-found'
+    ];
     
     if (!reservedRoutes.includes(orgSlug)) {
       isValidOrgRoute = true;
-      console.log(`📂 Flat organization route detected:`, { orgSlug, deptSlug });
+      
+      // ✅ Check if second segment is org-level page or department
+      if (secondSegment) {
+        if (reservedOrgPages.includes(secondSegment)) {
+          console.log(`📋 Organization page: ${orgSlug}/${secondSegment}`);
+        } else {
+          console.log(`📂 Department route: ${orgSlug}/${secondSegment}`);
+        }
+      } else {
+        console.log(`🏢 Organization main: ${orgSlug}`);
+      }
     }
   }
 
@@ -200,11 +221,13 @@ export async function middleware(request: NextRequest) {
     requestHeaders.set('x-current-org', orgSlug);
     requestHeaders.set('x-org-check-required', 'true');
     
-    if (deptSlug) {
-      requestHeaders.set('x-current-dept', deptSlug);
-      console.log(`🏢 Department context: ${orgSlug}/${deptSlug}`);
-    } else {
-      console.log(`🏢 Organization context: ${orgSlug}`);
+    if (secondSegment) {
+      // Check if it's a reserved org page or department
+      if (reservedOrgPages.includes(secondSegment)) {
+        requestHeaders.set('x-org-page', secondSegment);
+      } else {
+        requestHeaders.set('x-current-dept', secondSegment);
+      }
     }
   }
 

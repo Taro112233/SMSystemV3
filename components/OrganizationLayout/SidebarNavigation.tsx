@@ -1,5 +1,4 @@
 // components/OrganizationLayout/SidebarNavigation.tsx
-// DashboardSidebar/SidebarNavigation - Main navigation menu and search
 // ✅ UPDATED: Back button navigation for flat URL structure
 
 import React from 'react';
