@@ -8,15 +8,17 @@ import { prisma } from '@/lib/prisma';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { orgSlug: string; userId: string } }
+  { params }: { params: Promise<{ orgSlug: string; userId: string }> }
 ) {
   try {
+    const { orgSlug, userId } = await params;
+    
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json({ error: 'No access to organization' }, { status: 403 });
     }
@@ -30,7 +32,7 @@ export async function PATCH(
 
     // Permission checks
     if (access.role === 'OWNER') {
-      if (params.userId === user.userId && role !== 'OWNER') {
+      if (userId === user.userId && role !== 'OWNER') {
         return NextResponse.json({ error: 'Cannot change your own OWNER role' }, { status: 403 });
       }
     } else if (access.role === 'ADMIN') {
@@ -38,25 +40,27 @@ export async function PATCH(
         return NextResponse.json({ error: 'Only OWNER can assign OWNER role' }, { status: 403 });
       }
 
-      const targetMember = await prisma.organizationMember.findFirst({
-        where: { organizationId: access.organizationId, userId: params.userId },
+      // ✅ FIXED: Use organizationUser instead of organizationMember
+      const targetMember = await prisma.organizationUser.findFirst({
+        where: { organizationId: access.organizationId, userId },
       });
 
-      if (targetMember?.role === 'OWNER') {
+      if (targetMember?.roles === 'OWNER') {
         return NextResponse.json({ error: 'Cannot change OWNER role' }, { status: 403 });
       }
     } else {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const updatedMember = await prisma.organizationMember.update({
+    // ✅ FIXED: Update organizationUser instead of organizationMember
+    const updatedMember = await prisma.organizationUser.update({
       where: {
         organizationId_userId: {
           organizationId: access.organizationId,
-          userId: params.userId,
+          userId,
         },
       },
-      data: { role },
+      data: { roles: role },
       include: {
         user: {
           select: { firstName: true, lastName: true, email: true },
@@ -64,15 +68,15 @@ export async function PATCH(
       },
     });
 
+    // ✅ FIXED: Create audit log without entityType
     await prisma.auditLog.create({
       data: {
         organizationId: access.organizationId,
         userId: user.userId,
-        action: 'MEMBER_ROLE_UPDATED',
-        entityType: 'ORGANIZATION_MEMBER',
-        entityId: updatedMember.id,
-        metadata: {
-          targetUserId: params.userId,
+        action: 'members.role_updated',
+        resourceId: updatedMember.id,
+        payload: {
+          targetUserId: userId,
           newRole: role,
           targetUserName: `${updatedMember.user.firstName} ${updatedMember.user.lastName}`,
         },

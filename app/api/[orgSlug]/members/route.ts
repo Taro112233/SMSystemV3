@@ -8,9 +8,11 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orgSlug: string } }
+  { params }: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
+    const { orgSlug } = await params;
+    
     // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -21,7 +23,7 @@ export async function GET(
     }
 
     // Check organization access
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -29,7 +31,7 @@ export async function GET(
       );
     }
 
-    // Check permission
+    // Check permission to view members
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
@@ -37,8 +39,8 @@ export async function GET(
       );
     }
 
-    // Get all members
-    const members = await prisma.organizationMember.findMany({
+    // ✅ FIXED: Get all members using organizationUser
+    const members = await prisma.organizationUser.findMany({
       where: {
         organizationId: access.organizationId,
       },
@@ -55,18 +57,19 @@ export async function GET(
         },
       },
       orderBy: [
-        { role: 'asc' },
-        { createdAt: 'asc' },
+        { roles: 'desc' },
+        { joinedAt: 'asc' },
       ],
     });
 
+    // ✅ FIXED: Map response with correct field names
     return NextResponse.json({
       success: true,
-      members: members.map(member => ({
+      members: members.map((member: any) => ({
         id: member.id,
         userId: member.userId,
-        role: member.role,
-        joinedAt: member.createdAt,
+        role: member.roles, // ✅ Map 'roles' to 'role'
+        joinedAt: member.joinedAt,
         user: member.user,
       })),
     });

@@ -27,10 +27,6 @@ export const SidebarNavigation = ({
   const isOverviewActive = pathname === `/${orgSlug}`;
   const isReportsActive = pathname === `/${orgSlug}/reports`;
   const isSettingsActive = pathname === `/${orgSlug}/settings`;
-  
-  const handleBackClick = () => {
-    router.push('/dashboard');
-  };
 
   const handleOverviewClick = () => {
     router.push(`/${orgSlug}`);
@@ -48,16 +44,6 @@ export const SidebarNavigation = ({
     <>
       {!collapsed && (
         <>
-          {/* Back to Organizations */}
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start mb-4 text-sm h-9"
-            onClick={handleBackClick}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            กลับไปเลือกองค์กร
-          </Button>
-
           {/* Search */}
           <div className="relative mb-4">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />

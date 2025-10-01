@@ -1,7 +1,8 @@
 // components/OrganizationLayout/OrganizationHeader.tsx
-// DashboardHeader - Breadcrumb navigation bar (FLAT URL STRUCTURE)
+// DashboardHeader - Enhanced Breadcrumb with Reserved Pages Support
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
@@ -12,23 +13,42 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Home, Calendar, Bell } from 'lucide-react';
+import { Home, Calendar, Bell, Settings, Users, BarChart3 } from 'lucide-react';
 
 interface DashboardHeaderProps {
   organization: any;
   selectedDepartment?: any;
 }
 
+// ✅ Reserved org-level pages (from middleware.ts)
+const RESERVED_ORG_PAGES = {
+  'settings': { label: 'ตั้งค่า', icon: Settings },
+  'members': { label: 'จัดการสมาชิก', icon: Users },
+  'reports': { label: 'รายงาน', icon: BarChart3 },
+  'products': { label: 'สินค้า', icon: null },
+  'transfers': { label: 'โอนย้าย', icon: null },
+};
+
 export const DashboardHeader = ({ 
   organization, 
   selectedDepartment 
 }: DashboardHeaderProps) => {
+  const pathname = usePathname();
+
+  // ✅ Detect if current page is a reserved org page
+  const pathSegments = pathname.split('/').filter(Boolean);
+  const currentPageSlug = pathSegments[1]; // Second segment: /{orgSlug}/{pageSlug}
+  
+  const isReservedPage = currentPageSlug && RESERVED_ORG_PAGES[currentPageSlug as keyof typeof RESERVED_ORG_PAGES];
+  const reservedPageConfig = isReservedPage ? RESERVED_ORG_PAGES[currentPageSlug as keyof typeof RESERVED_ORG_PAGES] : null;
+
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
       <div className="flex items-center justify-between">
-        {/* Breadcrumb Navigation */}
+        {/* ✅ Enhanced Breadcrumb Navigation */}
         <Breadcrumb>
           <BreadcrumbList>
+            {/* Home */}
             <BreadcrumbItem>
               <BreadcrumbLink href="/dashboard" className="flex items-center">
                 <Home className="w-4 h-4 mr-1" />
@@ -38,8 +58,9 @@ export const DashboardHeader = ({
             
             <BreadcrumbSeparator />
             
+            {/* Organization */}
             <BreadcrumbItem>
-              {selectedDepartment ? (
+              {(selectedDepartment || isReservedPage) ? (
                 <BreadcrumbLink href={`/${organization.slug}`}>
                   {organization.name}
                 </BreadcrumbLink>
@@ -48,7 +69,21 @@ export const DashboardHeader = ({
               )}
             </BreadcrumbItem>
 
-            {selectedDepartment && (
+            {/* ✅ Reserved Org Page (settings, members, reports) */}
+            {isReservedPage && reservedPageConfig && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="flex items-center gap-2">
+                    {reservedPageConfig.icon && <reservedPageConfig.icon className="w-4 h-4" />}
+                    {reservedPageConfig.label}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </>
+            )}
+
+            {/* ✅ Department (only if not reserved page) */}
+            {!isReservedPage && selectedDepartment && (
               <>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>

@@ -1,17 +1,32 @@
 // FILE: app/api/[orgSlug]/settings/generate-invite-code/route.ts
-// Settings API - Generate new invite code
+// Settings API - Generate new invite code using crypto
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
-import { nanoid } from 'nanoid';
+import { randomBytes } from 'crypto'; // ✅ FIXED: Use crypto instead of nanoid
+
+// ✅ FIXED: Generate invite code using crypto
+function generateInviteCode(length: number = 8): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = randomBytes(length);
+  let result = '';
+  
+  for (let i = 0; i < length; i++) {
+    result += chars[bytes[i] % chars.length];
+  }
+  
+  return result;
+}
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { orgSlug: string } }
+  { params }: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
+    const { orgSlug } = await params;
+    
     // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -22,7 +37,7 @@ export async function POST(
     }
 
     // Check organization access
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -39,7 +54,7 @@ export async function POST(
     }
 
     // Generate new invite code (8 characters, URL-safe)
-    const inviteCode = nanoid(8);
+    const inviteCode = generateInviteCode(8);
 
     // Update organization with new invite code
     const updatedOrg = await prisma.organization.update({
@@ -52,15 +67,14 @@ export async function POST(
       },
     });
 
-    // Create audit log
+    // ✅ FIXED: Create audit log without entityType
     await prisma.auditLog.create({
       data: {
         organizationId: access.organizationId,
         userId: user.userId,
-        action: 'INVITE_CODE_GENERATED',
-        entityType: 'ORGANIZATION',
-        entityId: access.organizationId,
-        metadata: {
+        action: 'organization.invite_code_generated',
+        resourceId: access.organizationId,
+        payload: {
           inviteCode,
         },
       },

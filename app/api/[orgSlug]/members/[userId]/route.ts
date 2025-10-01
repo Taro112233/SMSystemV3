@@ -8,15 +8,17 @@ import { prisma } from '@/lib/prisma';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { orgSlug: string; userId: string } }
+  { params }: { params: Promise<{ orgSlug: string; userId: string }> }
 ) {
   try {
+    const { orgSlug, userId } = await params;
+    
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json({ error: 'No access to organization' }, { status: 403 });
     }
@@ -25,12 +27,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Only OWNER can remove members' }, { status: 403 });
     }
 
-    if (params.userId === user.userId) {
+    if (userId === user.userId) {
       return NextResponse.json({ error: 'Cannot remove yourself' }, { status: 400 });
     }
 
-    const targetMember = await prisma.organizationMember.findFirst({
-      where: { organizationId: access.organizationId, userId: params.userId },
+    // ✅ FIXED: Use organizationUser instead of organizationMember
+    const targetMember = await prisma.organizationUser.findFirst({
+      where: { organizationId: access.organizationId, userId },
       include: {
         user: {
           select: { firstName: true, lastName: true, email: true },
@@ -42,31 +45,32 @@ export async function DELETE(
       return NextResponse.json({ error: 'Member not found' }, { status: 404 });
     }
 
-    if (targetMember.role === 'OWNER') {
+    if (targetMember.roles === 'OWNER') {
       return NextResponse.json({ error: 'Cannot remove another OWNER' }, { status: 403 });
     }
 
-    await prisma.organizationMember.delete({
+    // ✅ FIXED: Delete organizationUser
+    await prisma.organizationUser.delete({
       where: {
         organizationId_userId: {
           organizationId: access.organizationId,
-          userId: params.userId,
+          userId,
         },
       },
     });
 
+    // ✅ FIXED: Create audit log without entityType
     await prisma.auditLog.create({
       data: {
         organizationId: access.organizationId,
         userId: user.userId,
-        action: 'MEMBER_REMOVED',
-        entityType: 'ORGANIZATION_MEMBER',
-        entityId: targetMember.id,
-        metadata: {
-          removedUserId: params.userId,
+        action: 'members.removed',
+        resourceId: targetMember.id,
+        payload: {
+          removedUserId: userId,
           removedUserName: `${targetMember.user.firstName} ${targetMember.user.lastName}`,
           removedUserEmail: targetMember.user.email,
-          previousRole: targetMember.role,
+          previousRole: targetMember.roles,
         },
       },
     });

@@ -9,9 +9,11 @@ import { prisma } from '@/lib/prisma';
 // GET - Get organization settings
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orgSlug: string } }
+  { params }: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
+    const { orgSlug } = await params;
+    
     // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -22,7 +24,7 @@ export async function GET(
     }
 
     // Check organization access
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -75,9 +77,11 @@ export async function GET(
 // PATCH - Update organization settings
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { orgSlug: string } }
+  { params }: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
+    const { orgSlug } = await params;
+    
     // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -88,7 +92,7 @@ export async function PATCH(
     }
 
     // Check organization access
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -135,7 +139,7 @@ export async function PATCH(
     };
 
     // Only OWNER can change slug
-    if (slug !== params.orgSlug) {
+    if (slug !== orgSlug) {
       if (access.role !== 'OWNER') {
         return NextResponse.json(
           { error: 'Only OWNER can change organization slug' },
@@ -166,15 +170,14 @@ export async function PATCH(
       data: updateData,
     });
 
-    // Create audit log
+    // ✅ FIXED: Create audit log without entityType
     await prisma.auditLog.create({
       data: {
         organizationId: access.organizationId,
         userId: user.userId,
-        action: 'ORGANIZATION_UPDATED',
-        entityType: 'ORGANIZATION',
-        entityId: access.organizationId,
-        metadata: {
+        action: 'organization.updated',
+        resourceId: access.organizationId,
+        payload: {
           changes: updateData,
         },
       },

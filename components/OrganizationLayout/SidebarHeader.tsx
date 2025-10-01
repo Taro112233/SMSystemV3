@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SidebarHeaderProps {
   organization: any;
@@ -35,9 +35,9 @@ export const SidebarHeader = ({
             variant="ghost" 
             size="icon"
             onClick={onToggleCollapse}
-            className="h-8 w-8"
+            className="h-10 w-8"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4" />
           </Button>
         </div>
       ) : (
@@ -46,7 +46,7 @@ export const SidebarHeader = ({
             variant="ghost" 
             size="icon"
             onClick={onToggleCollapse}
-            className="h-8 w-8"
+            className="h-10 w-8"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>

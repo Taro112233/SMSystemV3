@@ -9,9 +9,11 @@ import { prisma } from '@/lib/prisma';
 // GET - List all departments
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orgSlug: string } }
+  { params }: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
+    const { orgSlug } = await params;
+    
     // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -22,7 +24,7 @@ export async function GET(
     }
 
     // Check organization access
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -57,9 +59,11 @@ export async function GET(
 // POST - Create new department
 export async function POST(
   request: NextRequest,
-  { params }: { params: { orgSlug: string } }
+  { params }: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
+    const { orgSlug } = await params;
+    
     // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -70,7 +74,7 @@ export async function POST(
     }
 
     // Check organization access
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -121,7 +125,7 @@ export async function POST(
       );
     }
 
-    // Create department
+    // ✅ FIXED: Create department with createdBy field
     const department = await prisma.department.create({
       data: {
         organizationId: access.organizationId,
@@ -131,18 +135,18 @@ export async function POST(
         color: color || 'BLUE',
         icon: icon || 'BUILDING',
         isActive: isActive ?? true,
+        createdBy: user.userId, // ✅ ADDED
       },
     });
 
-    // Create audit log
+    // ✅ FIXED: Create audit log without entityType
     await prisma.auditLog.create({
       data: {
         organizationId: access.organizationId,
         userId: user.userId,
-        action: 'DEPARTMENT_CREATED',
-        entityType: 'DEPARTMENT',
-        entityId: department.id,
-        metadata: {
+        action: 'departments.create',
+        resourceId: department.id,
+        payload: {
           departmentName: name,
           departmentSlug: slug,
         },

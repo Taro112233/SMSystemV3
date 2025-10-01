@@ -9,9 +9,11 @@ import { prisma } from '@/lib/prisma';
 // GET - Get specific department
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orgSlug: string; deptId: string } }
+  { params }: { params: Promise<{ orgSlug: string; deptId: string }> }
 ) {
   try {
+    const { orgSlug, deptId } = await params;
+    
     // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -22,7 +24,7 @@ export async function GET(
     }
 
     // Check organization access
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -33,7 +35,7 @@ export async function GET(
     // Get department
     const department = await prisma.department.findFirst({
       where: {
-        id: params.deptId,
+        id: deptId,
         organizationId: access.organizationId,
       },
     });
@@ -61,9 +63,11 @@ export async function GET(
 // PATCH - Update department
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { orgSlug: string; deptId: string } }
+  { params }: { params: Promise<{ orgSlug: string; deptId: string }> }
 ) {
   try {
+    const { orgSlug, deptId } = await params;
+    
     // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -74,7 +78,7 @@ export async function PATCH(
     }
 
     // Check organization access
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -93,7 +97,7 @@ export async function PATCH(
     // Check if department exists and belongs to organization
     const existingDept = await prisma.department.findFirst({
       where: {
-        id: params.deptId,
+        id: deptId,
         organizationId: access.organizationId,
       },
     });
@@ -131,7 +135,7 @@ export async function PATCH(
         where: {
           organizationId: access.organizationId,
           slug,
-          id: { not: params.deptId },
+          id: { not: deptId },
         },
       });
 
@@ -146,7 +150,7 @@ export async function PATCH(
     // Update department
     const updatedDept = await prisma.department.update({
       where: {
-        id: params.deptId,
+        id: deptId,
       },
       data: {
         name,
@@ -155,18 +159,18 @@ export async function PATCH(
         color: color || 'BLUE',
         icon: icon || 'BUILDING',
         isActive: isActive ?? true,
+        updatedBy: user.userId,
       },
     });
 
-    // Create audit log
+    // ✅ FIXED: Create audit log without entityType
     await prisma.auditLog.create({
       data: {
         organizationId: access.organizationId,
         userId: user.userId,
-        action: 'DEPARTMENT_UPDATED',
-        entityType: 'DEPARTMENT',
-        entityId: params.deptId,
-        metadata: {
+        action: 'departments.update',
+        resourceId: deptId,
+        payload: {
           changes: { name, slug, description, color, icon, isActive },
         },
       },
@@ -189,9 +193,11 @@ export async function PATCH(
 // DELETE - Delete department
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { orgSlug: string; deptId: string } }
+  { params }: { params: Promise<{ orgSlug: string; deptId: string }> }
 ) {
   try {
+    const { orgSlug, deptId } = await params;
+    
     // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -202,7 +208,7 @@ export async function DELETE(
     }
 
     // Check organization access
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -221,7 +227,7 @@ export async function DELETE(
     // Check if department exists
     const department = await prisma.department.findFirst({
       where: {
-        id: params.deptId,
+        id: deptId,
         organizationId: access.organizationId,
       },
     });
@@ -233,9 +239,11 @@ export async function DELETE(
       );
     }
 
-    // Check if department has stocks or transfers
+    // ✅ FIXED: Check if department has stocks (when Stock model exists)
+    // Note: Uncomment this when Stock model is available
+    /*
     const hasStocks = await prisma.stock.count({
-      where: { departmentId: params.deptId },
+      where: { departmentId: deptId },
     });
 
     if (hasStocks > 0) {
@@ -244,23 +252,23 @@ export async function DELETE(
         { status: 400 }
       );
     }
+    */
 
     // Delete department
     await prisma.department.delete({
       where: {
-        id: params.deptId,
+        id: deptId,
       },
     });
 
-    // Create audit log
+    // ✅ FIXED: Create audit log without entityType
     await prisma.auditLog.create({
       data: {
         organizationId: access.organizationId,
         userId: user.userId,
-        action: 'DEPARTMENT_DELETED',
-        entityType: 'DEPARTMENT',
-        entityId: params.deptId,
-        metadata: {
+        action: 'departments.delete',
+        resourceId: deptId,
+        payload: {
           departmentName: department.name,
           departmentSlug: department.slug,
         },
