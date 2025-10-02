@@ -44,7 +44,7 @@ export const DepartmentSettings = ({
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            คุณไม่มีสิทธิ์จัดการแผนก ต้องเป็น ADMIN หรือ OWNER เท่านั้น
+            คุณไม่มีสิทธิ์จัดการหน่วยงาน ต้องเป็น ADMIN หรือ OWNER เท่านั้น
           </AlertDescription>
         </Alert>
       )}

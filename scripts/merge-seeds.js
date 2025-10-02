@@ -259,9 +259,9 @@ async function main() {
       data: [
         {
           organizationId: demoOrganization.id,
-          name: "แผนกหลัก",
+          name: "หน่วยงานหลัก",
           code: "MAIN",
-          description: "แผนกหลักของระบบ",
+          description: "หน่วยงานหลักของระบบ",
           color: "BLUE",
           icon: "BUILDING",
           isActive: true,

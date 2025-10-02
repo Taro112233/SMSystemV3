@@ -148,7 +148,7 @@ export function transformDepartmentData(dept: DatabaseDepartment): FrontendDepar
     name: dept.name,
     code: dept.slug,                                    // Map slug to code for frontend
     slug: dept.slug,                                    // Keep original slug
-    description: dept.description || `แผนก ${dept.name}`,
+    description: dept.description || `หน่วยงาน ${dept.name}`,
     color: mapColorThemeToTailwind(dept.color),         // Handles null values
     icon: dept.icon || 'BUILDING',                      // Default icon if null
     isActive: dept.isActive,

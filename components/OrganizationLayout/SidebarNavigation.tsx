@@ -48,7 +48,7 @@ export const SidebarNavigation = ({
           <div className="relative mb-4">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <Input 
-              placeholder="ค้นหาแผนก..." 
+              placeholder="ค้นหาหน่วยงาน..." 
               className="pl-10 h-8 text-sm bg-gray-50 border-0"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}

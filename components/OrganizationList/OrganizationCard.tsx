@@ -127,7 +127,7 @@ export const OrganizationCard = ({ organization: org, onClick }: OrganizationCar
             <Building2 className="w-4 h-4 text-gray-400" />
             <div>
               <p className="text-sm font-medium text-gray-900">{org.stats.departments}</p>
-              <p className="text-xs text-gray-500">แผนก</p>
+              <p className="text-xs text-gray-500">หน่วยงาน</p>
             </div>
           </div>
           

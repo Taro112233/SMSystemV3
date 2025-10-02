@@ -60,7 +60,7 @@ export const SettingsManagement = ({
         </TabsTrigger>
         <TabsTrigger value="departments" className="flex items-center gap-2">
           <Users className="w-4 h-4" />
-          <span>จัดการแผนก</span>
+          <span>จัดการหน่วยงาน</span>
         </TabsTrigger>
         <TabsTrigger value="members" className="flex items-center gap-2">
           <UserCog className="w-4 h-4" />

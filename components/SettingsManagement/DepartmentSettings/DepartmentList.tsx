@@ -78,15 +78,15 @@ export const DepartmentList = ({
       <SettingsCard>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold">จัดการแผนก</h3>
+            <h3 className="text-lg font-semibold">จัดการหน่วยงาน</h3>
             <p className="text-sm text-gray-600">
-              {departments.length} แผนกทั้งหมด ({activeDepartments.length} ใช้งาน, {inactiveDepartments.length} ปิดใช้งาน)
+              {departments.length} หน่วยงานทั้งหมด ({activeDepartments.length} ใช้งาน, {inactiveDepartments.length} ปิดใช้งาน)
             </p>
           </div>
           {canManage && !showCreateForm && (
             <Button onClick={() => setShowCreateForm(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              เพิ่มแผนกใหม่
+              เพิ่มหน่วยงานใหม่
             </Button>
           )}
         </div>
@@ -95,7 +95,7 @@ export const DepartmentList = ({
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <Input
-            placeholder="ค้นหาแผนก..."
+            placeholder="ค้นหาหน่วยงาน..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -105,7 +105,7 @@ export const DepartmentList = ({
 
       {/* Create Form */}
       {showCreateForm && canManage && (
-        <SettingsSection title="เพิ่มแผนกใหม่">
+        <SettingsSection title="เพิ่มหน่วยงานใหม่">
           <DepartmentForm
             organizationId={organizationId}
             onSubmit={handleCreate}
@@ -116,7 +116,7 @@ export const DepartmentList = ({
 
       {/* Edit Form */}
       {editingDepartment && canManage && (
-        <SettingsSection title={`แก้ไขแผนก: ${editingDepartment.name}`}>
+        <SettingsSection title={`แก้ไขหน่วยงาน: ${editingDepartment.name}`}>
           <DepartmentForm
             organizationId={organizationId}
             department={editingDepartment}
@@ -129,7 +129,7 @@ export const DepartmentList = ({
       {/* Active Departments */}
       {activeDepartments.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900">แผนกที่ใช้งาน</h3>
+          <h3 className="text-lg font-semibold text-gray-900">หน่วยงานที่ใช้งาน</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeDepartments.map(dept => (
               <DepartmentCard
@@ -147,7 +147,7 @@ export const DepartmentList = ({
       {/* Inactive Departments */}
       {inactiveDepartments.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-500">แผนกที่ปิดใช้งาน</h3>
+          <h3 className="text-lg font-semibold text-gray-500">หน่วยงานที่ปิดใช้งาน</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {inactiveDepartments.map(dept => (
               <DepartmentCard
@@ -166,7 +166,7 @@ export const DepartmentList = ({
       {filteredDepartments.length === 0 && (
         <SettingsCard>
           <div className="py-12 text-center text-gray-600">
-            {searchTerm ? 'ไม่พบแผนกที่ตรงกับคำค้นหา' : 'ยังไม่มีแผนก'}
+            {searchTerm ? 'ไม่พบหน่วยงานที่ตรงกับคำค้นหา' : 'ยังไม่มีหน่วยงาน'}
           </div>
         </SettingsCard>
       )}

@@ -45,7 +45,7 @@ export default function DepartmentPage() {
         const foundDepartment = findDepartmentBySlug(transformedDepartments, deptSlug);
 
         if (!foundDepartment) {
-          setError(`ไม่พบแผนก: ${deptSlug}`);
+          setError(`ไม่พบหน่วยงาน: ${deptSlug}`);
           setLoading(false);
           return;
         }
@@ -72,7 +72,7 @@ export default function DepartmentPage() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center space-y-4">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
-          <p className="text-gray-600">กำลังโหลดข้อมูลแผนก...</p>
+          <p className="text-gray-600">กำลังโหลดข้อมูลหน่วยงาน...</p>
         </div>
       </div>
     );
@@ -83,8 +83,8 @@ export default function DepartmentPage() {
     return (
       <div className="text-center py-12">
         <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-semibold text-gray-900 mb-2">ไม่พบข้อมูลแผนก</h2>
-        <p className="text-gray-600 mb-4">{error || `ไม่พบแผนก: ${deptSlug}`}</p>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">ไม่พบข้อมูลหน่วยงาน</h2>
+        <p className="text-gray-600 mb-4">{error || `ไม่พบหน่วยงาน: ${deptSlug}`}</p>
         <Button onClick={() => window.history.back()}>
           กลับไปหน้าก่อนหน้า
         </Button>

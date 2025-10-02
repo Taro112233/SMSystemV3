@@ -61,7 +61,6 @@ export async function GET(
     const departments = await prisma.department.findMany({
       where: {
         organizationId: access.organizationId,
-        isActive: true,
       },
       select: {
         id: true,
@@ -189,7 +188,7 @@ export async function POST(
       data: {
         name,
         slug,
-        description: description || `แผนก ${name}`,
+        description: description || `หน่วยงาน ${name}`,
         color: color || 'BLUE',
         icon: icon || 'BUILDING',
         organizationId: access.organizationId,

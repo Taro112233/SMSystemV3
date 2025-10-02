@@ -156,9 +156,9 @@ export default function SettingsPage() {
       const deptData = await deptResponse.json();
       setDepartments(deptData.departments);
       
-      toast.success('สร้างแผนกใหม่สำเร็จ');
+      toast.success('สร้างหน่วยงานใหม่สำเร็จ');
     } catch (error) {
-      toast.error('ไม่สามารถสร้างแผนกได้');
+      toast.error('ไม่สามารถสร้างหน่วยงานได้');
       throw error;
     }
   };
@@ -184,9 +184,9 @@ export default function SettingsPage() {
       const deptData = await deptResponse.json();
       setDepartments(deptData.departments);
       
-      toast.success('อัพเดทแผนกสำเร็จ');
+      toast.success('อัพเดทหน่วยงานสำเร็จ');
     } catch (error) {
-      toast.error('ไม่สามารถอัพเดทแผนกได้');
+      toast.error('ไม่สามารถอัพเดทหน่วยงานได้');
       throw error;
     }
   };
@@ -210,9 +210,9 @@ export default function SettingsPage() {
       const deptData = await deptResponse.json();
       setDepartments(deptData.departments);
       
-      toast.success('ลบแผนกสำเร็จ');
+      toast.success('ลบหน่วยงานสำเร็จ');
     } catch (error) {
-      toast.error('ไม่สามารถลบแผนกได้');
+      toast.error('ไม่สามารถลบหน่วยงานได้');
       throw error;
     }
   };
@@ -248,7 +248,7 @@ export default function SettingsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">การตั้งค่า</h1>
         <p className="text-gray-600 mt-2">
-          จัดการข้อมูลองค์กร แผนก และสมาชิก
+          จัดการข้อมูลองค์กร หน่วยงาน และสมาชิก
         </p>
       </div>
 

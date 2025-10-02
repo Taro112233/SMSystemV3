@@ -161,7 +161,7 @@ export default function LandingPage() {
             </div>
             <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/20">
               <div className="text-3xl font-bold text-purple-600 mb-2">Department</div>
-              <div className="text-sm text-gray-600">จัดการแยกตามแผนก</div>
+              <div className="text-sm text-gray-600">จัดการแยกตามหน่วยงาน</div>
             </div>
             <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/20">
               <div className="text-3xl font-bold text-orange-600 mb-2">Enterprise</div>
@@ -225,13 +225,13 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <div className="text-lg font-bold">Department-Centric</div>
-                    <div className="text-sm text-gray-500">จัดการแยกตามแผนก</div>
+                    <div className="text-sm text-gray-500">จัดการแยกตามหน่วยงาน</div>
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  จัดการสต็อกแยกตามแผนก พร้อมโครงสร้างแผนกแบบ Hierarchical
+                  จัดการสต็อกแยกตามหน่วยงาน พร้อมโครงสร้างหน่วยงานแบบ Hierarchical
                 </p>
                 <ul className="space-y-2 text-sm text-gray-500">
                   <li className="flex items-center gap-2">
@@ -327,7 +327,7 @@ export default function LandingPage() {
                   <Layers className="w-8 h-8 text-white" />
                 </div>
                 <h4 className="font-bold mb-2">3. Department Context</h4>
-                <p className="text-sm text-gray-600">เข้าสู่งานในแผนก</p>
+                <p className="text-sm text-gray-600">เข้าสู่งานในหน่วยงาน</p>
               </div>
               
               <ArrowRight className="w-6 h-6 text-gray-400 hidden md:block" />
@@ -370,7 +370,7 @@ export default function LandingPage() {
                   <Workflow className="w-5 h-5 text-green-600" />
                   <div>
                     <p className="font-medium">/org/{'{slug}'}/transfers - Organization Transfers</p>
-                    <p className="text-sm text-gray-600">การเบิกจ่ายระหว่างแผนก</p>
+                    <p className="text-sm text-gray-600">การเบิกจ่ายระหว่างหน่วยงาน</p>
                   </div>
                 </div>
               </CardContent>
@@ -388,21 +388,21 @@ export default function LandingPage() {
                   <Activity className="w-5 h-5 text-green-600" />
                   <div>
                     <p className="font-medium">/departments/{'{id}'}/stocks - Department Stocks</p>
-                    <p className="text-sm text-gray-600">สต็อกเฉพาะแผนก</p>
+                    <p className="text-sm text-gray-600">สต็อกเฉพาะหน่วยงาน</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
                   <RefreshCw className="w-5 h-5 text-blue-600" />
                   <div>
                     <p className="font-medium">/departments/{'{id}'}/transfers - Dept Transfers</p>
-                    <p className="text-sm text-gray-600">การเบิกจ่ายของแผนก</p>
+                    <p className="text-sm text-gray-600">การเบิกจ่ายของหน่วยงาน</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
                   <BarChart3 className="w-5 h-5 text-purple-600" />
                   <div>
                     <p className="font-medium">/departments/{'{id}'}/reports - Dept Analytics</p>
-                    <p className="text-sm text-gray-600">รายงานประสิทธิภาพแผนก</p>
+                    <p className="text-sm text-gray-600">รายงานประสิทธิภาพหน่วยงาน</p>
                   </div>
                 </div>
               </CardContent>
@@ -482,7 +482,7 @@ export default function LandingPage() {
                   {[
                     "Multi-Tenant Architecture แยกข้อมูลองค์กร",
                     "Department-Centric Stock Management",
-                    "Real-time Stock Updates ทุกแผนก",
+                    "Real-time Stock Updates ทุกหน่วยงาน",
                     "Custom Role System แบบ Granular",
                     "Organization Context Switching",
                     "Inter-Department Transfer Workflow",
@@ -747,7 +747,7 @@ export default function LandingPage() {
                   </h4>
                   <ul className="text-xs text-gray-600 space-y-1">
                     <li>• ดูสต็อกสินค้า</li>
-                    <li>• ปรับสต็อกในแผนกที่มีสิทธิ์</li>
+                    <li>• ปรับสต็อกในหน่วยงานที่มีสิทธิ์</li>
                     <li>• สร้างใบเบิกสินค้า</li>
                     <li>• รับสินค้าที่เบิก</li>
                     <li>• ดูรายงานพื้นฐาน</li>
@@ -774,7 +774,7 @@ export default function LandingPage() {
                   </h4>
                   <ul className="text-xs text-gray-600 space-y-1">
                     <li>• ทุกสิทธิ์ของ Admin</li>
-                    <li>• จัดการแผนก (CRUD)</li>
+                    <li>• จัดการหน่วยงาน (CRUD)</li>
                     <li>• ตั้งค่าองค์กร</li>
                     <li>• จัดการสมาชิกองค์กร</li>
                     <li>• ดูรายงานระดับองค์กร</li>
@@ -791,7 +791,7 @@ export default function LandingPage() {
               </h3>
               <div className="bg-orange-50 p-4 rounded-lg">
                 <p className="text-gray-700 mb-3">
-                  <strong>Department-to-Department Transfer Process:</strong> กระบวนการเบิกจ่ายสินค้าระหว่างแผนกแบบมีการควบคุม
+                  <strong>Department-to-Department Transfer Process:</strong> กระบวนการเบิกจ่ายสินค้าระหว่างหน่วยงานแบบมีการควบคุม
                 </p>
                 <div className="grid md:grid-cols-5 gap-3 text-xs">
                   <div className="text-center p-3 bg-white rounded">
@@ -799,7 +799,7 @@ export default function LandingPage() {
                       <span className="text-white font-bold">1</span>
                     </div>
                     <h4 className="font-semibold">REQUEST</h4>
-                    <p className="text-gray-600">แผนกสร้างใบเบิก</p>
+                    <p className="text-gray-600">หน่วยงานสร้างใบเบิก</p>
                   </div>
                   <div className="text-center p-3 bg-white rounded">
                     <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -813,7 +813,7 @@ export default function LandingPage() {
                       <span className="text-white font-bold">3</span>
                     </div>
                     <h4 className="font-semibold">PREPARE</h4>
-                    <p className="text-gray-600">แผนกต้นทางเตรียม</p>
+                    <p className="text-gray-600">หน่วยงานต้นทางเตรียม</p>
                   </div>
                   <div className="text-center p-3 bg-white rounded">
                     <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -827,7 +827,7 @@ export default function LandingPage() {
                       <span className="text-white font-bold">5</span>
                     </div>
                     <h4 className="font-semibold">RECEIVE</h4>
-                    <p className="text-gray-600">แผนกปลายทางรับ</p>
+                    <p className="text-gray-600">หน่วยงานปลายทางรับ</p>
                   </div>
                 </div>
               </div>
@@ -884,8 +884,8 @@ export default function LandingPage() {
                     <span className="text-white text-xs font-bold">2</span>
                   </div>
                   <div>
-                    <p className="font-semibold">ตั้งค่าแผนกและสินค้า</p>
-                    <p className="text-gray-600 text-xs">สร้างโครงสร้างแผนกและเพิ่มสินค้าพร้อมสต็อกเริ่มต้น</p>
+                    <p className="font-semibold">ตั้งค่าหน่วยงานและสินค้า</p>
+                    <p className="text-gray-600 text-xs">สร้างโครงสร้างหน่วยงานและเพิ่มสินค้าพร้อมสต็อกเริ่มต้น</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -894,7 +894,7 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <p className="font-semibold">เชิญทีมงานและกำหนดสิทธิ์</p>
-                    <p className="text-gray-600 text-xs">เพิ่มสมาชิกในองค์กรและกำหนดสิทธิ์ตามแผนกและบทบาท</p>
+                    <p className="text-gray-600 text-xs">เพิ่มสมาชิกในองค์กรและกำหนดสิทธิ์ตามหน่วยงานและบทบาท</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

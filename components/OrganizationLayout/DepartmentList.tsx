@@ -67,11 +67,11 @@ export const DepartmentList = ({
       <div className="space-y-1">
         {!collapsed && (
           <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            แผนกทั้งหมด
+            หน่วยงานทั้งหมด
           </div>
         )}
         <div className="px-3 py-2 text-sm text-gray-500">
-          ไม่พบข้อมูลแผนก
+          ไม่พบข้อมูลหน่วยงาน
         </div>
       </div>
     );
@@ -81,7 +81,7 @@ export const DepartmentList = ({
     <div className="space-y-1">
       {!collapsed && (
         <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          แผนกทั้งหมด ({departments.length})
+          หน่วยงานทั้งหมด ({departments.length})
         </div>
       )}
 

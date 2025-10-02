@@ -89,8 +89,8 @@ export const DepartmentOverview = ({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            แผนกทั้งหมด
-            <Badge variant="secondary">0 แผนก</Badge>
+            หน่วยงานทั้งหมด
+            <Badge variant="secondary">0 หน่วยงาน</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -99,17 +99,17 @@ export const DepartmentOverview = ({
               <Building className="w-8 h-8 text-gray-400" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              ยังไม่มีแผนก
+              ยังไม่มีหน่วยงาน
             </h3>
             <p className="text-gray-600 mb-4">
-              เริ่มต้นการจัดการสต็อกโดยการสร้างแผนกแรกขององค์กร
+              เริ่มต้นการจัดการสต็อกโดยการสร้างหน่วยงานแรกขององค์กร
             </p>
             <Button 
               className="bg-blue-500 hover:bg-blue-600"
               onClick={() => console.log('Create department clicked')}
             >
               <Plus className="w-4 h-4 mr-2" />
-              สร้างแผนกแรก
+              สร้างหน่วยงานแรก
             </Button>
           </div>
         </CardContent>
@@ -121,8 +121,8 @@ export const DepartmentOverview = ({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          แผนกทั้งหมด
-          <Badge variant="secondary">{departments.length} แผนก</Badge>
+          หน่วยงานทั้งหมด
+          <Badge variant="secondary">{departments.length} หน่วยงาน</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>

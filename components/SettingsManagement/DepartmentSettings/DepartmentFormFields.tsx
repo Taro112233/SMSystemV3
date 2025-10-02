@@ -75,7 +75,7 @@ export const DepartmentFormFields = ({
           </div>
           <div>
             <div className="font-semibold text-gray-900">
-              {formData.name || 'ชื่อแผนก'}
+              {formData.name || 'ชื่อหน่วยงาน'}
             </div>
             <div className="text-sm text-gray-500 font-mono">
               {formData.slug || 'slug'}
@@ -86,7 +86,7 @@ export const DepartmentFormFields = ({
 
       {/* Department Name */}
       <div className="space-y-2">
-        <Label htmlFor="name">ชื่อแผนก *</Label>
+        <Label htmlFor="name">ชื่อหน่วยงาน *</Label>
         <Input
           id="name"
           name="name"
@@ -122,7 +122,7 @@ export const DepartmentFormFields = ({
           name="description"
           value={formData.description}
           onChange={handleInputChange}
-          placeholder="อธิบายเกี่ยวกับแผนกนี้..."
+          placeholder="อธิบายเกี่ยวกับหน่วยงานนี้..."
           rows={3}
         />
       </div>
@@ -182,9 +182,9 @@ export const DepartmentFormFields = ({
       {/* Active Status */}
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div className="space-y-1">
-          <div className="font-medium">เปิดใช้งานแผนก</div>
+          <div className="font-medium">เปิดใช้งานหน่วยงาน</div>
           <div className="text-sm text-gray-600">
-            แผนกที่ปิดใช้งานจะไม่แสดงในรายการหลัก
+            หน่วยงานที่ปิดใช้งานจะไม่แสดงในรายการหลัก
           </div>
         </div>
         <Switch

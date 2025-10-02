@@ -1,12 +1,12 @@
 // FILE: components/SettingsManagement/DepartmentSettings/DepartmentCard.tsx
-// DepartmentSettings/DepartmentCard - Card component
+// DepartmentSettings/DepartmentCard - Card component with proper colors and alignment
 // ============================================
 
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { getIconComponent, mapColorThemeToTailwind } from '@/lib/department-helpers';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
@@ -20,6 +20,8 @@ interface DepartmentCardProps {
     color?: string;
     icon?: string;
     isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
   };
   canManage: boolean;
   onEdit: (dept: any) => void;
@@ -36,16 +38,43 @@ export const DepartmentCard = ({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const Icon = getIconComponent(department.icon || 'BUILDING');
-  const colorClass = mapColorThemeToTailwind(department.color);
+  
+  // ✅ FIXED: department.color อาจเป็น Tailwind class ('bg-blue-500') 
+  // ต้องแปลงกลับเป็น enum ก่อน ('BLUE')
+  const extractColorEnum = (color: string): string => {
+    // ถ้าเป็น Tailwind class แล้ว (bg-xxx-500) ให้แปลงกลับเป็น enum
+    if (color.startsWith('bg-')) {
+      const colorMap: Record<string, string> = {
+        'bg-blue-500': 'BLUE',
+        'bg-green-500': 'GREEN',
+        'bg-red-500': 'RED',
+        'bg-yellow-500': 'YELLOW',
+        'bg-purple-500': 'PURPLE',
+        'bg-pink-500': 'PINK',
+        'bg-indigo-500': 'INDIGO',
+        'bg-teal-500': 'TEAL',
+        'bg-orange-500': 'ORANGE',
+        'bg-gray-500': 'GRAY',
+      };
+      return colorMap[color] || 'BLUE';
+    }
+    // ถ้าเป็น enum อยู่แล้ว ใช้เลย
+    return color;
+  };
+  
+  const colorEnum = extractColorEnum(department.color || 'BLUE');
+  const colorClass = mapColorThemeToTailwind(colorEnum);
 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
       await onDelete(department.id);
-      toast.success('ลบแผนกสำเร็จ');
+      toast.success('ลบหน่วยงานสำเร็จ');
       setShowDeleteDialog(false);
     } catch (error) {
-      toast.error('ไม่สามารถลบแผนกได้');
+      toast.error('ไม่สามารถลบหน่วยงานได้', {
+        description: error instanceof Error ? error.message : 'เกิดข้อผิดพลาด'
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -53,61 +82,90 @@ export const DepartmentCard = ({
 
   return (
     <>
-      <Card className={!department.isActive ? 'opacity-60' : ''}>
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            {/* Icon */}
-            <div className={`w-12 h-12 ${colorClass} rounded-lg flex items-center justify-center flex-shrink-0`}>
-              <Icon className="w-6 h-6 text-white" />
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 truncate">
+      <Card className={`${!department.isActive ? 'opacity-60' : ''} hover:shadow-lg transition-shadow h-full flex flex-col`}>
+        <CardContent className="p-4 flex-1 flex flex-col">
+          <div className="space-y-3 flex-1 flex flex-col">
+            {/* Header with Icon and Status */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className={`w-12 h-12 ${colorClass} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 truncate">
                     {department.name}
-                  </h4>
+                  </h3>
                   <p className="text-sm text-gray-500 font-mono">
                     {department.slug}
                   </p>
                 </div>
-                {!department.isActive && (
-                  <Badge variant="secondary" className="text-xs">
-                    ปิดใช้งาน
-                  </Badge>
-                )}
               </div>
-
-              {department.description && (
-                <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                  {department.description}
-                </p>
-              )}
-
-              {/* Actions */}
-              {canManage && (
-                <div className="flex gap-2 mt-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEdit(department)}
-                  >
-                    <Edit className="w-3 h-3 mr-1" />
-                    แก้ไข
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDeleteDialog(true)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-3 h-3 mr-1" />
-                    ลบ
-                  </Button>
-                </div>
+              
+              {/* Status Badge */}
+              {department.isActive ? (
+                <Badge variant="default" className="bg-green-500 flex-shrink-0">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  ใช้งาน
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="flex-shrink-0">
+                  <XCircle className="w-3 h-3 mr-1" />
+                  ปิด
+                </Badge>
               )}
             </div>
+
+            {/* Description - Fixed height for consistency */}
+            <div className="min-h-[40px]">
+              {department.description ? (
+                <p className="text-sm text-gray-600 line-clamp-2">
+                  {department.description}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-400 italic">
+                  ไม่มีคำอธิบาย
+                </p>
+              )}
+            </div>
+
+            {/* Spacer to push timestamp and actions to bottom */}
+            <div className="flex-1" />
+
+            {/* Timestamps */}
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Clock className="w-3 h-3" />
+              <span>
+                อัพเดท: {new Date(department.updatedAt).toLocaleDateString('th-TH', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </span>
+            </div>
+
+            {/* Actions - Always at bottom with consistent spacing */}
+            {canManage && (
+              <div className="flex gap-2 pt-2 border-t mt-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => onEdit(department)}
+                >
+                  <Edit className="w-3 h-3 mr-1" />
+                  แก้ไข
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  ลบ
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -116,9 +174,9 @@ export const DepartmentCard = ({
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="ยืนยันการลบแผนก"
-        description={`คุณแน่ใจหรือไม่ที่จะลบแผนก "${department.name}"? การดำเนินการนี้ไม่สามารถยกเลิกได้`}
-        confirmText="ลบแผนก"
+        title="ยืนยันการลบหน่วยงาน"
+        description={`คุณแน่ใจหรือไม่ที่จะลบหน่วยงาน "${department.name}"? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+        confirmText="ลบหน่วยงาน"
         cancelText="ยกเลิก"
         onConfirm={handleDelete}
         isLoading={isDeleting}

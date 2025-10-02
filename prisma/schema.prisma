@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-10-02T13:09:03.947Z
+// Last generated: 2025-10-02T13:52:11.871Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -38,8 +38,8 @@ enum OrganizationStatus {
 
 // ===== SIMPLIFIED ROLE SYSTEM =====
 enum OrganizationRole {
-  MEMBER  // ทำงานทั่วไป เบิก จ่าย แก้สต็อก ดูทุกแผนก
-  ADMIN   // Member + CRUD สินค้า/แผนก + เชิญผู้ใช้ 
+  MEMBER  // ทำงานทั่วไป เบิก จ่าย แก้สต็อก ดูทุกหน่วยงาน
+  ADMIN   // Member + CRUD สินค้า/หน่วยงาน + เชิญผู้ใช้ 
   OWNER   // Admin + จัดการองค์กร + ตั้งค่าระบบ
 }
 

@@ -41,7 +41,7 @@ export const DepartmentForm = ({
 
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
-      toast.error('กรุณากรอกชื่อแผนก');
+      toast.error('กรุณากรอกชื่อหน่วยงาน');
       return false;
     }
 
@@ -73,10 +73,10 @@ export const DepartmentForm = ({
         organizationId,
       });
       
-      toast.success(department ? 'อัพเดทแผนกสำเร็จ' : 'สร้างแผนกใหม่สำเร็จ');
+      toast.success(department ? 'อัพเดทหน่วยงานสำเร็จ' : 'สร้างหน่วยงานใหม่สำเร็จ');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'เกิดข้อผิดพลาด';
-      toast.error(department ? 'ไม่สามารถอัพเดทแผนกได้' : 'ไม่สามารถสร้างแผนกได้', {
+      toast.error(department ? 'ไม่สามารถอัพเดทหน่วยงานได้' : 'ไม่สามารถสร้างหน่วยงานได้', {
         description: errorMsg
       });
     } finally {
@@ -108,7 +108,7 @@ export const DepartmentForm = ({
           ) : (
             <>
               <Save className="w-4 h-4 mr-2" />
-              {department ? 'บันทึกการเปลี่ยนแปลง' : 'สร้างแผนก'}
+              {department ? 'บันทึกการเปลี่ยนแปลง' : 'สร้างหน่วยงาน'}
             </>
           )}
         </Button>
