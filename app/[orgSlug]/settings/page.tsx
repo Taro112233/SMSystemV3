@@ -1,4 +1,4 @@
-// app/[orgSlug]/settings/page.tsx
+// app/[orgSlug]/settings/page.tsx - Updated for Modal
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [organizationData, setOrganizationData] = useState<any>(null);
   const [departments, setDepartments] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<'MEMBER' | 'ADMIN' | 'OWNER' | null>(null);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
 
   useEffect(() => {
     const loadSettingsData = async () => {
@@ -73,21 +74,7 @@ export default function SettingsPage() {
         setOrganizationData(orgData.organization);
 
         // Load departments
-        const deptResponse = await fetch(`/api/${orgSlug}`, {
-          credentials: 'include',
-        });
-
-        if (!deptResponse.ok) {
-          throw new Error('Failed to load departments');
-        }
-
-        const deptData = await deptResponse.json();
-
-        if (!deptData.success) {
-          throw new Error(deptData.error || 'Failed to load departments');
-        }
-
-        setDepartments(deptData.departments);
+        await loadDepartments();
 
         console.log('✅ Settings data loaded successfully');
         setLoading(false);
@@ -103,6 +90,33 @@ export default function SettingsPage() {
       loadSettingsData();
     }
   }, [orgSlug, router]);
+
+  // Separate function to reload departments
+  const loadDepartments = async () => {
+    try {
+      setIsLoadingDepartments(true);
+      const deptResponse = await fetch(`/api/${orgSlug}`, {
+        credentials: 'include',
+      });
+
+      if (!deptResponse.ok) {
+        throw new Error('Failed to load departments');
+      }
+
+      const deptData = await deptResponse.json();
+
+      if (!deptData.success) {
+        throw new Error(deptData.error || 'Failed to load departments');
+      }
+
+      setDepartments(deptData.departments);
+    } catch (err) {
+      console.error('Failed to load departments:', err);
+      toast.error('ไม่สามารถโหลดข้อมูลหน่วยงานได้');
+    } finally {
+      setIsLoadingDepartments(false);
+    }
+  };
 
   // Update organization handler
   const handleOrganizationUpdate = async (data: any) => {
@@ -147,18 +161,13 @@ export default function SettingsPage() {
         throw new Error(errorData.error || 'Failed to create department');
       }
 
-      const result = await response.json();
-      
-      // Reload departments
-      const deptResponse = await fetch(`/api/${orgSlug}`, {
-        credentials: 'include',
-      });
-      const deptData = await deptResponse.json();
-      setDepartments(deptData.departments);
-      
-      toast.success('สร้างหน่วยงานใหม่สำเร็จ');
+      // Reload departments after create
+      await loadDepartments();
     } catch (error) {
-      toast.error('ไม่สามารถสร้างหน่วยงานได้');
+      const errorMsg = error instanceof Error ? error.message : 'เกิดข้อผิดพลาด';
+      toast.error('ไม่สามารถสร้างหน่วยงานได้', {
+        description: errorMsg
+      });
       throw error;
     }
   };
@@ -177,16 +186,13 @@ export default function SettingsPage() {
         throw new Error(errorData.error || 'Failed to update department');
       }
 
-      // Reload departments
-      const deptResponse = await fetch(`/api/${orgSlug}`, {
-        credentials: 'include',
-      });
-      const deptData = await deptResponse.json();
-      setDepartments(deptData.departments);
-      
-      toast.success('อัพเดทหน่วยงานสำเร็จ');
+      // Reload departments after update
+      await loadDepartments();
     } catch (error) {
-      toast.error('ไม่สามารถอัพเดทหน่วยงานได้');
+      const errorMsg = error instanceof Error ? error.message : 'เกิดข้อผิดพลาด';
+      toast.error('ไม่สามารถอัพเดทหน่วยงานได้', {
+        description: errorMsg
+      });
       throw error;
     }
   };
@@ -203,16 +209,13 @@ export default function SettingsPage() {
         throw new Error(errorData.error || 'Failed to delete department');
       }
 
-      // Reload departments
-      const deptResponse = await fetch(`/api/${orgSlug}`, {
-        credentials: 'include',
-      });
-      const deptData = await deptResponse.json();
-      setDepartments(deptData.departments);
-      
-      toast.success('ลบหน่วยงานสำเร็จ');
+      // Reload departments after delete
+      await loadDepartments();
     } catch (error) {
-      toast.error('ไม่สามารถลบหน่วยงานได้');
+      const errorMsg = error instanceof Error ? error.message : 'เกิดข้อผิดพลาด';
+      toast.error('ไม่สามารถลบหน่วยงานได้', {
+        description: errorMsg
+      });
       throw error;
     }
   };
@@ -256,6 +259,7 @@ export default function SettingsPage() {
         organization={organizationData}
         departments={departments}
         userRole={userRole}
+        isLoadingDepartments={isLoadingDepartments}
         onOrganizationUpdate={handleOrganizationUpdate}
         onDepartmentCreate={handleDepartmentCreate}
         onDepartmentUpdate={handleDepartmentUpdate}

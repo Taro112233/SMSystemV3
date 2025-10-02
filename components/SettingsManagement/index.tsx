@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/index.tsx
-// SettingsManagement - Main settings router/tabs
+// SettingsManagement - Main settings router/tabs (Updated for Modal)
 // ============================================
 
 import React from 'react';
@@ -36,6 +36,7 @@ interface SettingsManagementProps {
     updatedAt: Date;
   }>;
   userRole: 'MEMBER' | 'ADMIN' | 'OWNER';
+  isLoadingDepartments?: boolean;
   onOrganizationUpdate: (data: any) => Promise<any>;
   onDepartmentCreate: (data: any) => Promise<void>;
   onDepartmentUpdate: (deptId: string, data: any) => Promise<void>;
@@ -46,6 +47,7 @@ export const SettingsManagement = ({
   organization,
   departments,
   userRole,
+  isLoadingDepartments = false,
   onOrganizationUpdate,
   onDepartmentCreate,
   onDepartmentUpdate,
@@ -77,12 +79,13 @@ export const SettingsManagement = ({
         />
       </TabsContent>
 
-      {/* Department Management Tab */}
+      {/* Department Management Tab - Updated with Modal */}
       <TabsContent value="departments" className="space-y-6">
         <DepartmentSettings
           departments={departments}
           organizationId={organization.id}
           userRole={userRole}
+          isLoading={isLoadingDepartments}
           onCreate={onDepartmentCreate}
           onUpdate={onDepartmentUpdate}
           onDelete={onDepartmentDelete}

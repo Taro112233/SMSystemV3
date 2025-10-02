@@ -1,15 +1,14 @@
 // FILE: components/SettingsManagement/DepartmentSettings/DepartmentList.tsx
-// DepartmentSettings/DepartmentList - List/grid view
+// DepartmentSettings/DepartmentList - Updated to use Modal
 // ============================================
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Loader2 } from 'lucide-react';
 import { SettingsCard } from '../shared/SettingsCard';
 import { DepartmentCard } from './DepartmentCard';
-import { DepartmentForm } from './DepartmentForm';
-import { SettingsSection } from '../shared/SettingsSection';
+import { DepartmentFormModal } from './DepartmentFormModal';
 
 interface DepartmentListProps {
   departments: Array<{
@@ -26,6 +25,7 @@ interface DepartmentListProps {
   }>;
   organizationId: string;
   canManage: boolean;
+  isLoading?: boolean;
   onCreate: (data: any) => Promise<void>;
   onUpdate: (deptId: string, data: any) => Promise<void>;
   onDelete: (deptId: string) => Promise<void>;
@@ -35,12 +35,13 @@ export const DepartmentList = ({
   departments,
   organizationId,
   canManage,
+  isLoading = false,
   onCreate,
   onUpdate,
   onDelete
 }: DepartmentListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<any>(null);
 
   // Filter departments by search term
@@ -56,21 +57,29 @@ export const DepartmentList = ({
 
   const handleCreate = async (data: any) => {
     await onCreate(data);
-    setShowCreateForm(false);
   };
 
-  const handleUpdate = async (deptId: string, data: any) => {
-    await onUpdate(deptId, data);
-    setEditingDepartment(null);
+  const handleUpdate = async (data: any) => {
+    if (editingDepartment) {
+      await onUpdate(editingDepartment.id, data);
+      setEditingDepartment(null);
+    }
   };
 
   const handleEdit = (dept: any) => {
     setEditingDepartment(dept);
   };
 
-  const handleCancelEdit = () => {
-    setEditingDepartment(null);
-  };
+  // Loading state
+  if (isLoading) {
+    return (
+      <SettingsCard>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        </div>
+      </SettingsCard>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -83,8 +92,8 @@ export const DepartmentList = ({
               {departments.length} หน่วยงานทั้งหมด ({activeDepartments.length} ใช้งาน, {inactiveDepartments.length} ปิดใช้งาน)
             </p>
           </div>
-          {canManage && !showCreateForm && (
-            <Button onClick={() => setShowCreateForm(true)}>
+          {canManage && (
+            <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="w-4 h-4 mr-2" />
               เพิ่มหน่วยงานใหม่
             </Button>
@@ -102,29 +111,6 @@ export const DepartmentList = ({
           />
         </div>
       </SettingsCard>
-
-      {/* Create Form */}
-      {showCreateForm && canManage && (
-        <SettingsSection title="เพิ่มหน่วยงานใหม่">
-          <DepartmentForm
-            organizationId={organizationId}
-            onSubmit={handleCreate}
-            onCancel={() => setShowCreateForm(false)}
-          />
-        </SettingsSection>
-      )}
-
-      {/* Edit Form */}
-      {editingDepartment && canManage && (
-        <SettingsSection title={`แก้ไขหน่วยงาน: ${editingDepartment.name}`}>
-          <DepartmentForm
-            organizationId={organizationId}
-            department={editingDepartment}
-            onSubmit={(data) => handleUpdate(editingDepartment.id, data)}
-            onCancel={handleCancelEdit}
-          />
-        </SettingsSection>
-      )}
 
       {/* Active Departments */}
       {activeDepartments.length > 0 && (
@@ -170,6 +156,23 @@ export const DepartmentList = ({
           </div>
         </SettingsCard>
       )}
+
+      {/* Create Modal */}
+      <DepartmentFormModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        organizationId={organizationId}
+        onSubmit={handleCreate}
+      />
+
+      {/* Edit Modal */}
+      <DepartmentFormModal
+        open={!!editingDepartment}
+        onOpenChange={(open) => !open && setEditingDepartment(null)}
+        organizationId={organizationId}
+        department={editingDepartment}
+        onSubmit={handleUpdate}
+      />
     </div>
   );
 };

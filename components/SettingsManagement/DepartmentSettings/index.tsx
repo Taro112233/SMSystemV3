@@ -1,8 +1,8 @@
 // FILE: components/SettingsManagement/DepartmentSettings/index.tsx
-// DepartmentSettings - Container + state management
+// DepartmentSettings - Container + state management (Updated for Modal)
 // ============================================
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { DepartmentList } from './DepartmentList';
@@ -22,6 +22,7 @@ interface DepartmentSettingsProps {
   }>;
   organizationId: string;
   userRole: 'MEMBER' | 'ADMIN' | 'OWNER';
+  isLoading?: boolean;
   onCreate: (data: any) => Promise<void>;
   onUpdate: (deptId: string, data: any) => Promise<void>;
   onDelete: (deptId: string) => Promise<void>;
@@ -31,6 +32,7 @@ export const DepartmentSettings = ({
   departments,
   organizationId,
   userRole,
+  isLoading = false,
   onCreate,
   onUpdate,
   onDelete
@@ -49,11 +51,12 @@ export const DepartmentSettings = ({
         </Alert>
       )}
 
-      {/* Department List */}
+      {/* Department List with Modal */}
       <DepartmentList
         departments={departments}
         organizationId={organizationId}
         canManage={canManage}
+        isLoading={isLoading}
         onCreate={onCreate}
         onUpdate={onUpdate}
         onDelete={onDelete}

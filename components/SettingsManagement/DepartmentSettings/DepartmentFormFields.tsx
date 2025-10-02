@@ -99,7 +99,7 @@ export const DepartmentFormFields = ({
 
       {/* Slug */}
       <div className="space-y-2">
-        <Label htmlFor="slug">Slug (URL) *</Label>
+        <Label htmlFor="slug">Slug *</Label>
         <Input
           id="slug"
           name="slug"
