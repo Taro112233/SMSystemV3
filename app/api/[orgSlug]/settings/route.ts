@@ -1,12 +1,12 @@
 // FILE: app/api/[orgSlug]/settings/route.ts
-// Settings API - Get and Update Organization Settings
+// Settings API - UPDATED to support inviteCode + inviteEnabled
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 
-// GET - Get organization settings
+// GET - Get organization settings (NO CHANGES)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -14,7 +14,6 @@ export async function GET(
   try {
     const { orgSlug } = await params;
     
-    // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -23,7 +22,6 @@ export async function GET(
       );
     }
 
-    // Check organization access
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
@@ -32,7 +30,6 @@ export async function GET(
       );
     }
 
-    // Get organization details
     const organization = await prisma.organization.findUnique({
       where: {
         id: access.organizationId,
@@ -74,7 +71,7 @@ export async function GET(
   }
 }
 
-// PATCH - Update organization settings
+// PATCH - Update organization settings - UPDATED
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -82,7 +79,6 @@ export async function PATCH(
   try {
     const { orgSlug } = await params;
     
-    // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -91,7 +87,6 @@ export async function PATCH(
       );
     }
 
-    // Check organization access
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
@@ -108,38 +103,62 @@ export async function PATCH(
       );
     }
 
-    // Get request body
     const body = await request.json();
-    const { name, slug, description, email, phone, timezone, inviteEnabled } = body;
+    const { 
+      name, 
+      slug, 
+      description, 
+      email, 
+      phone, 
+      timezone, 
+      inviteEnabled,
+      inviteCode // ✅ NEW: Accept inviteCode from request
+    } = body;
 
-    // Validate required fields
-    if (!name || !slug || !timezone) {
+    // ✅ NEW: If only updating invite settings, allow OWNER
+    const isInviteOnlyUpdate = inviteCode !== undefined || inviteEnabled !== undefined;
+    
+    if (isInviteOnlyUpdate && access.role !== 'OWNER') {
       return NextResponse.json(
-        { error: 'Name, slug, and timezone are required' },
-        { status: 400 }
+        { error: 'Only OWNER can update invite code settings' },
+        { status: 403 }
       );
     }
 
-    // Validate slug format
-    if (!/^[a-z0-9-]+$/.test(slug)) {
-      return NextResponse.json(
-        { error: 'Slug must contain only lowercase letters, numbers, and hyphens' },
-        { status: 400 }
-      );
+    // Validate required fields (only if updating basic info)
+    if (name !== undefined || slug !== undefined || timezone !== undefined) {
+      if (!name || !slug || !timezone) {
+        return NextResponse.json(
+          { error: 'Name, slug, and timezone are required' },
+          { status: 400 }
+        );
+      }
+
+      // Validate slug format
+      if (!/^[a-z0-9-]+$/.test(slug)) {
+        return NextResponse.json(
+          { error: 'Slug must contain only lowercase letters, numbers, and hyphens' },
+          { status: 400 }
+        );
+      }
     }
 
     // Prepare update data
-    const updateData: any = {
-      name,
-      description: description || null,
-      email: email || null,
-      phone: phone || null,
-      timezone,
-      inviteEnabled: inviteEnabled ?? true,
-    };
+    const updateData: any = {};
 
-    // Only OWNER can change slug
-    if (slug !== orgSlug) {
+    // Basic info updates
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description || null;
+    if (email !== undefined) updateData.email = email || null;
+    if (phone !== undefined) updateData.phone = phone || null;
+    if (timezone !== undefined) updateData.timezone = timezone;
+    
+    // ✅ NEW: Invite settings updates
+    if (inviteEnabled !== undefined) updateData.inviteEnabled = inviteEnabled;
+    if (inviteCode !== undefined) updateData.inviteCode = inviteCode;
+
+    // Slug update (only OWNER)
+    if (slug !== undefined && slug !== orgSlug) {
       if (access.role !== 'OWNER') {
         return NextResponse.json(
           { error: 'Only OWNER can change organization slug' },
@@ -147,7 +166,6 @@ export async function PATCH(
         );
       }
 
-      // Check if new slug is already taken
       const existingOrg = await prisma.organization.findUnique({
         where: { slug },
       });
@@ -170,7 +188,7 @@ export async function PATCH(
       data: updateData,
     });
 
-    // ✅ FIXED: Create audit log without entityType
+    // Create audit log
     await prisma.auditLog.create({
       data: {
         organizationId: access.organizationId,

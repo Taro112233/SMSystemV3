@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/MembersSettings/InviteCodeSection.tsx
-// MembersSettings/InviteCodeSection - Generate invite code UI
+// MembersSettings/InviteCodeSection - WITH EDIT MODAL
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Copy, CheckCircle2, RefreshCw, Key, Info } from 'lucide-react';
+import { Copy, CheckCircle2, RefreshCw, Key, Info, Edit } from 'lucide-react';
 import { toast } from 'sonner';
+import { InviteCodeEditModal } from './InviteCodeEditModal';
 
 interface InviteCodeSectionProps {
   organizationSlug: string;
@@ -22,8 +23,8 @@ export const InviteCodeSection = ({
   const [inviteCode, setInviteCode] = useState('');
   const [inviteEnabled, setInviteEnabled] = useState(true);
   const [copiedCode, setCopiedCode] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const isOwner = userRole === 'OWNER';
 
@@ -59,37 +60,9 @@ export const InviteCodeSection = ({
     }
   };
 
-  const handleGenerateNewCode = async () => {
-    if (!isOwner) {
-      toast.error('เฉพาะ OWNER เท่านั้นที่สามารถสร้างรหัสเชิญใหม่ได้');
-      return;
-    }
-
-    setIsGenerating(true);
-    try {
-      const response = await fetch(`/api/${organizationSlug}/settings/generate-invite-code`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate invite code');
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setInviteCode(data.inviteCode);
-        toast.success('สร้างรหัสเชิญใหม่สำเร็จ', {
-          description: `รหัสใหม่: ${data.inviteCode}`
-        });
-      }
-    } catch (error) {
-      toast.error('ไม่สามารถสร้างรหัสเชิญใหม่ได้');
-      console.error('Generate invite code failed:', error);
-    } finally {
-      setIsGenerating(false);
-    }
+  const handleSaveInviteCode = async (newCode: string, newEnabled: boolean) => {
+    // Reload data after save
+    await loadInviteCode();
   };
 
   if (isLoading) {
@@ -101,83 +74,86 @@ export const InviteCodeSection = ({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Status Badge */}
-      <div className="flex items-center gap-2">
-        <Key className="w-4 h-4 text-gray-600" />
-        <span className="font-medium">รหัสเชิญปัจจุบัน</span>
-        {inviteEnabled ? (
-          <Badge variant="default">เปิดใช้งาน</Badge>
-        ) : (
-          <Badge variant="secondary">ปิดใช้งาน</Badge>
-        )}
-      </div>
-
-      {/* Invite Code Display */}
-      {inviteCode ? (
+    <>
+      <div className="space-y-4">
+        {/* Status Badge */}
         <div className="flex items-center gap-2">
-          <Input
-            value={inviteCode}
-            readOnly
-            className="font-mono"
-          />
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleCopyInviteCode}
-          >
-            {copiedCode ? (
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
-            ) : (
-              <Copy className="w-4 h-4" />
-            )}
-          </Button>
-          {isOwner && (
+          <Key className="w-4 h-4 text-gray-600" />
+          <span className="font-medium">รหัสเชิญปัจจุบัน</span>
+          {inviteEnabled ? (
+            <Badge variant="default">เปิดใช้งาน</Badge>
+          ) : (
+            <Badge variant="secondary">ปิดใช้งาน</Badge>
+          )}
+        </div>
+
+        {/* Invite Code Display */}
+        {inviteCode ? (
+          <div className="flex items-center gap-2">
+            <Input
+              value={inviteCode}
+              readOnly
+              className="font-mono"
+            />
             <Button
               variant="outline"
               size="icon"
-              onClick={handleGenerateNewCode}
-              disabled={isGenerating}
+              onClick={handleCopyInviteCode}
             >
-              <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
+              {copiedCode ? (
+                <CheckCircle2 className="w-4 h-4 text-green-600" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
             </Button>
-          )}
-        </div>
-      ) : (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            ยังไม่มีรหัสเชิญ {isOwner && 'คลิกปุ่มด้านล่างเพื่อสร้างรหัสใหม่'}
-          </AlertDescription>
-        </Alert>
-      )}
+            {isOwner && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowEditModal(true)}
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        ) : (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              ยังไม่มีรหัสเชิญ {isOwner && 'คลิกปุ่มด้านล่างเพื่อสร้างรหัสใหม่'}
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {/* Generate Button for no code */}
-      {!inviteCode && isOwner && (
-        <Button
-          onClick={handleGenerateNewCode}
-          disabled={isGenerating}
-          className="w-full"
-        >
-          {isGenerating ? (
-            <>
-              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              กำลังสร้างรหัส...
-            </>
-          ) : (
-            <>
-              <Key className="w-4 h-4 mr-2" />
-              สร้างรหัสเชิญ
-            </>
-          )}
-        </Button>
-      )}
+        {/* Create Button for no code */}
+        {!inviteCode && isOwner && (
+          <Button
+            onClick={() => setShowEditModal(true)}
+            className="w-full"
+          >
+            <Key className="w-4 h-4 mr-2" />
+            สร้างรหัสเชิญ
+          </Button>
+        )}
 
-      {/* Info */}
-      <p className="text-sm text-gray-600">
-        รหัสเชิญใช้สำหรับเชิญสมาชิกใหม่เข้าร่วมองค์กร 
-        {isOwner ? ' คุณสามารถสร้างรหัสใหม่ได้ตลอดเวลา' : ' ติดต่อเจ้าขององค์กรเพื่อสร้างรหัสใหม่'}
-      </p>
-    </div>
+        {/* Info */}
+        <p className="text-sm text-gray-600">
+          รหัสเชิญใช้สำหรับเชิญสมาชิกใหม่เข้าร่วมองค์กร 
+          {isOwner ? ' คุณสามารถแก้ไขรหัสหรือปิดใช้งานได้' : ' ติดต่อเจ้าขององค์กรเพื่อแก้ไขรหัส'}
+        </p>
+      </div>
+
+      {/* Edit Modal */}
+      {isOwner && (
+        <InviteCodeEditModal
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          organizationSlug={organizationSlug}
+          currentCode={inviteCode}
+          currentEnabled={inviteEnabled}
+          onSave={handleSaveInviteCode}
+        />
+      )}
+    </>
   );
 };
