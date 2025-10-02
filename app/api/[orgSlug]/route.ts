@@ -1,5 +1,6 @@
-// app/api/[orgSlug]/route.ts - Fixed API Route with Real Data Transform
-// Organization API - Get organization data with departments list
+// FILE: app/api/[orgSlug]/route.ts
+// Organization API - Get organization data with ACTIVE departments only
+// ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
@@ -11,10 +12,8 @@ export async function GET(
   { params }: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
-    // Await params before using
     const { orgSlug } = await params;
     
-    // Get user from headers
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
@@ -22,7 +21,6 @@ export async function GET(
 
     console.log(`🔍 Loading organization data for: ${orgSlug} by user: ${user.userId}`);
 
-    // Verify organization access
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       console.log(`❌ No access to organization: ${orgSlug}`);
@@ -31,7 +29,7 @@ export async function GET(
 
     console.log(`✅ User has access with role: ${access.role}`);
 
-    // Get organization details with invite code fields
+    // Get organization details
     const organization = await prisma.organization.findUnique({
       where: { 
         slug: orgSlug,
@@ -57,10 +55,11 @@ export async function GET(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // Get departments for this organization
+    // ✅ UPDATED: Get ONLY ACTIVE departments for Sidebar
     const departments = await prisma.department.findMany({
       where: {
         organizationId: access.organizationId,
+        isActive: true, // ✅ กรองเฉพาะ Active
       },
       select: {
         id: true,
@@ -77,14 +76,14 @@ export async function GET(
         organizationId: true,
       },
       orderBy: [
-        { parentId: 'asc' },   // Parent departments first
+        { parentId: 'asc' },
         { name: 'asc' }
       ]
     });
 
-    console.log(`✅ Found ${departments.length} departments for ${orgSlug}`);
+    console.log(`✅ Found ${departments.length} ACTIVE departments for ${orgSlug}`);
 
-    // Transform departments from database format to frontend format
+    // Transform departments for frontend
     const transformedDepartments = departments.map(dept => transformDepartmentData({
       id: dept.id,
       name: dept.name,
@@ -98,12 +97,12 @@ export async function GET(
       updatedAt: dept.updatedAt
     }));
 
-    // Count organization members
+    // Count all organization members
     const memberCount = await prisma.organizationUser.count({
       where: { organizationId: access.organizationId }
     });
 
-    // Prepare organization data (conditionally include invite code for ADMIN/OWNER)
+    // Prepare organization data
     const organizationData = {
       ...organization,
       memberCount,
@@ -116,13 +115,12 @@ export async function GET(
     return NextResponse.json({
       success: true,
       organization: organizationData,
-      departments: transformedDepartments,
+      departments: transformedDepartments, // ✅ เฉพาะ Active เท่านั้น
       userRole: access.role,
       stats: {
-        totalDepartments: departments.length,
-        activeDepartments: departments.filter(d => d.isActive).length,
+        totalDepartments: departments.length, // ✅ นับเฉพาะ Active
+        activeDepartments: departments.length,
         totalMembers: memberCount,
-        // TODO: Add more stats when product/stock models exist
         totalProducts: 0,
         lowStockItems: 0,
         pendingTransfers: 0

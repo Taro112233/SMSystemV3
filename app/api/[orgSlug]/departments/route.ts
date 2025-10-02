@@ -1,12 +1,12 @@
 // FILE: app/api/[orgSlug]/departments/route.ts
-// Departments API - List and Create departments
+// Departments API - List all departments (UPDATED: Show all for Settings)
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 
-// GET - List all departments
+// GET - List all departments (including inactive)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -32,20 +32,26 @@ export async function GET(
       );
     }
 
-    // Get all departments in organization
+    // ✅ UPDATED: Get ALL departments (no isActive filter)
     const departments = await prisma.department.findMany({
       where: {
         organizationId: access.organizationId,
+        // ✅ ไม่กรอง isActive เพื่อให้ Settings แสดงทั้งหมด
       },
       orderBy: [
-        { isActive: 'desc' },
-        { name: 'asc' },
+        { isActive: 'desc' }, // Active ขึ้นก่อน
+        { name: 'asc' }
       ],
     });
 
     return NextResponse.json({
       success: true,
       departments,
+      stats: {
+        total: departments.length,
+        active: departments.filter(d => d.isActive).length,
+        inactive: departments.filter(d => !d.isActive).length,
+      }
     });
   } catch (error) {
     console.error('Get departments failed:', error);

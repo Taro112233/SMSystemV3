@@ -1,4 +1,7 @@
-// app/[orgSlug]/settings/page.tsx - Updated for Modal
+// FILE: app/[orgSlug]/settings/page.tsx
+// Settings Page - UPDATED to use /departments API
+// ============================================
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -91,11 +94,13 @@ export default function SettingsPage() {
     }
   }, [orgSlug, router]);
 
-  // Separate function to reload departments
+  // ✅ UPDATED: Use /departments API to get ALL departments
   const loadDepartments = async () => {
     try {
       setIsLoadingDepartments(true);
-      const deptResponse = await fetch(`/api/${orgSlug}`, {
+      
+      // ✅ เปลี่ยนจาก /api/[orgSlug] เป็น /api/[orgSlug]/departments
+      const deptResponse = await fetch(`/api/${orgSlug}/departments`, {
         credentials: 'include',
       });
 
@@ -109,7 +114,11 @@ export default function SettingsPage() {
         throw new Error(deptData.error || 'Failed to load departments');
       }
 
+      // ✅ ได้ departments ทั้งหมด (Active + Inactive)
       setDepartments(deptData.departments);
+      
+      console.log(`✅ Loaded ${deptData.departments.length} departments (${deptData.stats?.active || 0} active, ${deptData.stats?.inactive || 0} inactive)`);
+      
     } catch (err) {
       console.error('Failed to load departments:', err);
       toast.error('ไม่สามารถโหลดข้อมูลหน่วยงานได้');
