@@ -20,7 +20,9 @@ Directory structure:
     │   ├── [orgSlug]/
     │   │   ├── layout.tsx
     │   │   ├── page.tsx
-    │   │   └── [deptSlug]/
+    │   │   ├── [deptSlug]/
+    │   │   │   └── page.tsx
+    │   │   └── settings/
     │   │       └── page.tsx
     │   ├── api/
     │   │   ├── [orgSlug]/
@@ -97,8 +99,8 @@ Directory structure:
     │   │   ├── index.tsx
     │   │   ├── DepartmentSettings/
     │   │   │   ├── DepartmentCard.tsx
-    │   │   │   ├── DepartmentForm.tsx
     │   │   │   ├── DepartmentFormFields.tsx
+    │   │   │   ├── DepartmentFormModal.tsx
     │   │   │   ├── DepartmentList.tsx
     │   │   │   └── index.tsx
     │   │   ├── MembersSettings/
@@ -164,8 +166,6 @@ Directory structure:
     │       ├── toggle-group.tsx
     │       ├── toggle.tsx
     │       └── tooltip.tsx
-    ├── data/
-    │   └── orgMockData.ts
     ├── hooks/
     │   ├── use-mobile.ts
     │   └── use-org-access.ts
