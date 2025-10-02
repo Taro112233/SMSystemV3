@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/OrganizationSettings/index.tsx
-// OrganizationSettings - Container + state management
+// OrganizationSettings - Container (NO CHANGES NEEDED)
 // ============================================
 
 import React, { useState } from 'react';
@@ -19,8 +19,6 @@ interface OrganizationSettingsProps {
     email?: string;
     phone?: string;
     timezone: string;
-    inviteCode?: string;
-    inviteEnabled?: boolean;
     status: string;
   };
   userRole: 'MEMBER' | 'ADMIN' | 'OWNER';

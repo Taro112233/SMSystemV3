@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/OrganizationSettings/OrganizationForm.tsx
-// OrganizationSettings/OrganizationForm - Edit organization form
+// OrganizationSettings/OrganizationForm - Edit form with buttons at bottom-right
 // ============================================
 
 import React, { useState } from 'react';
@@ -7,9 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Save, X, Globe, Mail, Phone, Clock } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface OrganizationFormProps {
   organization: {
@@ -19,7 +17,6 @@ interface OrganizationFormProps {
     email?: string;
     phone?: string;
     timezone: string;
-    inviteEnabled?: boolean;
   };
   isOwner: boolean;
   onSave: (data: any) => Promise<void>;
@@ -40,16 +37,11 @@ export const OrganizationForm = ({
     email: organization.email || '',
     phone: organization.phone || '',
     timezone: organization.timezone,
-    inviteEnabled: organization.inviteEnabled ?? true,
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData(prev => ({ ...prev, inviteEnabled: checked }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,22 +156,17 @@ export const OrganizationForm = ({
         />
       </div>
 
-      {/* Invite Enabled */}
-      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-        <div className="space-y-1">
-          <div className="font-medium">เปิดใช้งานรหัสเชิญ</div>
-          <div className="text-sm text-gray-600">
-            อนุญาตให้สมาชิกใหม่เข้าร่วมผ่านรหัสเชิญ
-          </div>
-        </div>
-        <Switch
-          checked={formData.inviteEnabled}
-          onCheckedChange={handleSwitchChange}
-        />
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex gap-2 pt-4 border-t">
+      {/* Action Buttons - BOTTOM RIGHT */}
+      <div className="flex justify-end gap-2 pt-4 border-t">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSaving}
+        >
+          <X className="w-4 h-4 mr-2" />
+          ยกเลิก
+        </Button>
         <Button
           type="submit"
           disabled={isSaving}
@@ -195,15 +182,6 @@ export const OrganizationForm = ({
               บันทึกการเปลี่ยนแปลง
             </>
           )}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isSaving}
-        >
-          <X className="w-4 h-4 mr-2" />
-          ยกเลิก
         </Button>
       </div>
     </form>
