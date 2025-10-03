@@ -1,12 +1,12 @@
 // FILE: components/SettingsManagement/MembersSettings/MemberCard.tsx
-// MembersSettings/MemberCard - Member card component
+// MembersSettings/MemberCard - UPDATED with Role Badge Colors
 // ============================================
 
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, Mail, Phone, Calendar, Trash2 } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Trash2, Crown, Shield, UserCircle } from 'lucide-react';
 import { RoleManager } from './RoleManager';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { toast } from 'sonner';
@@ -64,13 +64,29 @@ export const MemberCard = ({
     }
   };
 
+  // ✅ UPDATED: Role Badge with distinct colors and icons
   const getRoleBadge = (role: string) => {
     const badges = {
-      OWNER: <Badge variant="default">เจ้าของ</Badge>,
-      ADMIN: <Badge variant="secondary">ผู้ดูแล</Badge>,
-      MEMBER: <Badge variant="outline">สมาชิก</Badge>
+      OWNER: (
+        <Badge className="bg-purple-500 hover:bg-purple-600 text-white">
+          <Crown className="w-3 h-3 mr-1" />
+          OWNER
+        </Badge>
+      ),
+      ADMIN: (
+        <Badge className="bg-blue-500 hover:bg-blue-600 text-white">
+          <Shield className="w-3 h-3 mr-1" />
+          ADMIN
+        </Badge>
+      ),
+      MEMBER: (
+        <Badge className="bg-gray-500 hover:bg-gray-600 text-white">
+          <UserCircle className="w-3 h-3 mr-1" />
+          MEMBER
+        </Badge>
+      )
     };
-    return badges[role as keyof typeof badges];
+    return badges[role as keyof typeof badges] || badges.MEMBER;
   };
 
   return (

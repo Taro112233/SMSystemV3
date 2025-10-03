@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/MembersSettings/InviteCodeSection.tsx
-// MembersSettings/InviteCodeSection - WITH EDIT MODAL
+// MembersSettings/InviteCodeSection - WITH UPDATED BADGE COLORS
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Copy, CheckCircle2, RefreshCw, Key, Info, Edit } from 'lucide-react';
+import { Copy, CheckCircle2, Key, Info, Edit, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { InviteCodeEditModal } from './InviteCodeEditModal';
 
@@ -61,7 +61,6 @@ export const InviteCodeSection = ({
   };
 
   const handleSaveInviteCode = async (newCode: string, newEnabled: boolean) => {
-    // Reload data after save
     await loadInviteCode();
   };
 
@@ -76,14 +75,20 @@ export const InviteCodeSection = ({
   return (
     <>
       <div className="space-y-4">
-        {/* Status Badge */}
+        {/* ✅ UPDATED: Status Badge with Colors */}
         <div className="flex items-center gap-2">
           <Key className="w-4 h-4 text-gray-600" />
           <span className="font-medium">รหัสเชิญปัจจุบัน</span>
           {inviteEnabled ? (
-            <Badge variant="default">เปิดใช้งาน</Badge>
+            <Badge className="bg-green-500 hover:bg-green-600 text-white">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              เปิดใช้งาน
+            </Badge>
           ) : (
-            <Badge variant="secondary">ปิดใช้งาน</Badge>
+            <Badge className="bg-red-500 hover:bg-red-600 text-white">
+              <XCircle className="w-3 h-3 mr-1" />
+              ปิดใช้งาน
+            </Badge>
           )}
         </div>
 

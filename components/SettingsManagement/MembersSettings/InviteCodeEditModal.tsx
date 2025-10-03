@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/MembersSettings/InviteCodeEditModal.tsx
-// MembersSettings/InviteCodeEditModal - Edit Modal with Form
+// MembersSettings/InviteCodeEditModal - Edit Modal with Frontend Random Code Generation
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -26,6 +26,22 @@ interface InviteCodeEditModalProps {
   onSave: (newCode: string, newEnabled: boolean) => Promise<void>;
 }
 
+// ✅ NEW: Frontend-only random code generator (ไม่เรียก API)
+function generateRandomInviteCode(length: number = 8): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let result = '';
+  
+  // Use crypto.getRandomValues for secure random generation
+  const randomValues = new Uint8Array(length);
+  crypto.getRandomValues(randomValues);
+  
+  for (let i = 0; i < length; i++) {
+    result += chars[randomValues[i] % chars.length];
+  }
+  
+  return result;
+}
+
 export const InviteCodeEditModal = ({
   open,
   onOpenChange,
@@ -37,7 +53,6 @@ export const InviteCodeEditModal = ({
   const [inviteCode, setInviteCode] = useState(currentCode);
   const [inviteEnabled, setInviteEnabled] = useState(currentEnabled);
   const [isSaving, setIsSaving] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -47,37 +62,25 @@ export const InviteCodeEditModal = ({
     }
   }, [open, currentCode, currentEnabled]);
 
-  const handleGenerateNewCode = async () => {
-    setIsGenerating(true);
-    try {
-      const response = await fetch(`/api/${organizationSlug}/settings/generate-invite-code`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate invite code');
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setInviteCode(data.inviteCode);
-        toast.success('สุ่มรหัสใหม่สำเร็จ', {
-          description: `รหัสใหม่: ${data.inviteCode}`
-        });
-      }
-    } catch (error) {
-      toast.error('ไม่สามารถสุ่มรหัสได้');
-      console.error('Generate invite code failed:', error);
-    } finally {
-      setIsGenerating(false);
-    }
+  // ✅ UPDATED: สุ่มรหัสใหม่ใน Frontend เท่านั้น (ไม่เรียก API)
+  const handleGenerateNewCode = () => {
+    const newCode = generateRandomInviteCode(8);
+    setInviteCode(newCode);
+    toast.success('สุ่มรหัสใหม่สำเร็จ', {
+      description: `รหัสใหม่: ${newCode} (ยังไม่ได้บันทึก)`
+    });
   };
 
+  // ✅ UPDATED: บันทึกรหัสเชิญไปยัง database (เมื่อผู้ใช้กดปุ่มบันทึก)
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Validate invite code
+      if (!inviteCode.trim()) {
+        toast.error('กรุณาระบุรหัสเชิญ');
+        return;
+      }
+
       // Update organization settings
       const response = await fetch(`/api/${organizationSlug}/settings`, {
         method: 'PATCH',
@@ -119,29 +122,30 @@ export const InviteCodeEditModal = ({
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
-          {/* Invite Code Input */}
+          {/* Invite Code Input - Read Only */}
           <div className="space-y-2">
             <Label htmlFor="inviteCode">รหัสเชิญ</Label>
             <div className="flex items-center gap-2">
               <Input
                 id="inviteCode"
                 value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                className="font-mono"
-                placeholder="ระบุรหัสเชิญ"
+                readOnly
+                className="font-mono bg-gray-50"
+                placeholder="คลิกปุ่มเพื่อสุ่มรหัส"
               />
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 onClick={handleGenerateNewCode}
-                disabled={isGenerating || isSaving}
+                disabled={isSaving}
+                title="สุ่มรหัสใหม่"
               >
-                <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
+                <RefreshCw className="w-4 h-4" />
               </Button>
             </div>
             <p className="text-xs text-gray-500">
-              คลิกปุ่ม <RefreshCw className="w-3 h-3 inline" /> เพื่อสุ่มรหัสใหม่
+              คลิกปุ่ม <RefreshCw className="w-3 h-3 inline" /> เพื่อสุ่มรหัสใหม่ (ยังไม่บันทึก)
             </p>
           </div>
 
