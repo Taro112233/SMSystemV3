@@ -105,6 +105,7 @@ Directory structure:
     │   │   │   └── index.tsx
     │   │   ├── MembersSettings/
     │   │   │   ├── index.tsx
+    │   │   │   ├── InviteCodeEditModal.tsx
     │   │   │   ├── InviteCodeSection.tsx
     │   │   │   ├── MemberCard.tsx
     │   │   │   ├── MembersList.tsx
@@ -176,6 +177,7 @@ Directory structure:
     │   ├── department-helpers.ts
     │   ├── invite-code.ts
     │   ├── prisma.ts
+    │   ├── role-helpers.ts
     │   ├── security-logger.ts
     │   └── utils.ts
     ├── prisma/
