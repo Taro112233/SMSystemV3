@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/DepartmentSettings/DepartmentFormFields.tsx
-// DepartmentSettings/DepartmentFormFields - Extracted form fields
+// DepartmentSettings/DepartmentFormFields - Extracted form fields with URL Preview
 // ============================================
 
 import React from 'react';
@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Link2 } from 'lucide-react';
 import { getAvailableColors, getAvailableIcons } from '@/lib/department-helpers';
 
 interface DepartmentFormFieldsProps {
@@ -27,12 +28,14 @@ interface DepartmentFormFieldsProps {
   };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   isEditing: boolean;
+  organizationSlug?: string; // ✅ NEW: For URL generation
 }
 
 export const DepartmentFormFields = ({
   formData,
   setFormData,
-  isEditing
+  isEditing,
+  organizationSlug
 }: DepartmentFormFieldsProps) => {
   const colors = getAvailableColors();
   const icons = getAvailableIcons();
@@ -58,6 +61,19 @@ export const DepartmentFormFields = ({
 
   const handleSwitchChange = (checked: boolean) => {
     setFormData((prev: any) => ({ ...prev, isActive: checked }));
+  };
+
+  // ✅ NEW: Generate example URL from slug
+  const getExampleUrl = () => {
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : 'http://localhost:3000';
+    
+    // Use organizationSlug from props or extract from current URL
+    const orgSlug = organizationSlug || 
+      (typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : 'your-org');
+    
+    return `${baseUrl}/${orgSlug}/${formData.slug || 'department-slug'}`;
   };
 
   // Get selected color class for preview
@@ -97,7 +113,7 @@ export const DepartmentFormFields = ({
         />
       </div>
 
-      {/* Slug */}
+      {/* Slug with URL Preview */}
       <div className="space-y-2">
         <Label htmlFor="slug">Slug *</Label>
         <Input
@@ -109,6 +125,20 @@ export const DepartmentFormFields = ({
           pattern="[a-z0-9-]+"
           required
         />
+        
+        {/* ✅ NEW: URL Preview - แสดงตัวอย่าง URL จริง */}
+        <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <Link2 className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium text-blue-900 mb-1">
+              ตัวอย่าง URL ของหน่วยงาน:
+            </div>
+            <div className="text-sm font-mono text-blue-700 break-all">
+              {getExampleUrl()}
+            </div>
+          </div>
+        </div>
+        
         <p className="text-xs text-gray-500">
           ใช้ตัวพิมพ์เล็ก ตัวเลข และเครื่องหมาย - เท่านั้น
         </p>

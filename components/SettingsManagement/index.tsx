@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/index.tsx
-// SettingsManagement - Main settings router/tabs (Updated for Modal)
+// SettingsManagement - Main settings router/tabs with organizationSlug
 // ============================================
 
 import React from 'react';
@@ -79,11 +79,12 @@ export const SettingsManagement = ({
         />
       </TabsContent>
 
-      {/* Department Management Tab - Updated with Modal */}
+      {/* Department Management Tab - ✅ Pass organizationSlug */}
       <TabsContent value="departments" className="space-y-6">
         <DepartmentSettings
           departments={departments}
           organizationId={organization.id}
+          organizationSlug={organization.slug}
           userRole={userRole}
           isLoading={isLoadingDepartments}
           onCreate={onDepartmentCreate}

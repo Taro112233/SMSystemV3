@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/DepartmentSettings/DepartmentList.tsx
-// DepartmentSettings/DepartmentList - Updated to use Modal
+// DepartmentSettings/DepartmentList - Updated to pass organizationSlug
 // ============================================
 
 import React, { useState } from 'react';
@@ -24,6 +24,7 @@ interface DepartmentListProps {
     updatedAt: Date;
   }>;
   organizationId: string;
+  organizationSlug: string; // ✅ NEW: For URL preview
   canManage: boolean;
   isLoading?: boolean;
   onCreate: (data: any) => Promise<void>;
@@ -34,6 +35,7 @@ interface DepartmentListProps {
 export const DepartmentList = ({
   departments,
   organizationId,
+  organizationSlug, // ✅ NEW
   canManage,
   isLoading = false,
   onCreate,
@@ -157,19 +159,21 @@ export const DepartmentList = ({
         </SettingsCard>
       )}
 
-      {/* Create Modal */}
+      {/* Create Modal - ✅ Pass organizationSlug */}
       <DepartmentFormModal
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         organizationId={organizationId}
+        organizationSlug={organizationSlug}
         onSubmit={handleCreate}
       />
 
-      {/* Edit Modal */}
+      {/* Edit Modal - ✅ Pass organizationSlug */}
       <DepartmentFormModal
         open={!!editingDepartment}
         onOpenChange={(open) => !open && setEditingDepartment(null)}
         organizationId={organizationId}
+        organizationSlug={organizationSlug}
         department={editingDepartment}
         onSubmit={handleUpdate}
       />

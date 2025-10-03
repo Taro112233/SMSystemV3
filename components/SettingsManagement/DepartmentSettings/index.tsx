@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/DepartmentSettings/index.tsx
-// DepartmentSettings - Container + state management (Updated for Modal)
+// DepartmentSettings - Container + state management with organizationSlug
 // ============================================
 
 import React from 'react';
@@ -21,6 +21,7 @@ interface DepartmentSettingsProps {
     updatedAt: Date;
   }>;
   organizationId: string;
+  organizationSlug: string; // ✅ NEW: For URL preview
   userRole: 'MEMBER' | 'ADMIN' | 'OWNER';
   isLoading?: boolean;
   onCreate: (data: any) => Promise<void>;
@@ -31,6 +32,7 @@ interface DepartmentSettingsProps {
 export const DepartmentSettings = ({
   departments,
   organizationId,
+  organizationSlug, // ✅ NEW
   userRole,
   isLoading = false,
   onCreate,
@@ -51,10 +53,11 @@ export const DepartmentSettings = ({
         </Alert>
       )}
 
-      {/* Department List with Modal */}
+      {/* Department List with Modal - ✅ Pass organizationSlug */}
       <DepartmentList
         departments={departments}
         organizationId={organizationId}
+        organizationSlug={organizationSlug}
         canManage={canManage}
         isLoading={isLoading}
         onCreate={onCreate}

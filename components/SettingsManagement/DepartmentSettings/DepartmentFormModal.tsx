@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/DepartmentSettings/DepartmentFormModal.tsx
-// DepartmentSettings/DepartmentFormModal - Modal wrapper for form
+// DepartmentSettings/DepartmentFormModal - Modal wrapper with organizationSlug
 // ============================================
 
 import React, { useState } from 'react';
@@ -19,6 +19,7 @@ interface DepartmentFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   organizationId: string;
+  organizationSlug?: string; // ✅ NEW: For URL preview
   department?: {
     id: string;
     name: string;
@@ -35,6 +36,7 @@ export const DepartmentFormModal = ({
   open,
   onOpenChange,
   organizationId,
+  organizationSlug, // ✅ NEW
   department,
   onSubmit,
 }: DepartmentFormModalProps) => {
@@ -124,11 +126,12 @@ export const DepartmentFormModal = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          {/* Form Fields */}
+          {/* Form Fields - ✅ Pass organizationSlug */}
           <DepartmentFormFields
             formData={formData}
             setFormData={setFormData}
             isEditing={!!department}
+            organizationSlug={organizationSlug}
           />
 
           {/* Action Buttons */}
