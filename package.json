@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm schema:merge && next dev",
+    "dev": "pnpm schema:merge && next dev --turbopack",
     "build": "pnpm schema:merge && pnpm db:generate && next build",
     "start": "next start",
     "lint": "next lint",

@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/OrganizationSettings/OrganizationForm.tsx
-// OrganizationSettings/OrganizationForm - Edit form with buttons at bottom-right
+// OrganizationSettings/OrganizationForm - Edit form with buttons at bottom-right + URL Preview
 // ============================================
 
 import React, { useState } from 'react';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Save, X, Globe, Mail, Phone, Clock } from 'lucide-react';
+import { Save, X, Globe, Mail, Phone, Clock, Link2 } from 'lucide-react';
 
 interface OrganizationFormProps {
   organization: {
@@ -57,6 +57,14 @@ export const OrganizationForm = ({
     }
   };
 
+  // ✅ Generate example URL from slug
+  const getExampleUrl = () => {
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : 'http://localhost:3000';
+    return `${baseUrl}/${formData.slug}`;
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Organization Name */}
@@ -71,7 +79,7 @@ export const OrganizationForm = ({
         />
       </div>
 
-      {/* Slug */}
+      {/* Slug with URL Preview */}
       <div className="space-y-2">
         <Label htmlFor="slug" className="flex items-center gap-2">
           <Globe className="w-4 h-4" />
@@ -87,6 +95,20 @@ export const OrganizationForm = ({
           pattern="[a-z0-9-]+"
           required
         />
+        
+        {/* ✅ URL Preview - แสดงตัวอย่าง URL จริง */}
+        <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <Link2 className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium text-blue-900 mb-1">
+              ตัวอย่าง URL ขององค์กร:
+            </div>
+            <div className="text-sm font-mono text-blue-700 break-all">
+              {getExampleUrl()}
+            </div>
+          </div>
+        </div>
+        
         <p className="text-xs text-gray-500">
           ใช้ตัวอักษรพิมพ์เล็ก ตัวเลข และเครื่องหมาย - เท่านั้น
         </p>
