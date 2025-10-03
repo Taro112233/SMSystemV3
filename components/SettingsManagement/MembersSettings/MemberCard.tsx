@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/MembersSettings/MemberCard.tsx
-// MembersSettings/MemberCard - UPDATED with Role Badge Colors
+// MembersSettings/MemberCard - IMPROVED with Better Error Handling
 // ============================================
 
 import React, { useState } from 'react';
@@ -45,26 +45,46 @@ export const MemberCard = ({
   const canManageRole = currentUserRole === 'OWNER' || 
     (currentUserRole === 'ADMIN' && member.role !== 'OWNER');
   
-  const canRemove = currentUserRole === 'OWNER' && member.role !== 'OWNER';
+  // ✅ UPDATED: Hierarchy-based deletion
+  // OWNER can remove ADMIN and MEMBER
+  // ADMIN can remove MEMBER
+  const getRoleLevel = (role: string): number => {
+    const levels = { MEMBER: 1, ADMIN: 2, OWNER: 3 };
+    return levels[role as keyof typeof levels] || 0;
+  };
+  
+  const canRemove = getRoleLevel(currentUserRole) > getRoleLevel(member.role);
 
+  // ✅ IMPROVED: Better error handling for remove
   const handleRemove = async () => {
     setIsRemoving(true);
     try {
       const success = await onMemberRemove(member.userId);
       if (success) {
-        toast.success('ลบสมาชิกสำเร็จ');
+        toast.success('ลบสมาชิกสำเร็จ', {
+          description: `${member.user.firstName} ${member.user.lastName} ถูกลบออกจากองค์กรแล้ว`
+        });
         setShowRemoveDialog(false);
       } else {
         toast.error('ไม่สามารถลบสมาชิกได้');
       }
     } catch (error) {
-      toast.error('เกิดข้อผิดพลาด');
+      console.error('Remove member error:', error);
+      
+      // Show specific error message
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'เกิดข้อผิดพลาด';
+      
+      toast.error('ไม่สามารถลบสมาชิกได้', {
+        description: errorMessage
+      });
     } finally {
       setIsRemoving(false);
     }
   };
 
-  // ✅ UPDATED: Role Badge with distinct colors and icons
+  // Role Badge with distinct colors and icons
   const getRoleBadge = (role: string) => {
     const badges = {
       OWNER: (
@@ -97,11 +117,11 @@ export const MemberCard = ({
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <User className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">
+                <div className="min-w-0">
+                  <h4 className="font-semibold text-gray-900 truncate">
                     {member.user.firstName} {member.user.lastName}
                   </h4>
                   {getRoleBadge(member.role)}
@@ -112,17 +132,17 @@ export const MemberCard = ({
             {/* Contact Info */}
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2 text-gray-600">
-                <Mail className="w-4 h-4" />
-                <span>{member.user.email}</span>
+                <Mail className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{member.user.email}</span>
               </div>
               {member.user.phone && (
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Phone className="w-4 h-4" />
+                  <Phone className="w-4 h-4 flex-shrink-0" />
                   <span>{member.user.phone}</span>
                 </div>
               )}
               <div className="flex items-center gap-2 text-gray-600">
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-4 h-4 flex-shrink-0" />
                 <span>เข้าร่วมเมื่อ {format(new Date(member.joinedAt), 'dd MMM yyyy', { locale: th })}</span>
               </div>
             </div>
@@ -131,18 +151,21 @@ export const MemberCard = ({
             {(canManageRole || canRemove) && (
               <div className="flex gap-2 pt-3 border-t">
                 {canManageRole && (
-                  <RoleManager
-                    currentRole={member.role}
-                    userId={member.userId}
-                    onRoleUpdate={onRoleUpdate}
-                  />
+                  <div className="flex-1">
+                    <RoleManager
+                      currentRole={member.role}
+                      userId={member.userId}
+                      onRoleUpdate={onRoleUpdate}
+                    />
+                  </div>
                 )}
                 {canRemove && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowRemoveDialog(true)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    disabled={isRemoving}
                   >
                     <Trash2 className="w-3 h-3 mr-1" />
                     ลบ
@@ -159,7 +182,7 @@ export const MemberCard = ({
         open={showRemoveDialog}
         onOpenChange={setShowRemoveDialog}
         title="ยืนยันการลบสมาชิก"
-        description={`คุณแน่ใจหรือไม่ที่จะลบ "${member.user.firstName} ${member.user.lastName}" ออกจากองค์กร?`}
+        description={`คุณแน่ใจหรือไม่ที่จะลบ "${member.user.firstName} ${member.user.lastName}" ออกจากองค์กร? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
         confirmText="ลบสมาชิก"
         cancelText="ยกเลิก"
         onConfirm={handleRemove}

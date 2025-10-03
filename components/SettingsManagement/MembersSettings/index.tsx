@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/MembersSettings/index.tsx
-// MembersSettings - Container + state management
+// MembersSettings - Container + state management - IMPROVED
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -8,6 +8,7 @@ import { Lock } from 'lucide-react';
 import { MembersList } from './MembersList';
 import { SettingsSection } from '../shared/SettingsSection';
 import { InviteCodeSection } from './InviteCodeSection';
+import { toast } from 'sonner';
 
 interface MembersSettingsProps {
   organizationId: string;
@@ -27,6 +28,8 @@ export const MembersSettings = ({
   useEffect(() => {
     if (canManage) {
       loadMembers();
+    } else {
+      setIsLoading(false);
     }
   }, [canManage, organizationSlug]);
 
@@ -40,15 +43,22 @@ export const MembersSettings = ({
       if (response.ok) {
         const data = await response.json();
         setMembers(data.members || []);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to load members');
       }
     } catch (error) {
       console.error('Failed to load members:', error);
+      toast.error('ไม่สามารถโหลดข้อมูลสมาชิกได้', {
+        description: error instanceof Error ? error.message : 'เกิดข้อผิดพลาด'
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRoleUpdate = async (userId: string, newRole: string) => {
+  // ✅ IMPROVED: Better error handling for role update
+  const handleRoleUpdate = async (userId: string, newRole: string): Promise<boolean> => {
     try {
       const response = await fetch(`/api/${organizationSlug}/members/${userId}/role`, {
         method: 'PATCH',
@@ -60,15 +70,20 @@ export const MembersSettings = ({
       if (response.ok) {
         await loadMembers();
         return true;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update role');
       }
-      return false;
     } catch (error) {
       console.error('Failed to update role:', error);
-      return false;
+      
+      // Re-throw to let MemberCard handle the toast
+      throw error;
     }
   };
 
-  const handleMemberRemove = async (userId: string) => {
+  // ✅ IMPROVED: Better error handling for member removal
+  const handleMemberRemove = async (userId: string): Promise<boolean> => {
     try {
       const response = await fetch(`/api/${organizationSlug}/members/${userId}`, {
         method: 'DELETE',
@@ -78,11 +93,15 @@ export const MembersSettings = ({
       if (response.ok) {
         await loadMembers();
         return true;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove member');
       }
-      return false;
     } catch (error) {
       console.error('Failed to remove member:', error);
-      return false;
+      
+      // Re-throw to let MemberCard handle the toast
+      throw error;
     }
   };
 
