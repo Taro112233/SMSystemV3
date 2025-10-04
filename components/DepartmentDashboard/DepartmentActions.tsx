@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   ClipboardList, Eye, Calendar, TrendingUp, FileText, 
-  ArrowUp, ArrowDown, ShoppingCart, FileCheck, Package,
+  ShoppingCart, FileCheck, Package,
   PlaneTakeoff,
   PlaneLanding
 } from 'lucide-react';

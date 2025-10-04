@@ -38,9 +38,7 @@ Directory structure:
     │   │   │   │       └── role/
     │   │   │   │           └── route.ts
     │   │   │   └── settings/
-    │   │   │       ├── route.ts
-    │   │   │       └── generate-invite-code/
-    │   │   │           └── route.ts
+    │   │   │       └── route.ts
     │   │   ├── arcjet/
     │   │   │   └── route.ts
     │   │   ├── auth/
@@ -55,7 +53,9 @@ Directory structure:
     │   │   ├── dashboard/
     │   │   │   └── route.ts
     │   │   ├── organizations/
-    │   │   │   └── route.ts
+    │   │   │   ├── route.ts
+    │   │   │   └── join-by-code/
+    │   │   │       └── route.ts
     │   │   └── security/
     │   │       └── monitoring/
     │   │           └── route.ts

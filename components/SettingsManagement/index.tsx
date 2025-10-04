@@ -10,36 +10,62 @@ import { OrganizationSettings } from './OrganizationSettings';
 import { DepartmentSettings } from './DepartmentSettings';
 import { MembersSettings } from './MembersSettings';
 
+// ✅ FIXED: Proper type definitions
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  email?: string;
+  phone?: string;
+  timezone: string;
+  inviteCode?: string;
+  inviteEnabled?: boolean;
+  status: string;
+}
+
+interface Department {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive: boolean;
+  parentId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface OrganizationUpdateData {
+  name?: string;
+  slug?: string;
+  description?: string;
+  email?: string;
+  phone?: string;
+  timezone?: string;
+  inviteCode?: string;
+  inviteEnabled?: boolean;
+}
+
+interface DepartmentFormData {
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive?: boolean;
+  organizationId: string;
+}
+
 interface SettingsManagementProps {
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    email?: string;
-    phone?: string;
-    timezone: string;
-    inviteCode?: string;
-    inviteEnabled?: boolean;
-    status: string;
-  };
-  departments: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    color?: string;
-    icon?: string;
-    isActive: boolean;
-    parentId?: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
+  organization: Organization;
+  departments: Department[];
   userRole: 'MEMBER' | 'ADMIN' | 'OWNER';
   isLoadingDepartments?: boolean;
-  onOrganizationUpdate: (data: any) => Promise<any>;
-  onDepartmentCreate: (data: any) => Promise<void>;
-  onDepartmentUpdate: (deptId: string, data: any) => Promise<void>;
+  onOrganizationUpdate: (data: OrganizationUpdateData) => Promise<Organization>;
+  onDepartmentCreate: (data: DepartmentFormData) => Promise<void>;
+  onDepartmentUpdate: (deptId: string, data: Partial<DepartmentFormData>) => Promise<void>;
   onDepartmentDelete: (deptId: string) => Promise<void>;
 }
 
@@ -79,7 +105,7 @@ export const SettingsManagement = ({
         />
       </TabsContent>
 
-      {/* Department Management Tab - ✅ Pass organizationSlug */}
+      {/* Department Management Tab */}
       <TabsContent value="departments" className="space-y-6">
         <DepartmentSettings
           departments={departments}

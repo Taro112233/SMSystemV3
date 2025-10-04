@@ -7,32 +7,45 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { DepartmentList } from './DepartmentList';
 
-interface DepartmentSettingsProps {
-  departments: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    color?: string;
-    icon?: string;
-    isActive: boolean;
-    parentId?: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
+// ✅ FIXED: Proper type definitions
+interface Department {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive: boolean;
+  parentId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface DepartmentFormData {
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive?: boolean;
   organizationId: string;
-  organizationSlug: string; // ✅ NEW: For URL preview
+}
+
+interface DepartmentSettingsProps {
+  departments: Department[];
+  organizationId: string;
+  organizationSlug: string;
   userRole: 'MEMBER' | 'ADMIN' | 'OWNER';
   isLoading?: boolean;
-  onCreate: (data: any) => Promise<void>;
-  onUpdate: (deptId: string, data: any) => Promise<void>;
+  onCreate: (data: DepartmentFormData) => Promise<void>;
+  onUpdate: (deptId: string, data: Partial<DepartmentFormData>) => Promise<void>;
   onDelete: (deptId: string) => Promise<void>;
 }
 
 export const DepartmentSettings = ({
   departments,
   organizationId,
-  organizationSlug, // ✅ NEW
+  organizationSlug,
   userRole,
   isLoading = false,
   onCreate,
@@ -53,7 +66,7 @@ export const DepartmentSettings = ({
         </Alert>
       )}
 
-      {/* Department List with Modal - ✅ Pass organizationSlug */}
+      {/* Department List with Modal */}
       <DepartmentList
         departments={departments}
         organizationId={organizationId}

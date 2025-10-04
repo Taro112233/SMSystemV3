@@ -1,12 +1,12 @@
 // app/api/dashboard/route.ts
 // Dashboard API - Get user's organizations with stats
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerUser } from '@/lib/auth-server';
 
 // Get user's organizations with statistics
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Authentication
     const user = await getServerUser();

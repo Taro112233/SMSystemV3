@@ -2,7 +2,7 @@
 // MembersSettings/InviteCodeSection - WITH UPDATED BADGE COLORS
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';  // ✅ เพิ่ม useCallback
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -28,11 +28,8 @@ export const InviteCodeSection = ({
 
   const isOwner = userRole === 'OWNER';
 
-  useEffect(() => {
-    loadInviteCode();
-  }, [organizationSlug]);
-
-  const loadInviteCode = async () => {
+  // ✅ ใช้ useCallback เพื่อ memoize function
+  const loadInviteCode = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/${organizationSlug}/settings`, {
@@ -49,7 +46,11 @@ export const InviteCodeSection = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [organizationSlug]);  // ✅ เพิ่ม dependency
+
+  useEffect(() => {
+    loadInviteCode();
+  }, [loadInviteCode]);  // ✅ ใช้ loadInviteCode แทน organizationSlug
 
   const handleCopyInviteCode = () => {
     if (inviteCode) {
@@ -60,7 +61,7 @@ export const InviteCodeSection = ({
     }
   };
 
-  const handleSaveInviteCode = async (newCode: string, newEnabled: boolean) => {
+  const handleSaveInviteCode = async () => {  // ✅ ลบ parameters ที่ไม่ได้ใช้
     await loadInviteCode();
   };
 
@@ -156,7 +157,7 @@ export const InviteCodeSection = ({
           organizationSlug={organizationSlug}
           currentCode={inviteCode}
           currentEnabled={inviteEnabled}
-          onSave={handleSaveInviteCode}
+          onSave={handleSaveInviteCode}  // ✅ ส่ง function ที่ไม่รับ parameters
         />
       )}
     </>

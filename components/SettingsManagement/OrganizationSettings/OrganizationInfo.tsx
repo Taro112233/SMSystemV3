@@ -6,16 +6,19 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Globe, Mail, Phone, Clock, Building2, FileText, Edit } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';  // ✅ เพิ่ม import
+
+interface OrganizationData {
+  name: string;
+  slug: string;
+  description?: string;
+  email?: string;
+  phone?: string;
+  timezone: string;
+}
 
 interface OrganizationInfoProps {
-  organization: {
-    name: string;
-    slug: string;
-    description?: string;
-    email?: string;
-    phone?: string;
-    timezone: string;
-  };
+  organization: OrganizationData;
   canEdit: boolean;
   isOwner: boolean;
   onEdit: () => void;
@@ -62,17 +65,19 @@ export const OrganizationInfo = ({
 };
 
 // Helper component for displaying info items
+interface InfoItemProps {
+  icon: LucideIcon;  // ✅ แก้จาก any
+  label: string;
+  value: string;
+  badge?: string;
+}
+
 const InfoItem = ({ 
   icon: Icon, 
   label, 
   value,
   badge 
-}: { 
-  icon: any; 
-  label: string; 
-  value: string;
-  badge?: string;
-}) => (
+}: InfoItemProps) => (
   <div className="flex items-start gap-3">
     <Icon className="w-5 h-5 text-gray-600 mt-0.5" />
     <div className="flex-1">

@@ -1,15 +1,72 @@
-// FILE: app/[orgSlug]/settings/page.tsx
+// FILE: app/[orgSlug]/settings/page.tsx - FIXED LINT ERRORS
 // Settings Page - UPDATED to use /departments API
-// ============================================
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { SettingsManagement } from '@/components/SettingsManagement';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+
+// ✅ FIXED: Define proper types
+interface OrganizationData {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  email?: string;
+  phone?: string;
+  timezone: string;
+  inviteCode?: string;
+  inviteEnabled?: boolean;
+  status: string;
+}
+
+interface Department {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive: boolean;
+  parentId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface UpdateOrgData {
+  name?: string;
+  slug?: string;
+  description?: string;
+  email?: string;
+  phone?: string;
+  timezone?: string;
+  inviteCode?: string;
+  inviteEnabled?: boolean;
+}
+
+interface CreateDepartmentData {
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive?: boolean;
+}
+
+// ✅ FIXED: Make UpdateDepartmentData match expected Partial type
+interface UpdateDepartmentData {
+  name?: string;
+  slug?: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive?: boolean;
+  organizationId?: string;
+}
 
 export default function SettingsPage() {
   const params = useParams();
@@ -18,10 +75,41 @@ export default function SettingsPage() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [organizationData, setOrganizationData] = useState<any>(null);
-  const [departments, setDepartments] = useState<any[]>([]);
+  const [organizationData, setOrganizationData] = useState<OrganizationData | null>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [userRole, setUserRole] = useState<'MEMBER' | 'ADMIN' | 'OWNER' | null>(null);
   const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+
+  // ✅ FIXED: Wrap loadDepartments with useCallback
+  const loadDepartments = useCallback(async () => {
+    try {
+      setIsLoadingDepartments(true);
+      
+      const deptResponse = await fetch(`/api/${orgSlug}/departments`, {
+        credentials: 'include',
+      });
+
+      if (!deptResponse.ok) {
+        throw new Error('Failed to load departments');
+      }
+
+      const deptData = await deptResponse.json();
+
+      if (!deptData.success) {
+        throw new Error(deptData.error || 'Failed to load departments');
+      }
+
+      setDepartments(deptData.departments);
+      
+      console.log(`✅ Loaded ${deptData.departments.length} departments (${deptData.stats?.active || 0} active, ${deptData.stats?.inactive || 0} inactive)`);
+      
+    } catch (err) {
+      console.error('Failed to load departments:', err);
+      toast.error('ไม่สามารถโหลดข้อมูลหน่วยงานได้');
+    } finally {
+      setIsLoadingDepartments(false);
+    }
+  }, [orgSlug]);
 
   useEffect(() => {
     const loadSettingsData = async () => {
@@ -92,43 +180,10 @@ export default function SettingsPage() {
     if (orgSlug) {
       loadSettingsData();
     }
-  }, [orgSlug, router]);
+  }, [orgSlug, router, loadDepartments]); // ✅ FIXED: Include loadDepartments dependency
 
-  // ✅ UPDATED: Use /departments API to get ALL departments
-  const loadDepartments = async () => {
-    try {
-      setIsLoadingDepartments(true);
-      
-      // ✅ เปลี่ยนจาก /api/[orgSlug] เป็น /api/[orgSlug]/departments
-      const deptResponse = await fetch(`/api/${orgSlug}/departments`, {
-        credentials: 'include',
-      });
-
-      if (!deptResponse.ok) {
-        throw new Error('Failed to load departments');
-      }
-
-      const deptData = await deptResponse.json();
-
-      if (!deptData.success) {
-        throw new Error(deptData.error || 'Failed to load departments');
-      }
-
-      // ✅ ได้ departments ทั้งหมด (Active + Inactive)
-      setDepartments(deptData.departments);
-      
-      console.log(`✅ Loaded ${deptData.departments.length} departments (${deptData.stats?.active || 0} active, ${deptData.stats?.inactive || 0} inactive)`);
-      
-    } catch (err) {
-      console.error('Failed to load departments:', err);
-      toast.error('ไม่สามารถโหลดข้อมูลหน่วยงานได้');
-    } finally {
-      setIsLoadingDepartments(false);
-    }
-  };
-
-  // Update organization handler
-  const handleOrganizationUpdate = async (data: any) => {
+  // ✅ FIXED: Type the data parameter
+  const handleOrganizationUpdate = async (data: UpdateOrgData) => {
     try {
       const response = await fetch(`/api/${orgSlug}/settings`, {
         method: 'PATCH',
@@ -155,8 +210,8 @@ export default function SettingsPage() {
     }
   };
 
-  // Department handlers
-  const handleDepartmentCreate = async (data: any) => {
+  // ✅ FIXED: Type the data parameter
+  const handleDepartmentCreate = async (data: CreateDepartmentData) => {
     try {
       const response = await fetch(`/api/${orgSlug}/departments`, {
         method: 'POST',
@@ -181,7 +236,8 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDepartmentUpdate = async (deptId: string, data: any) => {
+  // ✅ FIXED: Type the data parameter
+  const handleDepartmentUpdate = async (deptId: string, data: UpdateDepartmentData) => {
     try {
       const response = await fetch(`/api/${orgSlug}/departments/${deptId}`, {
         method: 'PATCH',

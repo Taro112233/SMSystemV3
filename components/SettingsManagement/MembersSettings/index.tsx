@@ -2,7 +2,7 @@
 // MembersSettings - Container + state management - IMPROVED
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock } from 'lucide-react';
 import { MembersList } from './MembersList';
@@ -10,30 +10,37 @@ import { SettingsSection } from '../shared/SettingsSection';
 import { InviteCodeSection } from './InviteCodeSection';
 import { toast } from 'sonner';
 
+// ✅ FIXED: Proper type definitions
+interface Member {
+  id: string;
+  userId: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+  };
+  role: 'MEMBER' | 'ADMIN' | 'OWNER';
+  joinedAt: Date;
+}
+
 interface MembersSettingsProps {
-  organizationId: string;
+  organizationId: string; // ✅ Keep in interface for consistency with parent
   organizationSlug: string;
   userRole: 'MEMBER' | 'ADMIN' | 'OWNER';
 }
 
 export const MembersSettings = ({
-  organizationId,
+  // organizationId not destructured - not needed in this component
   organizationSlug,
   userRole
 }: MembersSettingsProps) => {
-  const [members, setMembers] = useState([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const canManage = ['ADMIN', 'OWNER'].includes(userRole);
 
-  useEffect(() => {
-    if (canManage) {
-      loadMembers();
-    } else {
-      setIsLoading(false);
-    }
-  }, [canManage, organizationSlug]);
-
-  const loadMembers = async () => {
+  // ✅ FIXED: useCallback to prevent exhaustive-deps warning
+  const loadMembers = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/${organizationSlug}/members`, {
@@ -55,9 +62,17 @@ export const MembersSettings = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [organizationSlug]); // ✅ FIXED: Added dependency
 
-  // ✅ IMPROVED: Better error handling for role update
+  // ✅ FIXED: Now includes loadMembers in dependency array
+  useEffect(() => {
+    if (canManage) {
+      loadMembers();
+    } else {
+      setIsLoading(false);
+    }
+  }, [canManage, loadMembers]);
+
   const handleRoleUpdate = async (userId: string, newRole: string): Promise<boolean> => {
     try {
       const response = await fetch(`/api/${organizationSlug}/members/${userId}/role`, {
@@ -76,13 +91,10 @@ export const MembersSettings = ({
       }
     } catch (error) {
       console.error('Failed to update role:', error);
-      
-      // Re-throw to let MemberCard handle the toast
       throw error;
     }
   };
 
-  // ✅ IMPROVED: Better error handling for member removal
   const handleMemberRemove = async (userId: string): Promise<boolean> => {
     try {
       const response = await fetch(`/api/${organizationSlug}/members/${userId}`, {
@@ -99,8 +111,6 @@ export const MembersSettings = ({
       }
     } catch (error) {
       console.error('Failed to remove member:', error);
-      
-      // Re-throw to let MemberCard handle the toast
       throw error;
     }
   };

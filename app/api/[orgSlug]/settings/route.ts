@@ -7,6 +7,19 @@ import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 
+// ✅ Define interface for update data - compatible with Prisma JsonValue
+interface OrganizationUpdateData {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  timezone?: string;
+  inviteEnabled?: boolean;
+  inviteCode?: string;
+  [key: string]: string | boolean | null | undefined; // Index signature for Prisma compatibility
+}
+
 // GET - Get organization settings (NO AUDIT LOG - READ ONLY)
 export async function GET(
   request: NextRequest,
@@ -168,8 +181,8 @@ export async function PATCH(
       );
     }
 
-    // Prepare update data
-    const updateData: any = {};
+    // Prepare update data - ✅ Using proper interface
+    const updateData: OrganizationUpdateData = {};
 
     // Basic info updates
     if (name !== undefined) updateData.name = name;

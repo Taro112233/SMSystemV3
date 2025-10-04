@@ -10,32 +10,46 @@ import { SettingsCard } from '../shared/SettingsCard';
 import { DepartmentCard } from './DepartmentCard';
 import { DepartmentFormModal } from './DepartmentFormModal';
 
+// ✅ NEW: Proper type definitions
+interface Department {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive: boolean;
+  parentId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ✅ FIXED: Match DepartmentFormModal's interface exactly
+interface DepartmentFormData {
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+  icon: string;
+  isActive: boolean;
+  organizationId?: string;  // Optional เพราะจะถูกเพิ่มใน handler
+}
+
 interface DepartmentListProps {
-  departments: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    color?: string;
-    icon?: string;
-    isActive: boolean;
-    parentId?: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
+  departments: Department[];
   organizationId: string;
-  organizationSlug: string; // ✅ NEW: For URL preview
+  organizationSlug: string;
   canManage: boolean;
   isLoading?: boolean;
-  onCreate: (data: any) => Promise<void>;
-  onUpdate: (deptId: string, data: any) => Promise<void>;
+  onCreate: (data: DepartmentFormData & { organizationId: string }) => Promise<void>;  // ✅ Ensure organizationId is always string
+  onUpdate: (deptId: string, data: Partial<DepartmentFormData>) => Promise<void>;
   onDelete: (deptId: string) => Promise<void>;
 }
 
 export const DepartmentList = ({
   departments,
   organizationId,
-  organizationSlug, // ✅ NEW
+  organizationSlug,
   canManage,
   isLoading = false,
   onCreate,
@@ -44,7 +58,7 @@ export const DepartmentList = ({
 }: DepartmentListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingDepartment, setEditingDepartment] = useState<any>(null);
+  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
 
   // Filter departments by search term
   const filteredDepartments = departments.filter(dept =>
@@ -57,18 +71,19 @@ export const DepartmentList = ({
   const activeDepartments = filteredDepartments.filter(d => d.isActive);
   const inactiveDepartments = filteredDepartments.filter(d => !d.isActive);
 
-  const handleCreate = async (data: any) => {
-    await onCreate(data);
+  const handleCreate = async (data: DepartmentFormData) => {
+    // ✅ Add organizationId to data before calling onCreate
+    await onCreate({ ...data, organizationId });
   };
 
-  const handleUpdate = async (data: any) => {
+  const handleUpdate = async (data: DepartmentFormData) => {
     if (editingDepartment) {
       await onUpdate(editingDepartment.id, data);
       setEditingDepartment(null);
     }
   };
 
-  const handleEdit = (dept: any) => {
+  const handleEdit = (dept: Department) => {
     setEditingDepartment(dept);
   };
 
@@ -159,7 +174,7 @@ export const DepartmentList = ({
         </SettingsCard>
       )}
 
-      {/* Create Modal - ✅ Pass organizationSlug */}
+      {/* Create Modal */}
       <DepartmentFormModal
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
@@ -168,13 +183,13 @@ export const DepartmentList = ({
         onSubmit={handleCreate}
       />
 
-      {/* Edit Modal - ✅ Pass organizationSlug */}
+      {/* Edit Modal */}
       <DepartmentFormModal
         open={!!editingDepartment}
         onOpenChange={(open) => !open && setEditingDepartment(null)}
         organizationId={organizationId}
         organizationSlug={organizationSlug}
-        department={editingDepartment}
+        department={editingDepartment || undefined}
         onSubmit={handleUpdate}
       />
     </div>

@@ -5,15 +5,19 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
+// ✅ FIXED: Make stats optional to match index.tsx
 interface OrganizationPerformanceProps {
   organization: {
-    stats: {
-      totalValue: string;
+    stats?: {
+      totalValue?: string;
     };
   };
 }
 
 export const OrganizationPerformance = ({ organization }: OrganizationPerformanceProps) => {
+  // ✅ Safe access with defaults
+  const totalValue = organization.stats?.totalValue || '0';
+
   const performanceMetrics = [
     {
       label: 'อัตราการใช้สต็อก',
@@ -35,7 +39,7 @@ export const OrganizationPerformance = ({ organization }: OrganizationPerformanc
   const summaryCards = [
     {
       title: 'มูลค่าสต็อกรวม',
-      value: organization.stats.totalValue,
+      value: totalValue,
       bgColor: 'bg-blue-50',
       textColor: 'text-blue-600'
     },

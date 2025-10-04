@@ -4,6 +4,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Building } from 'lucide-react'; // ✅ Import Building as fallback
 import { getIconComponent, type FrontendDepartment } from '@/lib/department-helpers';
 
 interface DepartmentListProps {
@@ -20,15 +21,14 @@ export const DepartmentList = ({
   collapsed 
 }: DepartmentListProps) => {
   
-  // ✅ Safe icon rendering using department-helpers
+  // ✅ Safe icon rendering with pre-imported fallback
   const renderIcon = (dept: FrontendDepartment) => {
     try {
       const IconComponent = getIconComponent(dept.icon || 'BUILDING');
       return <IconComponent className="w-3 h-3 text-white" />;
     } catch (error) {
       console.error('Error rendering department icon:', error, dept);
-      // Fallback to Building icon
-      const { Building } = require('lucide-react');
+      // ✅ Use pre-imported Building icon as fallback
       return <Building className="w-3 h-3 text-white" />;
     }
   };

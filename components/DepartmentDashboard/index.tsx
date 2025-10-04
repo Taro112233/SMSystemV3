@@ -5,9 +5,10 @@ import React from 'react';
 import { DepartmentActions } from './DepartmentActions';
 import { DepartmentInfo } from './DepartmentInfo';
 import { DepartmentStats } from './DepartmentStats';
+import { type FrontendDepartment } from '@/lib/department-helpers';
 
 interface DepartmentViewProps {
-  department: any;
+  department: FrontendDepartment;
 }
 
 export const DepartmentView = ({ department }: DepartmentViewProps) => {

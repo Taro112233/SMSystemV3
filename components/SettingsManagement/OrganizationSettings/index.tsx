@@ -10,19 +10,33 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock } from 'lucide-react';
 import { SettingsSection } from '../shared/SettingsSection';
 
+// ✅ FIXED: Proper type definitions
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  email?: string;
+  phone?: string;
+  timezone: string;
+  status: string;
+}
+
+interface OrganizationUpdateData {
+  name?: string;
+  slug?: string;
+  description?: string;
+  email?: string;
+  phone?: string;
+  timezone?: string;
+  inviteCode?: string;
+  inviteEnabled?: boolean;
+}
+
 interface OrganizationSettingsProps {
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    email?: string;
-    phone?: string;
-    timezone: string;
-    status: string;
-  };
+  organization: Organization;
   userRole: 'MEMBER' | 'ADMIN' | 'OWNER';
-  onUpdate: (data: any) => Promise<any>;
+  onUpdate: (data: OrganizationUpdateData) => Promise<Organization>;
 }
 
 export const OrganizationSettings = ({ 
@@ -42,7 +56,7 @@ export const OrganizationSettings = ({
     setIsEditing(true);
   };
 
-  const handleSave = async (formData: any) => {
+  const handleSave = async (formData: OrganizationUpdateData) => {
     try {
       await onUpdate(formData);
       setIsEditing(false);

@@ -3,19 +3,23 @@
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Clock, Dot, Activity, AlertCircle } from 'lucide-react';
+import { Clock, Dot, Activity } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+// ✅ NEW: Proper type definition
+interface ActivityItem {
+  id: number | string;
+  type: string;
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  time: string;
+  status: string;
+  user: string;
+}
 
 interface RecentActivityProps {
-  activities?: Array<{
-    id: number | string;
-    type: string;
-    icon: any;
-    title: string;
-    description: string;
-    time: string;
-    status: string;
-    user: string;
-  }>;
+  activities?: ActivityItem[];
 }
 
 export const RecentActivity = ({ activities = [] }: RecentActivityProps) => {

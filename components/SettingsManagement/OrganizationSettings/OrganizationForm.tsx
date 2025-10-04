@@ -9,17 +9,19 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Save, X, Globe, Mail, Phone, Clock, Link2 } from 'lucide-react';
 
+interface OrganizationData {
+  name: string;
+  slug: string;
+  description?: string;
+  email?: string;
+  phone?: string;
+  timezone: string;
+}
+
 interface OrganizationFormProps {
-  organization: {
-    name: string;
-    slug: string;
-    description?: string;
-    email?: string;
-    phone?: string;
-    timezone: string;
-  };
+  organization: OrganizationData;
   isOwner: boolean;
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: OrganizationData) => Promise<void>;  // ✅ แก้จาก any
   onCancel: () => void;
 }
 
@@ -30,7 +32,7 @@ export const OrganizationForm = ({
   onCancel
 }: OrganizationFormProps) => {
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<OrganizationData>({  // ✅ เพิ่ม type
     name: organization.name,
     slug: organization.slug,
     description: organization.description || '',

@@ -1,7 +1,4 @@
-// FILE: components/SettingsManagement/DepartmentSettings/DepartmentCard.tsx
-// DepartmentSettings/DepartmentCard - Card component with proper colors and alignment
-// ============================================
-
+// components/SettingsManagement/DepartmentSettings/DepartmentCard.tsx
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,20 +8,23 @@ import { getIconComponent, mapColorThemeToTailwind } from '@/lib/department-help
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 
+// ✅ เพิ่ม interface สำหรับ Department
+interface Department {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface DepartmentCardProps {
-  department: {
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    color?: string;
-    icon?: string;
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  };
+  department: Department;
   canManage: boolean;
-  onEdit: (dept: any) => void;
+  onEdit: (dept: Department) => void; // ✅ เปลี่ยนจาก any เป็น Department
   onDelete: (deptId: string) => Promise<void>;
 }
 
@@ -39,10 +39,7 @@ export const DepartmentCard = ({
 
   const Icon = getIconComponent(department.icon || 'BUILDING');
   
-  // ✅ FIXED: department.color อาจเป็น Tailwind class ('bg-blue-500') 
-  // ต้องแปลงกลับเป็น enum ก่อน ('BLUE')
   const extractColorEnum = (color: string): string => {
-    // ถ้าเป็น Tailwind class แล้ว (bg-xxx-500) ให้แปลงกลับเป็น enum
     if (color.startsWith('bg-')) {
       const colorMap: Record<string, string> = {
         'bg-blue-500': 'BLUE',
@@ -58,7 +55,6 @@ export const DepartmentCard = ({
       };
       return colorMap[color] || 'BLUE';
     }
-    // ถ้าเป็น enum อยู่แล้ว ใช้เลย
     return color;
   };
   
@@ -85,7 +81,6 @@ export const DepartmentCard = ({
       <Card className={`${!department.isActive ? 'opacity-60' : ''} hover:shadow-lg transition-shadow h-full flex flex-col`}>
         <CardContent className="p-4 flex-1 flex flex-col">
           <div className="space-y-3 flex-1 flex flex-col">
-            {/* Header with Icon and Status */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className={`w-12 h-12 ${colorClass} rounded-lg flex items-center justify-center flex-shrink-0`}>
@@ -101,7 +96,6 @@ export const DepartmentCard = ({
                 </div>
               </div>
               
-              {/* Status Badge */}
               {department.isActive ? (
                 <Badge variant="default" className="bg-green-500 flex-shrink-0">
                   <CheckCircle className="w-3 h-3 mr-1" />
@@ -115,7 +109,6 @@ export const DepartmentCard = ({
               )}
             </div>
 
-            {/* Description - Fixed height for consistency */}
             <div className="min-h-[40px]">
               {department.description ? (
                 <p className="text-sm text-gray-600 line-clamp-2">
@@ -128,10 +121,8 @@ export const DepartmentCard = ({
               )}
             </div>
 
-            {/* Spacer to push timestamp and actions to bottom */}
             <div className="flex-1" />
 
-            {/* Timestamps */}
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <Clock className="w-3 h-3" />
               <span>
@@ -143,7 +134,6 @@ export const DepartmentCard = ({
               </span>
             </div>
 
-            {/* Actions - Always at bottom with consistent spacing */}
             {canManage && (
               <div className="flex gap-2 pt-2 border-t mt-auto">
                 <Button
@@ -170,7 +160,6 @@ export const DepartmentCard = ({
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}

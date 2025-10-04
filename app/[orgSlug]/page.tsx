@@ -1,4 +1,4 @@
-// app/[orgSlug]/page.tsx - Updated Organization Page (Real Data Only)
+// app/[orgSlug]/page.tsx - Updated Organization Page (Real Data Only) - FIXED TYPES
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -8,10 +8,43 @@ import { transformDepartmentData, type FrontendDepartment } from '@/lib/departme
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+// ✅ FIXED: Define proper types matching OrganizationOverview component
+interface OrganizationStats {
+  totalProducts: number;
+  lowStockItems: number;
+  pendingTransfers: number;
+  activeUsers: number;
+  totalValue: string;
+  departments: number;
+}
+
+interface OrganizationData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  logo: string;
+  color: string;
+  userRole: string;
+  stats: OrganizationStats;
+}
+
+// ✅ FIXED: Match EXACT Activity interface from OrganizationOverview component
+interface Activity {
+  id: string;
+  type: string;           // ✅ Required field
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  time: string;
+  status: 'success' | 'warning' | 'info' | 'error';
+  user?: string;
+}
+
 interface OrganizationPageData {
-  organization: any;
+  organization: OrganizationData;
   departments: FrontendDepartment[];
-  recentActivities: any[];
+  recentActivities: Activity[]; // ✅ FIXED: Use Activity type
 }
 
 export default function OrganizationPage() {
@@ -49,7 +82,7 @@ export default function OrganizationPage() {
         const transformedDepartments: FrontendDepartment[] = data.departments.map(transformDepartmentData);
         
         // Create organization object with calculated stats (proper typing)
-        const organization = {
+        const organization: OrganizationData = {
           id: data.organization.id,
           name: data.organization.name,
           slug: data.organization.slug,
@@ -68,7 +101,7 @@ export default function OrganizationPage() {
         };
 
         // Empty recent activities array - will be populated from audit log API later
-        const recentActivities: any[] = [];
+        const recentActivities: Activity[] = [];
 
         setPageData({
           organization,

@@ -1,5 +1,6 @@
 // lib/audit-logger.ts
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 
 type AuditCategory = 'PRODUCT' | 'STOCK' | 'TRANSFER' | 'USER' | 'ORGANIZATION' | 'DEPARTMENT' | 'AUTH' | 'SYSTEM';
 type AuditSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
@@ -7,17 +8,17 @@ type AuditSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
 interface AuditLogParams {
   organizationId: string;
   userId?: string;
-  targetUserId?: string;        // ✅ NEW
+  targetUserId?: string;
   departmentId?: string;
   action: string;
-  category: AuditCategory;      // ✅ NEW
-  severity?: AuditSeverity;     // ✅ NEW
+  category: AuditCategory;
+  severity?: AuditSeverity;
   description: string;
   resourceId?: string;
   resourceType?: string;
-  payload?: any;
+  payload?: Prisma.InputJsonValue;  // ✅ เปลี่ยนจาก JsonValue เป็น Prisma.InputJsonValue
   ipAddress?: string;
-  userAgent?: string;           // ✅ NEW
+  userAgent?: string;
 }
 
 /**

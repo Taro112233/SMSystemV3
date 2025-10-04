@@ -5,7 +5,8 @@ import {
   Building, Hospital, Warehouse, TestTube, Pill,
   Activity, Stethoscope, Users, Package, Shield,
   Circle, Square, Triangle, Star, Heart, Crown,
-  Eye, Settings, Folder, Tag, Box
+  Eye, Settings, Folder, Tag, Box,
+  LucideIcon
 } from 'lucide-react';
 
 /**
@@ -80,8 +81,8 @@ export function mapColorThemeToTailwind(colorTheme: string | null | undefined): 
 /**
  * ✅ Get React component from icon string
  */
-export function getIconComponent(iconString: string) {
-  const iconMap: Record<string, any> = {
+export function getIconComponent(iconString: string): LucideIcon {  // ✅ แก้ return type
+  const iconMap: Record<string, LucideIcon> = {  // ✅ แก้จาก any
     'BUILDING': Building,
     'HOSPITAL': Hospital,
     'PHARMACY': Pill,
@@ -136,7 +137,7 @@ export function getDepartmentCategory(icon: string, name: string): string {
  */
 export function transformDepartmentData(dept: DatabaseDepartment): FrontendDepartment {
   // Handle date conversion safely
-  const getISOString = (dateValue: any): string => {
+  const getISOString = (dateValue: Date | string | null | undefined): string => {  // ✅ แก้จาก any
     if (!dateValue) return new Date().toISOString();
     if (typeof dateValue === 'string') return dateValue;
     if (dateValue instanceof Date) return dateValue.toISOString();

@@ -12,10 +12,23 @@ import {
   Circle, Square, Triangle, Star, Heart, Crown,
   Eye, Settings, Folder, Tag, Box
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+// ✅ NEW: Proper type definitions
+interface Department {
+  id: string;
+  name: string;
+  color?: string;
+  icon?: string | LucideIcon | { name?: string; type?: { name?: string } };
+  notifications?: number;
+  stockItems?: number;
+  memberCount?: number;
+  lowStock?: number;
+}
 
 interface DepartmentOverviewProps {
-  departments: any[];
-  onSelectDepartment: (dept: any) => void;
+  departments: Department[];
+  onSelectDepartment: (dept: Department) => void;
 }
 
 export const DepartmentOverview = ({ 
@@ -23,8 +36,8 @@ export const DepartmentOverview = ({
   onSelectDepartment 
 }: DepartmentOverviewProps) => {
   
-  // ✅ FIXED: Safe icon component resolver
-  const getIconComponent = (iconType: any) => {
+  // ✅ FIXED: Proper return type instead of any
+  const getIconComponent = (iconType: Department['icon']): LucideIcon => {
     // Handle various icon formats that might come from API
     let iconString = '';
     
@@ -32,18 +45,22 @@ export const DepartmentOverview = ({
       iconString = iconType;
     } else if (typeof iconType === 'function') {
       // Already a React component
-      return iconType;
-    } else if (iconType?.name) {
-      iconString = iconType.name;
-    } else if (iconType?.type?.name) {
-      iconString = iconType.type.name;
-    } else {
+      return iconType as LucideIcon;
+    } else if (iconType && typeof iconType === 'object') {
+      if ('name' in iconType && iconType.name) {
+        iconString = iconType.name;
+      } else if ('type' in iconType && iconType.type && 'name' in iconType.type && iconType.type.name) {
+        iconString = iconType.type.name;
+      }
+    }
+    
+    if (!iconString) {
       console.warn('Unknown icon type:', iconType);
       return Building;
     }
     
     // Icon mapping
-    const iconMap: Record<string, any> = {
+    const iconMap: Record<string, LucideIcon> = {
       'BUILDING': Building,
       'HOSPITAL': Hospital,
       'PHARMACY': Pill,
@@ -73,7 +90,7 @@ export const DepartmentOverview = ({
   };
 
   // ✅ Safe rendering with error boundaries
-  const renderDepartmentIcon = (dept: any) => {
+  const renderDepartmentIcon = (dept: Department) => {
     try {
       const IconComponent = getIconComponent(dept.icon);
       return <IconComponent className="w-5 h-5 text-white" />;
@@ -140,7 +157,7 @@ export const DepartmentOverview = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium text-gray-900 truncate">{dept.name}</h3>
-                    {dept.notifications > 0 && (
+                    {(dept.notifications || 0) > 0 && (
                       <Badge variant="destructive" className="h-5 min-w-5 text-xs px-1">
                         {dept.notifications}
                       </Badge>

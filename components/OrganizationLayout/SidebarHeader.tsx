@@ -3,10 +3,20 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface OrganizationData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  logo: string;
+  color: string;
+  userRole: string;
+}
 
 interface SidebarHeaderProps {
-  organization: any;
+  organization: OrganizationData;
   collapsed: boolean;
   onToggleCollapse: () => void;
 }

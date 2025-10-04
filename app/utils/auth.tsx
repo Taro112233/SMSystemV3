@@ -1,4 +1,4 @@
-// app/utils/auth.tsx - SIMPLIFIED AUTH CONTEXT
+// app/utils/auth.tsx - SIMPLIFIED AUTH CONTEXT (FIXED LINT ERRORS)
 // InvenStock - Username-based Authentication Hooks
 
 'use client';
@@ -37,7 +37,11 @@ interface AuthContextType {
   register: (userData: RegisterRequest) => Promise<{ requiresApproval: boolean }>;
   logout: () => Promise<void>;
   switchOrganization: (orgSlug: string) => Promise<void>;
-  joinOrganization: (inviteCode: string) => Promise<any>;
+  joinOrganization: (inviteCode: string) => Promise<{
+    success: boolean;
+    organization?: Organization;
+    message?: string;
+  }>;
   refreshUser: (orgSlug?: string) => Promise<void>;
   clearError: () => void;
   hasPermission: (permission: string) => boolean;
@@ -75,6 +79,47 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!userRole) return false;
     return isMinimumRole(userRole, minimumRole);
   }, [userRole]);
+
+  // ✅ Refresh user data with optional organization context
+  const refreshUser = useCallback(async (orgSlug?: string) => {
+    try {
+      setLoading(true);
+      const data = await getCurrentUser(orgSlug);
+      
+      setUser(data.user);
+      setOrganizations(data.organizations);
+      
+      if (data.currentOrganization) {
+        setCurrentOrganization(data.currentOrganization);
+        // Find user's role in current organization
+        const currentOrgUser = data.organizations.find(
+          org => org.organizationId === data.currentOrganization?.id
+        );
+        if (currentOrgUser) {
+          setUserRole(currentOrgUser.role);
+        }
+      } else {
+        setCurrentOrganization(null);
+        setUserRole(null);
+      }
+      
+      storeUserData(data.user);
+      
+      console.log('User data refreshed');
+    } catch (err) {
+      if (isAuthError(err)) {
+        // Clear user data if authentication failed
+        setUser(null);
+        setCurrentOrganization(null);
+        setOrganizations([]);
+        setUserRole(null);
+        clearStoredUserData();
+      }
+      console.error('Failed to refresh user:', parseAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []); // ✅ FIXED: No dependencies needed, all state setters are stable
 
   // ✅ Login function - no organization context in JWT
   const login = useCallback(async (credentials: LoginRequest) => {
@@ -219,7 +264,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Refresh user data to get updated organizations list
       await refreshUser();
       
-      console.log('Successfully joined organization:', response.organization.name);
+      console.log('Successfully joined organization:', response.organization?.name);
       return response;
     } catch (err) {
       const errorMessage = parseAuthError(err);
@@ -229,48 +274,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  // ✅ Refresh user data with optional organization context
-  const refreshUser = useCallback(async (orgSlug?: string) => {
-    try {
-      setLoading(true);
-      const data = await getCurrentUser(orgSlug);
-      
-      setUser(data.user);
-      setOrganizations(data.organizations);
-      
-      if (data.currentOrganization) {
-        setCurrentOrganization(data.currentOrganization);
-        // Find user's role in current organization
-        const currentOrgUser = data.organizations.find(
-          org => org.organizationId === data.currentOrganization?.id
-        );
-        if (currentOrgUser) {
-          setUserRole(currentOrgUser.role);
-        }
-      } else {
-        setCurrentOrganization(null);
-        setUserRole(null);
-      }
-      
-      storeUserData(data.user);
-      
-      console.log('User data refreshed');
-    } catch (err) {
-      if (isAuthError(err)) {
-        // Clear user data if authentication failed
-        setUser(null);
-        setCurrentOrganization(null);
-        setOrganizations([]);
-        setUserRole(null);
-        clearStoredUserData();
-      }
-      console.error('Failed to refresh user:', parseAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  }, [refreshUser]); // ✅ FIXED: Include refreshUser dependency
 
   // Initialize authentication state
   useEffect(() => {

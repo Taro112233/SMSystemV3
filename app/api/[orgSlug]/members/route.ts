@@ -6,6 +6,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 
+// ✅ Define interfaces for type safety
+interface OrganizationUserWithUser {
+  id: string;
+  organizationId: string;
+  userId: string;
+  roles: string;
+  isOwner: boolean;
+  joinedAt: Date;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string | null;
+    phone: string | null;
+    username: string;
+  };
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -60,13 +78,13 @@ export async function GET(
         { roles: 'desc' },
         { joinedAt: 'asc' },
       ],
-    });
+    }) as OrganizationUserWithUser[];
 
     // ❌ NO AUDIT LOG - GET/Read operations are not logged
     
     return NextResponse.json({
       success: true,
-      members: members.map((member: any) => ({
+      members: members.map((member) => ({
         id: member.id,
         userId: member.userId,
         role: member.roles,

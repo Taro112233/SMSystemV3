@@ -14,10 +14,21 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Home, Calendar, Bell, Settings, Users, BarChart3 } from 'lucide-react';
+import type { FrontendDepartment } from '@/lib/department-helpers';
+
+interface OrganizationData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  logo: string;
+  color: string;
+  userRole: string;
+}
 
 interface DashboardHeaderProps {
-  organization: any;
-  selectedDepartment?: any;
+  organization: OrganizationData;
+  selectedDepartment?: FrontendDepartment | null;
 }
 
 // ✅ Reserved org-level pages (from middleware.ts)

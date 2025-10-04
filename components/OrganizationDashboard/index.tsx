@@ -7,12 +7,54 @@ import { OrganizationPerformance } from './OrganizationPerformance';
 import { OrganizationStats } from './OrganizationStats';
 import { QuickActions } from './QuickActions';
 import { RecentActivity } from './RecentActivity';
+import type { LucideIcon } from 'lucide-react';
+
+// ✅ NEW: Proper type definitions
+interface OrganizationStats {
+  totalProducts?: number;
+  lowStockItems?: number;
+  pendingTransfers?: number;
+  activeUsers?: number;
+  totalValue?: string;
+  departments?: number;
+}
+
+interface Department {
+  id: string;
+  name: string;
+  color?: string;
+  icon?: string | LucideIcon | { name?: string; type?: { name?: string } };
+  notifications?: number;
+  stockItems?: number;
+  memberCount?: number;
+  lowStock?: number;
+}
+
+interface Activity {
+  id: number | string;
+  type: string;
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  time: string;
+  status: string;
+  user: string;
+}
+
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  stats?: OrganizationStats;
+  // Add other organization fields as needed
+}
 
 interface OrganizationOverviewProps {
-  organization: any;
-  departments: any[];
-  recentActivities: any[];
-  onSelectDepartment: (dept: any) => void;
+  organization: Organization;
+  departments: Department[];
+  recentActivities: Activity[];
+  onSelectDepartment: (dept: Department) => void;
 }
 
 export const OrganizationOverview = ({

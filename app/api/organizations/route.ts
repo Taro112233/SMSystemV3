@@ -262,14 +262,14 @@ export async function POST(request: NextRequest) {
 }
 
 // ===== PATCH - Update organization (for completeness) =====
-export async function PATCH(request: NextRequest) {
+export async function PATCH() {
   return NextResponse.json({
     error: "Use PATCH /api/organizations/[orgId] for updates"
   }, { status: 405 });
 }
 
 // ===== DELETE - Not allowed at organization level =====
-export async function DELETE(request: NextRequest) {
+export async function DELETE() {
   return NextResponse.json({
     error: "Use DELETE /api/organizations/[orgId] for deletion"
   }, { status: 405 });

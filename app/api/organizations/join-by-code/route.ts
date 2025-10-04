@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!organization) {
-      // ✅ Log failed join attempt
-      const { ipAddress, userAgent } = getRequestMetadata(request);
+      // ✅ Log failed join attempt with IP only (userAgent ไม่จำเป็นต้องใช้)
+      const { ipAddress } = getRequestMetadata(request);
       
       console.log(`❌ Invalid invite code attempt: ${inviteCode} by user: ${user.userId} from IP: ${ipAddress}`);
       

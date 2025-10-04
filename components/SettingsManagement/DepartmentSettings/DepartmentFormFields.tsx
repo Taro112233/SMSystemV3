@@ -1,7 +1,4 @@
-// FILE: components/SettingsManagement/DepartmentSettings/DepartmentFormFields.tsx
-// DepartmentSettings/DepartmentFormFields - Extracted form fields with URL Preview
-// ============================================
-
+// components/SettingsManagement/DepartmentSettings/DepartmentFormFields.tsx
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,18 +14,21 @@ import {
 import { Link2 } from 'lucide-react';
 import { getAvailableColors, getAvailableIcons } from '@/lib/department-helpers';
 
+// ✅ เพิ่ม interface สำหรับ FormData
+interface DepartmentFormData {
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+  icon: string;
+  isActive: boolean;
+}
+
 interface DepartmentFormFieldsProps {
-  formData: {
-    name: string;
-    slug: string;
-    description: string;
-    color: string;
-    icon: string;
-    isActive: boolean;
-  };
-  setFormData: React.Dispatch<React.SetStateAction<any>>;
+  formData: DepartmentFormData;
+  setFormData: React.Dispatch<React.SetStateAction<DepartmentFormData>>; // ✅ เปลี่ยนจาก any
   isEditing: boolean;
-  organizationSlug?: string; // ✅ NEW: For URL generation
+  organizationSlug?: string;
 }
 
 export const DepartmentFormFields = ({
@@ -42,10 +42,9 @@ export const DepartmentFormFields = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({
+    setFormData((prev) => ({ // ✅ ลบ any type
       ...prev,
       [name]: value,
-      // Auto-generate slug from name if creating new department
       ...(name === 'name' && !isEditing ? {
         slug: value
           .toLowerCase()
@@ -56,33 +55,29 @@ export const DepartmentFormFields = ({
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev: any) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value })); // ✅ ลบ any type
   };
 
   const handleSwitchChange = (checked: boolean) => {
-    setFormData((prev: any) => ({ ...prev, isActive: checked }));
+    setFormData((prev) => ({ ...prev, isActive: checked })); // ✅ ลบ any type
   };
 
-  // ✅ NEW: Generate example URL from slug
   const getExampleUrl = () => {
     const baseUrl = typeof window !== 'undefined' 
       ? window.location.origin 
       : 'http://localhost:3000';
     
-    // Use organizationSlug from props or extract from current URL
     const orgSlug = organizationSlug || 
       (typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : 'your-org');
     
     return `${baseUrl}/${orgSlug}/${formData.slug || 'department-slug'}`;
   };
 
-  // Get selected color class for preview
   const selectedColor = colors.find(c => c.value === formData.color);
   const SelectedIcon = icons.find(i => i.value === formData.icon)?.component;
 
   return (
     <>
-      {/* Preview Card */}
       <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <div className="text-sm text-gray-600 mb-2">ตัวอย่าง:</div>
         <div className="flex items-center gap-3">
@@ -100,7 +95,6 @@ export const DepartmentFormFields = ({
         </div>
       </div>
 
-      {/* Department Name */}
       <div className="space-y-2">
         <Label htmlFor="name">ชื่อหน่วยงาน *</Label>
         <Input
@@ -113,7 +107,6 @@ export const DepartmentFormFields = ({
         />
       </div>
 
-      {/* Slug with URL Preview */}
       <div className="space-y-2">
         <Label htmlFor="slug">Slug *</Label>
         <Input
@@ -126,7 +119,6 @@ export const DepartmentFormFields = ({
           required
         />
         
-        {/* ✅ NEW: URL Preview - แสดงตัวอย่าง URL จริง */}
         <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <Link2 className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -144,7 +136,6 @@ export const DepartmentFormFields = ({
         </p>
       </div>
 
-      {/* Description */}
       <div className="space-y-2">
         <Label htmlFor="description">คำอธิบาย</Label>
         <Textarea
@@ -157,9 +148,7 @@ export const DepartmentFormFields = ({
         />
       </div>
 
-      {/* Color and Icon Row */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Color */}
         <div className="space-y-2">
           <Label htmlFor="color">สี</Label>
           <Select
@@ -182,7 +171,6 @@ export const DepartmentFormFields = ({
           </Select>
         </div>
 
-        {/* Icon */}
         <div className="space-y-2">
           <Label htmlFor="icon">ไอคอน</Label>
           <Select
@@ -209,7 +197,6 @@ export const DepartmentFormFields = ({
         </div>
       </div>
 
-      {/* Active Status */}
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div className="space-y-1">
           <div className="font-medium">เปิดใช้งานหน่วยงาน</div>

@@ -1,7 +1,4 @@
-// FILE: components/SettingsManagement/DepartmentSettings/DepartmentFormModal.tsx
-// DepartmentSettings/DepartmentFormModal - Modal wrapper with organizationSlug
-// ============================================
-
+// components/SettingsManagement/DepartmentSettings/DepartmentFormModal.tsx
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -15,33 +12,47 @@ import { Button } from '@/components/ui/button';
 import { Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 
+// ✅ เพิ่ม interface สำหรับ Department
+interface Department {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive: boolean;
+}
+
+// ✅ เพิ่ม interface สำหรับ FormData
+interface DepartmentFormData {
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+  icon: string;
+  isActive: boolean;
+  organizationId?: string;
+}
+
 interface DepartmentFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   organizationId: string;
-  organizationSlug?: string; // ✅ NEW: For URL preview
-  department?: {
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    color?: string;
-    icon?: string;
-    isActive: boolean;
-  };
-  onSubmit: (data: any) => Promise<void>;
+  organizationSlug?: string;
+  department?: Department;
+  onSubmit: (data: DepartmentFormData) => Promise<void>; // ✅ เปลี่ยนจาก any
 }
 
 export const DepartmentFormModal = ({
   open,
   onOpenChange,
   organizationId,
-  organizationSlug, // ✅ NEW
+  organizationSlug,
   department,
   onSubmit,
 }: DepartmentFormModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<DepartmentFormData>({ // ✅ เพิ่ม type
     name: department?.name || '',
     slug: department?.slug || '',
     description: department?.description || '',
@@ -50,7 +61,6 @@ export const DepartmentFormModal = ({
     isActive: department?.isActive ?? true,
   });
 
-  // Reset form when department changes or modal opens
   React.useEffect(() => {
     if (open) {
       setFormData({
@@ -126,7 +136,6 @@ export const DepartmentFormModal = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          {/* Form Fields - ✅ Pass organizationSlug */}
           <DepartmentFormFields
             formData={formData}
             setFormData={setFormData}
@@ -134,7 +143,6 @@ export const DepartmentFormModal = ({
             organizationSlug={organizationSlug}
           />
 
-          {/* Action Buttons */}
           <div className="flex gap-2 pt-4 border-t">
             <Button
               type="button"

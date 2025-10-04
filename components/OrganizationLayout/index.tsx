@@ -6,13 +6,31 @@ import { SidebarHeader } from './SidebarHeader';
 import { SidebarNavigation } from './SidebarNavigation';
 import { DepartmentList } from './DepartmentList';
 import { SidebarFooter } from './SidebarFooter';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import type { FrontendDepartment } from '@/lib/department-helpers';
+
+interface OrganizationData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  logo: string;
+  color: string;
+  userRole: string;
+  stats: {
+    totalProducts: number;
+    lowStockItems: number;
+    pendingTransfers: number;
+    activeUsers: number;
+    totalValue: string;
+    departments: number;
+  };
+}
 
 interface DashboardSidebarProps {
-  organization: any;
-  departments: any[];
-  selectedDepartment: any;
-  onSelectDepartment: (dept: any) => void;
+  organization: OrganizationData;
+  departments: FrontendDepartment[];
+  selectedDepartment: FrontendDepartment | null;
+  onSelectDepartment: (dept: FrontendDepartment) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
   searchTerm: string;
