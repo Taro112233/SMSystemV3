@@ -1,14 +1,17 @@
-// app/[orgSlug]/page.tsx - Updated Organization Page (Real Data Only) - FIXED TYPES
+// app/[orgSlug]/page.tsx - UPDATED with Real Audit Logs for Recent Activity
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { OrganizationOverview } from '@/components/OrganizationDashboard';
 import { transformDepartmentData, type FrontendDepartment } from '@/lib/department-helpers';
+import { transformAuditLogsToActivities, type AuditLog } from '@/lib/audit-helpers';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// ✅ FIXED: Define proper types matching OrganizationOverview component
+// ✅ Types matching backend API responses
+import type { ActivityItem } from '@/components/OrganizationDashboard/RecentActivity';
+
 interface OrganizationStats {
   totalProducts: number;
   lowStockItems: number;
@@ -29,22 +32,10 @@ interface OrganizationData {
   stats: OrganizationStats;
 }
 
-// ✅ FIXED: Match EXACT Activity interface from OrganizationOverview component
-interface Activity {
-  id: string;
-  type: string;           // ✅ Required field
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  time: string;
-  status: 'success' | 'warning' | 'info' | 'error';
-  user?: string;
-}
-
 interface OrganizationPageData {
   organization: OrganizationData;
   departments: FrontendDepartment[];
-  recentActivities: Activity[]; // ✅ FIXED: Use Activity type
+  recentActivities: ActivityItem[];
 }
 
 export default function OrganizationPage() {
@@ -63,33 +54,55 @@ export default function OrganizationPage() {
 
         console.log('🔍 Loading organization page data for:', orgSlug);
 
-        // Load organization and departments data
-        const response = await fetch(`/api/${orgSlug}`, {
+        // ✅ 1. Load organization and departments data
+        const orgResponse = await fetch(`/api/${orgSlug}`, {
           credentials: 'include',
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to load organization data: ${response.status}`);
+        if (!orgResponse.ok) {
+          throw new Error(`Failed to load organization data: ${orgResponse.status}`);
         }
 
-        const data = await response.json();
+        const orgData = await orgResponse.json();
         
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to load organization data');
+        if (!orgData.success) {
+          throw new Error(orgData.error || 'Failed to load organization data');
         }
 
-        // Transform departments for frontend with proper typing
-        const transformedDepartments: FrontendDepartment[] = data.departments.map(transformDepartmentData);
+        // ✅ 2. Load recent audit logs (async, non-blocking)
+        let recentActivities: ActivityItem[] = [];
+        try {
+          const auditResponse = await fetch(`/api/${orgSlug}/audit-logs?limit=20`, {
+            credentials: 'include',
+          });
+
+          if (auditResponse.ok) {
+            const auditData = await auditResponse.json();
+            if (auditData.success && auditData.logs) {
+              // Transform audit logs to activities
+              recentActivities = transformAuditLogsToActivities(auditData.logs as AuditLog[]);
+              console.log(`✅ Loaded ${recentActivities.length} recent activities`);
+            }
+          } else {
+            console.warn('Failed to load audit logs, showing empty activities');
+          }
+        } catch (auditError) {
+          console.warn('Audit logs not available:', auditError);
+          // Continue without activities - not critical
+        }
+
+        // Transform departments for frontend
+        const transformedDepartments: FrontendDepartment[] = orgData.departments.map(transformDepartmentData);
         
-        // Create organization object with calculated stats (proper typing)
+        // Create organization object with calculated stats
         const organization: OrganizationData = {
-          id: data.organization.id,
-          name: data.organization.name,
-          slug: data.organization.slug,
-          description: data.organization.description || `องค์กร ${data.organization.name}`,
-          logo: data.organization.name.substring(0, 2).toUpperCase(),
+          id: orgData.organization.id,
+          name: orgData.organization.name,
+          slug: orgData.organization.slug,
+          description: orgData.organization.description || `องค์กร ${orgData.organization.name}`,
+          logo: orgData.organization.name.substring(0, 2).toUpperCase(),
           color: 'bg-blue-500',
-          userRole: data.userRole || 'MEMBER',
+          userRole: orgData.userRole || 'MEMBER',
           stats: {
             totalProducts: transformedDepartments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.stockItems, 0),
             lowStockItems: transformedDepartments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.lowStock, 0),
@@ -100,13 +113,10 @@ export default function OrganizationPage() {
           }
         };
 
-        // Empty recent activities array - will be populated from audit log API later
-        const recentActivities: Activity[] = [];
-
         setPageData({
           organization,
           departments: transformedDepartments,
-          recentActivities
+          recentActivities // ✅ Real data from audit logs
         });
 
         console.log('✅ Organization page data loaded');
