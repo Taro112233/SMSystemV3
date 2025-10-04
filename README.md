@@ -27,6 +27,8 @@ Directory structure:
     │   ├── api/
     │   │   ├── [orgSlug]/
     │   │   │   ├── route.ts
+    │   │   │   ├── audit-logs/
+    │   │   │   │   └── route.ts
     │   │   │   ├── departments/
     │   │   │   │   ├── route.ts
     │   │   │   │   └── [deptId]/
@@ -171,6 +173,7 @@ Directory structure:
     │   ├── use-mobile.ts
     │   └── use-org-access.ts
     ├── lib/
+    │   ├── audit-helpers.ts
     │   ├── audit-logger.ts
     │   ├── auth-server.ts
     │   ├── auth.ts
