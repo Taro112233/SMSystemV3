@@ -171,11 +171,11 @@ Directory structure:
     │   ├── use-mobile.ts
     │   └── use-org-access.ts
     ├── lib/
+    │   ├── audit-logger.ts
     │   ├── auth-server.ts
     │   ├── auth.ts
     │   ├── config.ts
     │   ├── department-helpers.ts
-    │   ├── invite-code.ts
     │   ├── prisma.ts
     │   ├── role-helpers.ts
     │   ├── security-logger.ts
