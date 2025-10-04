@@ -88,6 +88,9 @@ model Department {
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
   
+  // ✅ FIXED: Audit Log Relation
+  auditLogs      AuditLog[]
+  
   @@unique([organizationId, slug])
   @@index([parentId])
   @@index([isActive])

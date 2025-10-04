@@ -504,6 +504,114 @@ export async function GET(
 }
 ```
 
+### 📊 Audit Log System
+
+#### **Schema Overview**
+```prisma
+model AuditLog {
+  id             String        @id @default(cuid())
+  organizationId String
+  userId         String?       // ผู้ทำ action
+  targetUserId   String?       // ผู้ถูกกระทำ (optional)
+  departmentId   String?       // หน่วยงานที่เกี่ยวข้อง
+  
+  action         String        // "products.create"
+  category       AuditCategory // PRODUCT, STOCK, TRANSFER, USER, ORG
+  severity       AuditSeverity // INFO, WARNING, CRITICAL
+  description    String        // "สมชาย สร้างสินค้า Paracetamol ที่คลังยา"
+  
+  resourceId     String?
+  resourceType   String?
+  payload        Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+}
+```
+
+#### **When to Log Audit**
+```typescript
+// ✅ Log these actions:
+- CREATE, UPDATE, DELETE operations (NOT Read)
+- Permission changes (role updates, member removal)
+- Critical operations (approve transfer, delete department)
+- Authentication events (login, failed attempts)
+
+// ❌ Don't log:
+- GET/Read operations
+- Health checks
+- Static asset requests
+```
+
+#### **Severity Guidelines**
+```typescript
+INFO      // Normal operations (90%) - สร้าง/แก้ไข/ตรวจนับ
+WARNING   // Important changes (8%) - เปลี่ยนบทบาท, ลบข้อมูล
+CRITICAL  // Security events (2%) - ลบสมาชิก, login failed
+```
+
+#### **Usage Pattern**
+```typescript
+import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
+
+// In API routes
+const { ipAddress, userAgent } = getRequestMetadata(request);
+
+await createAuditLog({
+  organizationId: access.organizationId,
+  userId: user.userId,
+  departmentId: department?.id,        // ✅ ถ้ามี dept context
+  action: 'products.create',
+  category: 'PRODUCT',
+  severity: 'INFO',
+  description: `สร้างสินค้า ${product.name} ที่${department.name}`,
+  resourceId: product.id,
+  resourceType: 'Product',
+  payload: { productName: product.name },
+  ipAddress,
+  userAgent,
+});
+```
+
+#### **Action Naming Convention**
+```typescript
+// Pattern: {resource}.{operation}
+'products.create'
+'products.update'
+'products.delete'
+'departments.create'
+'members.role_updated'
+'members.removed'
+'stocks.adjust'
+'transfers.create'
+'transfers.approve'
+'organization.settings_updated'
+```
+
+#### **Department Context Rule**
+```typescript
+// ✅ Include departmentId when:
+- Action happens in specific department
+- Resource belongs to department
+- Example: สร้างสินค้าที่คลังยา, ตรวจนับที่ OPD
+
+// ❌ departmentId = null when:
+- Organization-level actions
+- Example: สร้างหน่วยงาน, เปลี่ยนบทบาทสมาชิก
+```
+
+#### **Helper Functions Available**
+```typescript
+// lib/audit-logger.ts
+createAuditLog(params)              // Create audit log
+getRequestMetadata(request)         // Get IP + User-Agent
+getOrganizationAuditLogs(orgId)     // Get org logs
+getDepartmentAuditLogs(deptId)      // Get dept logs
+getCriticalAuditLogs(orgId)         // Get CRITICAL only
+```
+
+---
+
 ### **Component Architecture**
 ```typescript
 // ✅ Permission-aware components

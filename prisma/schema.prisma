@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-10-03T18:34:07.188Z
+// Last generated: 2025-10-04T07:29:39.422Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -124,7 +124,10 @@ model User {
   
   // Relations
   organizationUsers   OrganizationUser[]
-  auditLogs          AuditLog[]
+  
+  // ✅ FIXED: Audit Log Relations
+  auditLogsAsUser     AuditLog[] @relation("AuditLogUser")
+  auditLogsAsTarget   AuditLog[] @relation("AuditLogTarget")
   
   @@index([email])
   @@index([username])
@@ -227,6 +230,9 @@ model Department {
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
   
+  // ✅ FIXED: Audit Log Relation
+  auditLogs      AuditLog[]
+  
   @@unique([organizationId, slug])
   @@index([parentId])
   @@index([isActive])
@@ -238,31 +244,71 @@ model Department {
 // ==========================================
 
 // prisma/schemas/audit.prisma
-// ===== STREAMLINED AUDIT SYSTEM - InvenStock V2.0 =====
+// ===== PRODUCTION-READY AUDIT SYSTEM - InvenStock V2.0 =====
 
-// Single Audit Model - Hybrid Approach
 model AuditLog {
-  id             String @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
-  userId         String?
   
-  // Action Tracking (Dot Notation)
-  action         String      // "products.create", "transfers.approve", "users.login"
-  resourceId     String?     // ID of affected record
+  // Actor & Target
+  userId         String?       // ผู้ทำ action
+  targetUserId   String?       // ผู้ถูกกระทำ (optional)
   
-  // Smart Payload Storage
-  payload        Json?       // Context-aware data based on action type
+  // Department Context
+  departmentId   String?       // หน่วยงานที่เกี่ยวข้อง
+  
+  // Action Classification
+  action         String        // "products.create"
+  category       AuditCategory // PRODUCT, STOCK, TRANSFER, USER, ORG
+  severity       AuditSeverity @default(INFO)
+  
+  // Human-Readable
+  description    String        // "สมชาย สร้างสินค้า Paracetamol ที่คลังยา"
+  
+  // Resource Tracking
+  resourceId     String?       // ID ของ record
+  resourceType   String?       // "Product", "Stock", "Transfer"
+  
+  // Detailed Data
+  payload        Json?         // { before, after, metadata }
+  
+  // Request Context
+  ipAddress      String?
+  userAgent      String?       // Browser/device info
   
   // Timestamp
   createdAt      DateTime @default(now())
   
   // Relations
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User? @relation(fields: [userId], references: [id])
+  user           User? @relation("AuditLogUser", fields: [userId], references: [id], onDelete: SetNull)
+  targetUser     User? @relation("AuditLogTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   
   // Optimized Indexes
-  @@index([organizationId, createdAt])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([departmentId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
   @@index([action])
+  @@index([category, severity])
   @@index([resourceId])
   @@map("audit_logs")
+}
+
+// Enums
+enum AuditCategory {
+  PRODUCT       // สินค้า
+  STOCK         // สต็อก
+  TRANSFER      // การโอนย้าย
+  USER          // ผู้ใช้
+  ORGANIZATION  // องค์กร
+  DEPARTMENT    // หน่วยงาน
+  AUTH          // Authentication
+  SYSTEM        // ระบบ
+}
+
+enum AuditSeverity {
+  INFO          // ปกติ (90%)
+  WARNING       // สำคัญ (8%)
+  CRITICAL      // วิกฤติ (2%)
 }
