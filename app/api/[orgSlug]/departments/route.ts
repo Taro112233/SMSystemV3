@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 
 // GET - List all departments (including inactive)
 export async function GET(
@@ -32,14 +33,13 @@ export async function GET(
       );
     }
 
-    // ✅ UPDATED: Get ALL departments (no isActive filter)
+    // Get ALL departments (no isActive filter)
     const departments = await prisma.department.findMany({
       where: {
         organizationId: access.organizationId,
-        // ✅ ไม่กรอง isActive เพื่อให้ Settings แสดงทั้งหมด
       },
       orderBy: [
-        { isActive: 'desc' }, // Active ขึ้นก่อน
+        { isActive: 'desc' },
         { name: 'asc' }
       ],
     });
@@ -131,7 +131,7 @@ export async function POST(
       );
     }
 
-    // ✅ FIXED: Create department with createdBy field
+    // Create department
     const department = await prisma.department.create({
       data: {
         organizationId: access.organizationId,
@@ -141,22 +141,29 @@ export async function POST(
         color: color || 'BLUE',
         icon: icon || 'BUILDING',
         isActive: isActive ?? true,
-        createdBy: user.userId, // ✅ ADDED
+        createdBy: user.userId,
       },
     });
 
-    // ✅ FIXED: Create audit log without entityType
-    await prisma.auditLog.create({
-      data: {
-        organizationId: access.organizationId,
-        userId: user.userId,
-        action: 'departments.create',
-        resourceId: department.id,
-        payload: {
-          departmentName: name,
-          departmentSlug: slug,
-        },
+    // ✅ Create audit log
+    const { ipAddress, userAgent } = getRequestMetadata(request);
+    
+    await createAuditLog({
+      organizationId: access.organizationId,
+      userId: user.userId,
+      departmentId: department.id,
+      action: 'departments.create',
+      category: 'DEPARTMENT',
+      severity: 'INFO',
+      description: `สร้างหน่วยงาน ${department.name}`,
+      resourceId: department.id,
+      resourceType: 'Department',
+      payload: {
+        departmentName: name,
+        departmentSlug: slug,
       },
+      ipAddress,
+      userAgent,
     });
 
     return NextResponse.json({

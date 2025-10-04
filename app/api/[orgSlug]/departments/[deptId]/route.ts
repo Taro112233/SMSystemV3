@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 
 // GET - Get specific department
 export async function GET(
@@ -163,17 +164,39 @@ export async function PATCH(
       },
     });
 
-    // ✅ FIXED: Create audit log without entityType
-    await prisma.auditLog.create({
-      data: {
-        organizationId: access.organizationId,
-        userId: user.userId,
-        action: 'departments.update',
-        resourceId: deptId,
-        payload: {
-          changes: { name, slug, description, color, icon, isActive },
+    // ✅ Create audit log
+    const { ipAddress, userAgent } = getRequestMetadata(request);
+    
+    await createAuditLog({
+      organizationId: access.organizationId,
+      userId: user.userId,
+      departmentId: deptId,
+      action: 'departments.update',
+      category: 'DEPARTMENT',
+      severity: 'INFO',
+      description: `แก้ไขหน่วยงาน ${updatedDept.name}`,
+      resourceId: deptId,
+      resourceType: 'Department',
+      payload: {
+        before: {
+          name: existingDept.name,
+          slug: existingDept.slug,
+          description: existingDept.description,
+          color: existingDept.color,
+          icon: existingDept.icon,
+          isActive: existingDept.isActive,
+        },
+        after: {
+          name: updatedDept.name,
+          slug: updatedDept.slug,
+          description: updatedDept.description,
+          color: updatedDept.color,
+          icon: updatedDept.icon,
+          isActive: updatedDept.isActive,
         },
       },
+      ipAddress,
+      userAgent,
     });
 
     return NextResponse.json({
@@ -239,21 +262,6 @@ export async function DELETE(
       );
     }
 
-    // ✅ FIXED: Check if department has stocks (when Stock model exists)
-    // Note: Uncomment this when Stock model is available
-    /*
-    const hasStocks = await prisma.stock.count({
-      where: { departmentId: deptId },
-    });
-
-    if (hasStocks > 0) {
-      return NextResponse.json(
-        { error: 'Cannot delete department with existing stock records' },
-        { status: 400 }
-      );
-    }
-    */
-
     // Delete department
     await prisma.department.delete({
       where: {
@@ -261,18 +269,24 @@ export async function DELETE(
       },
     });
 
-    // ✅ FIXED: Create audit log without entityType
-    await prisma.auditLog.create({
-      data: {
-        organizationId: access.organizationId,
-        userId: user.userId,
-        action: 'departments.delete',
-        resourceId: deptId,
-        payload: {
-          departmentName: department.name,
-          departmentSlug: department.slug,
-        },
+    // ✅ Create audit log
+    const { ipAddress, userAgent } = getRequestMetadata(request);
+    
+    await createAuditLog({
+      organizationId: access.organizationId,
+      userId: user.userId,
+      action: 'departments.delete',
+      category: 'DEPARTMENT',
+      severity: 'WARNING',
+      description: `ลบหน่วยงาน ${department.name}`,
+      resourceId: deptId,
+      resourceType: 'Department',
+      payload: {
+        departmentName: department.name,
+        departmentSlug: department.slug,
       },
+      ipAddress,
+      userAgent,
     });
 
     return NextResponse.json({

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { isValidRole, canChangeRole, MAX_ADMINS, type OrganizationRole } from '@/lib/role-helpers';
+import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 
 export async function PATCH(
   request: NextRequest,
@@ -27,12 +28,12 @@ export async function PATCH(
     const body = await request.json();
     const { role } = body;
 
-    // ✅ FIXED: Validate role using centralized helper
+    // Validate role using centralized helper
     if (!isValidRole(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
-    // ✅ FIXED: Use transaction to prevent race conditions
+    // Use transaction to prevent race conditions
     const result = await prisma.$transaction(async (tx) => {
       // Get target member's current role
       const targetMember = await tx.organizationUser.findFirst({
@@ -50,17 +51,17 @@ export async function PATCH(
 
       const currentRole = targetMember.roles as OrganizationRole;
 
-      // ✅ FIXED: Check if manager can change this role
+      // Check if manager can change this role
       if (!canChangeRole(access.role as OrganizationRole, currentRole, role)) {
         throw new Error(`You don't have permission to change ${currentRole} to ${role}`);
       }
 
-      // ✅ NEW: Prevent ADMIN from changing their own role
+      // Prevent ADMIN from changing their own role
       if (access.role === 'ADMIN' && userId === user.userId) {
         throw new Error('Cannot change your own role. Ask another ADMIN or OWNER.');
       }
 
-      // ✅ NEW: If demoting an OWNER, check if there are other OWNERs
+      // If demoting an OWNER, check if there are other OWNERs
       if (currentRole === 'OWNER' && role !== 'OWNER') {
         const otherOwnerCount = await tx.organizationUser.count({
           where: { 
@@ -76,12 +77,12 @@ export async function PATCH(
         }
       }
 
-      // ✅ NEW: If OWNER is trying to demote themselves
+      // If OWNER is trying to demote themselves
       if (userId === user.userId && currentRole === 'OWNER' && role !== 'OWNER') {
         throw new Error('Cannot demote yourself. Ask another OWNER to change your role.');
       }
 
-      // ✅ NEW: Check ADMIN quota limit
+      // Check ADMIN quota limit
       if (role === 'ADMIN' && currentRole !== 'ADMIN') {
         const adminCount = await tx.organizationUser.count({
           where: { 
@@ -112,22 +113,27 @@ export async function PATCH(
         },
       });
 
-      // ✅ FIXED: Create audit log with oldRole
-      await tx.auditLog.create({
-        data: {
-          organizationId: access.organizationId,
-          userId: user.userId,
-          action: 'members.role_updated',
-          resourceId: updatedMember.id,
-          payload: {
-            targetUserId: userId,
-            targetUserName: `${updatedMember.user.firstName} ${updatedMember.user.lastName}`,
-            oldRole: currentRole, // ✅ บันทึก oldRole
-            newRole: role,
-            changedBy: user.userId,
-            timestamp: new Date().toISOString(),
-          },
+      // ✅ Create audit log
+      const { ipAddress, userAgent } = getRequestMetadata(request);
+      
+      await createAuditLog({
+        organizationId: access.organizationId,
+        userId: user.userId,
+        targetUserId: userId,
+        action: 'members.role_updated',
+        category: 'USER',
+        severity: 'WARNING',
+        description: `เปลี่ยนบทบาท ${updatedMember.user.firstName} ${updatedMember.user.lastName} จาก ${currentRole} เป็น ${role}`,
+        resourceId: updatedMember.id,
+        resourceType: 'OrganizationUser',
+        payload: {
+          targetUserName: `${updatedMember.user.firstName} ${updatedMember.user.lastName}`,
+          targetUserEmail: updatedMember.user.email,
+          oldRole: currentRole,
+          newRole: role,
         },
+        ipAddress,
+        userAgent,
       });
 
       return updatedMember;

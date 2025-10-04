@@ -1,5 +1,5 @@
 // FILE: app/api/[orgSlug]/members/route.ts
-// Members API - Get all organization members
+// Members API - Get all organization members (NO AUDIT LOG - READ ONLY)
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -39,7 +39,7 @@ export async function GET(
       );
     }
 
-    // ✅ FIXED: Get all members using organizationUser
+    // Get all members using organizationUser
     const members = await prisma.organizationUser.findMany({
       where: {
         organizationId: access.organizationId,
@@ -62,13 +62,14 @@ export async function GET(
       ],
     });
 
-    // ✅ FIXED: Map response with correct field names
+    // ❌ NO AUDIT LOG - GET/Read operations are not logged
+    
     return NextResponse.json({
       success: true,
       members: members.map((member: any) => ({
         id: member.id,
         userId: member.userId,
-        role: member.roles, // ✅ Map 'roles' to 'role'
+        role: member.roles,
         joinedAt: member.joinedAt,
         user: member.user,
       })),

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerUser } from '@/lib/auth-server';
 import { z } from 'zod';
 import arcjet, { shield, tokenBucket } from "@arcjet/next";
+import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 
 // ===== ARCJET SECURITY =====
 const aj = arcjet({
@@ -30,7 +31,6 @@ const CreateOrganizationSchema = z.object({
   email: z.string().email().max(255).optional().or(z.literal('')),
   phone: z.string().max(20).optional().or(z.literal('')),
   timezone: z.string().max(50).default('Asia/Bangkok'),
-  // ❌ REMOVED: allowDepartments (doesn't exist in new schema)
 });
 
 interface ValidationError {
@@ -38,7 +38,7 @@ interface ValidationError {
   message: string;
 }
 
-// ===== GET - List user's organizations =====
+// ===== GET - List user's organizations (NO AUDIT LOG - READ ONLY) =====
 export async function GET(request: NextRequest) {
   try {
     // Security check
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // ✅ FIXED: Updated organization select to match new schema
+    // Updated organization select to match new schema
     const organizationUsers = await prisma.organizationUser.findMany({
       where: {
         userId: user.userId,
@@ -70,11 +70,10 @@ export async function GET(request: NextRequest) {
             phone: true,
             status: true,
             timezone: true,
-            inviteCode: true,      // ✅ new field
-            inviteEnabled: true,   // ✅ new field
+            inviteCode: true,
+            inviteEnabled: true,
             createdAt: true,
             updatedAt: true,
-            // ❌ REMOVED: allowDepartments (doesn't exist)
           }
         }
       },
@@ -90,6 +89,8 @@ export async function GET(request: NextRequest) {
       isOwner: orgUser.isOwner,
       joinedAt: orgUser.joinedAt,
     }));
+
+    // ❌ NO AUDIT LOG - GET/Read operations are not logged
 
     return NextResponse.json({
       success: true,
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     // Create organization with transaction
     const result = await prisma.$transaction(async (tx) => {
-      // ✅ FIXED: Create organization with new schema fields
+      // Create organization with new schema fields
       const organization = await tx.organization.create({
         data: {
           name: name.trim(),
@@ -168,10 +169,7 @@ export async function POST(request: NextRequest) {
           phone: phone?.trim() || null,
           status: 'ACTIVE',
           timezone,
-          // ✅ NEW: Set default invite settings
           inviteEnabled: true,
-          // inviteCode will be generated later if needed
-          // ❌ REMOVED: allowDepartments (doesn't exist in new schema)
         },
         select: {
           id: true,
@@ -201,19 +199,25 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // Create audit log
-      await tx.auditLog.create({
-        data: {
-          organizationId: organization.id,
-          userId: user.userId,
-          action: 'organizations.create',
-          payload: {
-            organizationName: organization.name,
-            organizationSlug: organization.slug,
-            timestamp: new Date().toISOString(),
-            ip: request.headers.get('x-forwarded-for') || 'unknown'
-          }
-        }
+      // ✅ Create audit log with proper structure
+      const { ipAddress, userAgent } = getRequestMetadata(request);
+      
+      await createAuditLog({
+        organizationId: organization.id,
+        userId: user.userId,
+        action: 'organization.create',
+        category: 'ORGANIZATION',
+        severity: 'INFO',
+        description: `สร้างองค์กร ${organization.name}`,
+        resourceId: organization.id,
+        resourceType: 'Organization',
+        payload: {
+          organizationName: organization.name,
+          organizationSlug: organization.slug,
+          timezone: organization.timezone,
+        },
+        ipAddress,
+        userAgent,
       });
 
       return { organization, organizationUser };

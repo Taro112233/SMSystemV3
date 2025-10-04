@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { getRoleHierarchy, type OrganizationRole } from '@/lib/role-helpers';
+import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 
 export async function DELETE(
   request: NextRequest,
@@ -24,21 +25,19 @@ export async function DELETE(
       return NextResponse.json({ error: 'No access to organization' }, { status: 403 });
     }
 
-    // ✅ UPDATED: Check if user can delete based on hierarchy
-    // OWNER can delete ADMIN and MEMBER
-    // ADMIN can delete MEMBER
+    // Check if user can delete based on hierarchy
     if (!['OWNER', 'ADMIN'].includes(access.role)) {
       return NextResponse.json({ 
         error: 'Only OWNER or ADMIN can remove members' 
       }, { status: 403 });
     }
 
-    // ✅ Cannot delete yourself
+    // Cannot delete yourself
     if (userId === user.userId) {
       return NextResponse.json({ error: 'Cannot remove yourself' }, { status: 400 });
     }
 
-    // ✅ FIXED: Use transaction to prevent race condition
+    // Use transaction to prevent race condition
     await prisma.$transaction(async (tx) => {
       // Lock organization to prevent concurrent deletions
       await tx.organization.findUnique({
@@ -63,7 +62,7 @@ export async function DELETE(
       const targetRole = targetMember.roles as OrganizationRole;
       const managerRole = access.role as OrganizationRole;
 
-      // ✅ NEW: Check hierarchy - can only delete lower roles
+      // Check hierarchy - can only delete lower roles
       const managerLevel = getRoleHierarchy(managerRole);
       const targetLevel = getRoleHierarchy(targetRole);
 
@@ -71,7 +70,7 @@ export async function DELETE(
         throw new Error(`Cannot remove ${targetRole}. You can only remove members with lower roles.`);
       }
 
-      // ✅ Extra protection: If target is OWNER, check remaining OWNERs
+      // Extra protection: If target is OWNER, check remaining OWNERs
       if (targetRole === 'OWNER') {
         const remainingOwners = await tx.organizationUser.count({
           where: { 
@@ -97,23 +96,27 @@ export async function DELETE(
         },
       });
 
-      // Create audit log
-      await tx.auditLog.create({
-        data: {
-          organizationId: access.organizationId,
-          userId: user.userId,
-          action: 'members.removed',
-          resourceId: targetMember.id,
-          payload: {
-            removedUserId: userId,
-            removedUserName: `${targetMember.user.firstName} ${targetMember.user.lastName}`,
-            removedUserEmail: targetMember.user.email,
-            previousRole: targetMember.roles,
-            removedBy: user.userId,
-            removedByRole: access.role,
-            timestamp: new Date().toISOString(),
-          },
+      // ✅ Create audit log
+      const { ipAddress, userAgent } = getRequestMetadata(request);
+      
+      await createAuditLog({
+        organizationId: access.organizationId,
+        userId: user.userId,
+        targetUserId: userId,
+        action: 'members.removed',
+        category: 'USER',
+        severity: 'CRITICAL',
+        description: `ลบสมาชิก ${targetMember.user.firstName} ${targetMember.user.lastName} ออกจากองค์กร`,
+        resourceId: targetMember.id,
+        resourceType: 'OrganizationUser',
+        payload: {
+          removedUserName: `${targetMember.user.firstName} ${targetMember.user.lastName}`,
+          removedUserEmail: targetMember.user.email,
+          previousRole: targetMember.roles,
+          removedByRole: access.role,
         },
+        ipAddress,
+        userAgent,
       });
     });
 

@@ -5,8 +5,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 
-// GET - Get organization settings (NO CHANGES)
+// GET - Get organization settings (NO AUDIT LOG - READ ONLY)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -56,6 +57,8 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // ❌ NO AUDIT LOG - GET/Read operations are not logged
 
     return NextResponse.json({
       success: true,
@@ -112,10 +115,10 @@ export async function PATCH(
       phone, 
       timezone, 
       inviteEnabled,
-      inviteCode // ✅ NEW: Accept inviteCode from request
+      inviteCode
     } = body;
 
-    // ✅ NEW: If only updating invite settings, allow OWNER
+    // If only updating invite settings, allow OWNER
     const isInviteOnlyUpdate = inviteCode !== undefined || inviteEnabled !== undefined;
     
     if (isInviteOnlyUpdate && access.role !== 'OWNER') {
@@ -143,6 +146,28 @@ export async function PATCH(
       }
     }
 
+    // Get current organization data for audit log
+    const currentOrg = await prisma.organization.findUnique({
+      where: { id: access.organizationId },
+      select: {
+        name: true,
+        slug: true,
+        description: true,
+        email: true,
+        phone: true,
+        timezone: true,
+        inviteCode: true,
+        inviteEnabled: true,
+      },
+    });
+
+    if (!currentOrg) {
+      return NextResponse.json(
+        { error: 'Organization not found' },
+        { status: 404 }
+      );
+    }
+
     // Prepare update data
     const updateData: any = {};
 
@@ -153,7 +178,7 @@ export async function PATCH(
     if (phone !== undefined) updateData.phone = phone || null;
     if (timezone !== undefined) updateData.timezone = timezone;
     
-    // ✅ NEW: Invite settings updates
+    // Invite settings updates
     if (inviteEnabled !== undefined) updateData.inviteEnabled = inviteEnabled;
     if (inviteCode !== undefined) updateData.inviteCode = inviteCode;
 
@@ -188,17 +213,31 @@ export async function PATCH(
       data: updateData,
     });
 
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        organizationId: access.organizationId,
-        userId: user.userId,
-        action: 'organization.updated',
-        resourceId: access.organizationId,
-        payload: {
-          changes: updateData,
-        },
+    // ✅ Create audit log
+    const { ipAddress, userAgent } = getRequestMetadata(request);
+    
+    // Determine severity based on changes
+    let severity: 'INFO' | 'WARNING' = 'INFO';
+    if (updateData.slug || updateData.inviteCode || updateData.inviteEnabled !== undefined) {
+      severity = 'WARNING';
+    }
+
+    await createAuditLog({
+      organizationId: access.organizationId,
+      userId: user.userId,
+      action: 'organization.settings_updated',
+      category: 'ORGANIZATION',
+      severity,
+      description: `แก้ไขการตั้งค่าองค์กร`,
+      resourceId: access.organizationId,
+      resourceType: 'Organization',
+      payload: {
+        before: currentOrg,
+        after: updateData,
+        changes: Object.keys(updateData),
       },
+      ipAddress,
+      userAgent,
     });
 
     return NextResponse.json({

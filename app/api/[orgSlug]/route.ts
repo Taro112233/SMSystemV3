@@ -1,12 +1,14 @@
 // FILE: app/api/[orgSlug]/route.ts
-// Organization API - Get organization data with ACTIVE departments only
+// Organization API - Get organization data with ACTIVE departments only (NO AUDIT - READ ONLY)
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { transformDepartmentData } from '@/lib/department-helpers';
+import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 
+// GET - NO AUDIT LOG (READ ONLY)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -55,11 +57,11 @@ export async function GET(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // ✅ UPDATED: Get ONLY ACTIVE departments for Sidebar
+    // Get ONLY ACTIVE departments for Sidebar
     const departments = await prisma.department.findMany({
       where: {
         organizationId: access.organizationId,
-        isActive: true, // ✅ กรองเฉพาะ Active
+        isActive: true,
       },
       select: {
         id: true,
@@ -112,13 +114,15 @@ export async function GET(
       })
     };
 
+    // ❌ NO AUDIT LOG - GET/Read operations are not logged
+
     return NextResponse.json({
       success: true,
       organization: organizationData,
-      departments: transformedDepartments, // ✅ เฉพาะ Active เท่านั้น
+      departments: transformedDepartments,
       userRole: access.role,
       stats: {
-        totalDepartments: departments.length, // ✅ นับเฉพาะ Active
+        totalDepartments: departments.length,
         activeDepartments: departments.length,
         totalMembers: memberCount,
         totalProducts: 0,
@@ -196,6 +200,27 @@ export async function POST(
     });
 
     console.log(`✅ Created new department: ${newDepartment.name} (${newDepartment.slug})`);
+
+    // ✅ Create audit log
+    const { ipAddress, userAgent } = getRequestMetadata(request);
+    
+    await createAuditLog({
+      organizationId: access.organizationId,
+      userId: user.userId,
+      departmentId: newDepartment.id,
+      action: 'departments.create',
+      category: 'DEPARTMENT',
+      severity: 'INFO',
+      description: `สร้างหน่วยงาน ${newDepartment.name}`,
+      resourceId: newDepartment.id,
+      resourceType: 'Department',
+      payload: {
+        departmentName: name,
+        departmentSlug: slug,
+      },
+      ipAddress,
+      userAgent,
+    });
 
     // Transform for frontend
     const transformedDept = transformDepartmentData({
