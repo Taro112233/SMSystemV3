@@ -1,12 +1,11 @@
 // FILE: app/api/[orgSlug]/members/route.ts
-// Members API - Get all organization members (NO AUDIT LOG - READ ONLY)
+// Members API - UPDATED: Allow all org members to view
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 
-// ✅ Define interfaces for type safety
 interface OrganizationUserWithUser {
   id: string;
   organizationId: string;
@@ -31,7 +30,6 @@ export async function GET(
   try {
     const { orgSlug } = await params;
     
-    // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -40,7 +38,6 @@ export async function GET(
       );
     }
 
-    // Check organization access
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
@@ -49,15 +46,9 @@ export async function GET(
       );
     }
 
-    // Check permission to view members
-    if (!['ADMIN', 'OWNER'].includes(access.role)) {
-      return NextResponse.json(
-        { error: 'Insufficient permissions' },
-        { status: 403 }
-      );
-    }
+    // ✅ UPDATED: Allow all org members to view member list
+    // (Previously required ADMIN/OWNER, now any member can view)
 
-    // Get all members using organizationUser
     const members = await prisma.organizationUser.findMany({
       where: {
         organizationId: access.organizationId,
@@ -80,8 +71,6 @@ export async function GET(
       ],
     }) as OrganizationUserWithUser[];
 
-    // ❌ NO AUDIT LOG - GET/Read operations are not logged
-    
     return NextResponse.json({
       success: true,
       members: members.map((member) => ({

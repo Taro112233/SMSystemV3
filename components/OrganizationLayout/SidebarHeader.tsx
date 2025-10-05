@@ -77,15 +77,12 @@ export const SidebarHeader = ({
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2">
-          {/* ✅ Collapsed state - show icon with color */}
-          <div className={`w-10 h-10 ${colorClass} rounded-lg flex items-center justify-center shadow-sm`}>
-            <IconComponent className="w-5 h-5 text-white" />
-          </div>
+          {/* ✅ Collapsed state - show ChevronRight */}
           <Button 
             variant="ghost" 
             size="icon"
             onClick={onToggleCollapse}
-            className="h-8 w-8"
+            className="h-10 w-8"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>

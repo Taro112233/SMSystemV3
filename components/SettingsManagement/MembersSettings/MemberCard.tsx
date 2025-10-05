@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/MembersSettings/MemberCard.tsx
-// MembersSettings/MemberCard - IMPROVED with Better Error Handling
+// MembersSettings/MemberCard - UPDATED: Better read-only UX
 // ============================================
 
 import React, { useState } from 'react';
@@ -45,9 +45,6 @@ export const MemberCard = ({
   const canManageRole = currentUserRole === 'OWNER' || 
     (currentUserRole === 'ADMIN' && member.role !== 'OWNER');
   
-  // ✅ UPDATED: Hierarchy-based deletion
-  // OWNER can remove ADMIN and MEMBER
-  // ADMIN can remove MEMBER
   const getRoleLevel = (role: string): number => {
     const levels = { MEMBER: 1, ADMIN: 2, OWNER: 3 };
     return levels[role as keyof typeof levels] || 0;
@@ -55,7 +52,6 @@ export const MemberCard = ({
   
   const canRemove = getRoleLevel(currentUserRole) > getRoleLevel(member.role);
 
-  // ✅ IMPROVED: Better error handling for remove
   const handleRemove = async () => {
     setIsRemoving(true);
     try {
@@ -71,7 +67,6 @@ export const MemberCard = ({
     } catch (error) {
       console.error('Remove member error:', error);
       
-      // Show specific error message
       const errorMessage = error instanceof Error 
         ? error.message 
         : 'เกิดข้อผิดพลาด';
@@ -84,7 +79,6 @@ export const MemberCard = ({
     }
   };
 
-  // Role Badge with distinct colors and icons
   const getRoleBadge = (role: string) => {
     const badges = {
       OWNER: (
@@ -147,7 +141,7 @@ export const MemberCard = ({
               </div>
             </div>
 
-            {/* Actions */}
+            {/* ✅ UPDATED: Only show actions if user can manage */}
             {(canManageRole || canRemove) && (
               <div className="flex gap-2 pt-3 border-t">
                 {canManageRole && (
@@ -177,7 +171,6 @@ export const MemberCard = ({
         </CardContent>
       </Card>
 
-      {/* Remove Confirmation Dialog */}
       <ConfirmDialog
         open={showRemoveDialog}
         onOpenChange={setShowRemoveDialog}

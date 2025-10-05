@@ -1,16 +1,15 @@
 // FILE: components/SettingsManagement/MembersSettings/index.tsx
-// MembersSettings - Container + state management - IMPROVED
+// MembersSettings - Container + state management - FIXED: Remove unused imports
 // ============================================
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Lock } from 'lucide-react';
+import { Info } from 'lucide-react'; // ✅ FIXED: Removed unused 'Lock' import
 import { MembersList } from './MembersList';
 import { SettingsSection } from '../shared/SettingsSection';
 import { InviteCodeSection } from './InviteCodeSection';
 import { toast } from 'sonner';
 
-// ✅ FIXED: Proper type definitions
 interface Member {
   id: string;
   userId: string;
@@ -25,21 +24,21 @@ interface Member {
 }
 
 interface MembersSettingsProps {
-  organizationId: string; // ✅ Keep in interface for consistency with parent
+  organizationId: string;
   organizationSlug: string;
   userRole: 'MEMBER' | 'ADMIN' | 'OWNER';
 }
 
 export const MembersSettings = ({
-  // organizationId not destructured - not needed in this component
   organizationSlug,
   userRole
 }: MembersSettingsProps) => {
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // ✅ FIXED: Removed unused 'canView' variable
   const canManage = ['ADMIN', 'OWNER'].includes(userRole);
 
-  // ✅ FIXED: useCallback to prevent exhaustive-deps warning
   const loadMembers = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -62,16 +61,11 @@ export const MembersSettings = ({
     } finally {
       setIsLoading(false);
     }
-  }, [organizationSlug]); // ✅ FIXED: Added dependency
+  }, [organizationSlug]);
 
-  // ✅ FIXED: Now includes loadMembers in dependency array
   useEffect(() => {
-    if (canManage) {
-      loadMembers();
-    } else {
-      setIsLoading(false);
-    }
-  }, [canManage, loadMembers]);
+    loadMembers();
+  }, [loadMembers]);
 
   const handleRoleUpdate = async (userId: string, newRole: string): Promise<boolean> => {
     try {
@@ -117,44 +111,46 @@ export const MembersSettings = ({
 
   return (
     <div className="space-y-6">
-      {/* Permission Alert */}
+      {/* Info alert for MEMBER (not blocking) */}
       {!canManage && (
         <Alert>
-          <Lock className="h-4 w-4" />
+          <Info className="h-4 w-4" />
           <AlertDescription>
-            คุณไม่มีสิทธิ์จัดการสมาชิก ต้องเป็น ADMIN หรือ OWNER เท่านั้น
+            คุณสามารถดูรายชื่อสมาชิกได้ แต่ไม่สามารถแก้ไขหรือลบได้ (ต้องเป็น ADMIN หรือ OWNER)
           </AlertDescription>
         </Alert>
       )}
 
+      {/* Show Invite Code Section only for ADMIN/OWNER */}
       {canManage && (
-        <>
-          {/* Invite Code Section */}
-          <SettingsSection
-            title="รหัสเชิญเข้าองค์กร"
-            description="สร้างและจัดการรหัสเชิญสำหรับสมาชิกใหม่"
-          >
-            <InviteCodeSection
-              organizationSlug={organizationSlug}
-              userRole={userRole}
-            />
-          </SettingsSection>
-
-          {/* Members List */}
-          <SettingsSection
-            title="สมาชิกในองค์กร"
-            description="จัดการสมาชิก บทบาท และสิทธิ์การเข้าถึง"
-          >
-            <MembersList
-              members={members}
-              isLoading={isLoading}
-              currentUserRole={userRole}
-              onRoleUpdate={handleRoleUpdate}
-              onMemberRemove={handleMemberRemove}
-            />
-          </SettingsSection>
-        </>
+        <SettingsSection
+          title="รหัสเชิญเข้าองค์กร"
+          description="สร้างและจัดการรหัสเชิญสำหรับสมาชิกใหม่"
+        >
+          <InviteCodeSection
+            organizationSlug={organizationSlug}
+            userRole={userRole}
+          />
+        </SettingsSection>
       )}
+
+      {/* Show Members List for everyone */}
+      <SettingsSection
+        title="สมาชิกในองค์กร"
+        description={
+          canManage 
+            ? "จัดการสมาชิก บทบาท และสิทธิ์การเข้าถึง"
+            : "รายชื่อสมาชิกทั้งหมดในองค์กร"
+        }
+      >
+        <MembersList
+          members={members}
+          isLoading={isLoading}
+          currentUserRole={userRole}
+          onRoleUpdate={handleRoleUpdate}
+          onMemberRemove={handleMemberRemove}
+        />
+      </SettingsSection>
     </div>
   );
 };
