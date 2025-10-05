@@ -159,7 +159,7 @@ export function validateDeptSlug(slug: string): {
  * Generate safe slug from name
  */
 export function generateSafeSlug(name: string, isOrganization: boolean = false): string {
-  let slug = name
+  const baseSlug = name
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9\s-]/g, '') // Remove invalid chars
@@ -169,22 +169,22 @@ export function generateSafeSlug(name: string, isOrganization: boolean = false):
 
   // If generated slug is reserved, add suffix
   const validator = isOrganization ? validateOrgSlug : validateDeptSlug;
-  const validation = validator(slug);
+  const validation = validator(baseSlug);
   
   if (!validation.isValid) {
     // Try adding suffix
     let counter = 1;
-    let newSlug = `${slug}-${counter}`;
+    let newSlug = `${baseSlug}-${counter}`;
     
     while (!validator(newSlug).isValid && counter < 100) {
       counter++;
-      newSlug = `${slug}-${counter}`;
+      newSlug = `${baseSlug}-${counter}`;
     }
     
     return newSlug;
   }
 
-  return slug;
+  return baseSlug;
 }
 
 /**

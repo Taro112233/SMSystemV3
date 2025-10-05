@@ -180,8 +180,10 @@ Directory structure:
     │   ├── config.ts
     │   ├── department-helpers.ts
     │   ├── prisma.ts
+    │   ├── reserved-routes.ts
     │   ├── role-helpers.ts
     │   ├── security-logger.ts
+    │   ├── slug-validator.ts
     │   └── utils.ts
     ├── prisma/
     │   ├── schema.prisma

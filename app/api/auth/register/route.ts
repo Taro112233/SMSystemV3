@@ -1,7 +1,8 @@
-// app/api/auth/register/route.ts - FIXED TYPESCRIPT ERRORS
+// app/api/auth/register/route.ts - FULLY FIXED VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, createToken, getCookieOptions, userToPayload } from '@/lib/auth';
+import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { z } from 'zod';
 import arcjet, { shield, tokenBucket, slidingWindow } from "@arcjet/next";
 
@@ -35,7 +36,6 @@ const RegisterSchema = z.object({
   organizationName: z.string().max(100).optional().or(z.literal('')),
 });
 
-// ✅ FIXED: Define proper interfaces for all types
 interface ValidationError {
   field: string;
   message: string;
@@ -90,7 +90,6 @@ export async function POST(request: NextRequest) {
     const validation = RegisterSchema.safeParse(body);
     
     if (!validation.success) {
-      // ✅ FIXED: Properly type the validation errors
       const details: ValidationError[] = validation.error.issues.map((err) => ({
         field: err.path.join('.'),
         message: err.message
@@ -137,10 +136,15 @@ export async function POST(request: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
         data: {
-          username: username.toLowerCase(), password: hashedPassword,
-          firstName: firstName.trim(), lastName: lastName.trim(),
-          email: cleanEmail?.toLowerCase(), phone: cleanPhone,
-          status: 'ACTIVE', isActive: true, emailVerified: false,
+          username: username.toLowerCase(), 
+          password: hashedPassword,
+          firstName: firstName.trim(), 
+          lastName: lastName.trim(),
+          email: cleanEmail?.toLowerCase(), 
+          phone: cleanPhone,
+          status: 'ACTIVE', 
+          isActive: true, 
+          emailVerified: false,
         },
         select: {
           id: true, username: true, email: true, firstName: true, lastName: true,
@@ -163,9 +167,11 @@ export async function POST(request: NextRequest) {
 
         organization = await tx.organization.create({
           data: {
-            name: cleanOrgName, slug, 
+            name: cleanOrgName, 
+            slug, 
             description: `Organization created by ${newUser.firstName} ${newUser.lastName}`,
-            status: 'ACTIVE', timezone: 'Asia/Bangkok',
+            status: 'ACTIVE', 
+            timezone: 'Asia/Bangkok',
             email: cleanEmail?.toLowerCase(),
             phone: cleanPhone,
           },
@@ -177,20 +183,35 @@ export async function POST(request: NextRequest) {
 
         await tx.organizationUser.create({
           data: {
-            organizationId: organization.id, userId: newUser.id,
-            roles: 'OWNER', isOwner: true, isActive: true, joinedAt: new Date(),
+            organizationId: organization.id, 
+            userId: newUser.id,
+            roles: 'OWNER', 
+            isOwner: true, 
+            isActive: true, 
+            joinedAt: new Date(),
           }
         });
 
-        await tx.auditLog.create({
-          data: {
-            organizationId: organization.id, userId: newUser.id, action: 'users.register',
-            payload: {
-              username: newUser.username, organizationCreated: true,
-              organizationName: organization.name, timestamp: new Date().toISOString(),
-              ip: request.headers.get('x-forwarded-for') || clientIp
-            }
-          }
+        // ✅ FIXED: Use createAuditLog helper with all required fields
+        const { ipAddress, userAgent } = getRequestMetadata(request);
+        
+        await createAuditLog({
+          organizationId: organization.id,
+          userId: newUser.id,
+          action: 'organization.create',
+          category: 'ORGANIZATION',
+          severity: 'INFO',
+          description: `${newUser.firstName} ${newUser.lastName} สร้างองค์กร ${organization.name}`,
+          resourceId: organization.id,
+          resourceType: 'Organization',
+          payload: {
+            username: newUser.username,
+            organizationName: organization.name,
+            organizationSlug: organization.slug,
+            timestamp: new Date().toISOString(),
+          },
+          ipAddress,
+          userAgent,
         });
       }
 
@@ -199,23 +220,32 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Registration successful: ${username} from IP: ${clientIp}`);
 
+    // ✅ FIXED: Create lightweight JWT (no organizationId)
     const userPayload = userToPayload(result.newUser);
-    const token = result.organization ? 
-      await createToken({ ...userPayload, organizationId: result.organization.id, role: 'OWNER' }) :
-      await createToken(userPayload);
+    const token = await createToken(userPayload);
 
     const userResponse = {
-      id: result.newUser.id, username: result.newUser.username, email: result.newUser.email,
-      firstName: result.newUser.firstName, lastName: result.newUser.lastName,
+      id: result.newUser.id, 
+      username: result.newUser.username, 
+      email: result.newUser.email,
+      firstName: result.newUser.firstName, 
+      lastName: result.newUser.lastName,
       fullName: `${result.newUser.firstName} ${result.newUser.lastName}`,
-      phone: result.newUser.phone, status: result.newUser.status, isActive: result.newUser.isActive,
-      emailVerified: result.newUser.emailVerified, createdAt: result.newUser.createdAt, 
+      phone: result.newUser.phone, 
+      status: result.newUser.status, 
+      isActive: result.newUser.isActive,
+      emailVerified: result.newUser.emailVerified, 
+      createdAt: result.newUser.createdAt, 
       updatedAt: result.newUser.updatedAt,
     };
 
     const response = NextResponse.json({
-      success: true, message: 'Registration successful', user: userResponse,
-      token, organization: result.organization, requiresApproval: false,
+      success: true, 
+      message: 'Registration successful', 
+      user: userResponse,
+      token, 
+      organization: result.organization, 
+      requiresApproval: false,
     });
 
     response.cookies.set('auth-token', token, getCookieOptions());
@@ -224,18 +254,27 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Registration error:', error);
     
-    // ✅ FIXED: Properly type Prisma errors
     const prismaError = error as PrismaError;
     
     if (prismaError?.code === 'P2002') {
       const target = prismaError?.meta?.target;
       if (target?.includes('username')) {
-        return NextResponse.json({ success: false, error: 'Username already exists' }, { status: 409 });
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Username already exists' 
+        }, { status: 409 });
       }
       if (target?.includes('email')) {
-        return NextResponse.json({ success: false, error: 'Email already exists' }, { status: 409 });
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Email already exists' 
+        }, { status: 409 });
       }
     }
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Internal server error' 
+    }, { status: 500 });
   }
 }

@@ -112,7 +112,7 @@ export function getSystemReservedSlugs(): string[] {
  * Check if path is a public route
  */
 export function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.includes(pathname as any);
+  return PUBLIC_ROUTES.includes(pathname as (typeof PUBLIC_ROUTES)[number]);
 }
 
 /**
@@ -133,7 +133,7 @@ export function isAuthEndpoint(pathname: string): boolean {
  * Check if slug is reserved for org-level pages
  */
 export function isOrgLevelPage(slug: string): boolean {
-  return ORG_LEVEL_PAGES.includes(slug.toLowerCase() as any);
+  return ORG_LEVEL_PAGES.includes(slug.toLowerCase() as (typeof ORG_LEVEL_PAGES)[number]);
 }
 
 /**
@@ -141,7 +141,7 @@ export function isOrgLevelPage(slug: string): boolean {
  */
 export function isSystemReserved(slug: string): boolean {
   const systemSlugs = getSystemReservedSlugs();
-  return systemSlugs.includes(slug.toLowerCase() as any);
+  return systemSlugs.some(reserved => reserved === slug.toLowerCase());
 }
 
 // ===== ROUTE PATTERNS =====
@@ -181,13 +181,13 @@ export function parseRoute(pathname: string): {
   }
 
   // Check exact public routes (must match exactly)
-  if (PUBLIC_ROUTES.includes(pathname as any)) {
+  if (PUBLIC_ROUTES.includes(pathname as (typeof PUBLIC_ROUTES)[number])) {
     return { type: 'public' };
   }
 
   // Check app routes (exact match only)
   const pathWithoutSlash = pathname.substring(1);
-  if (APP_ROUTES.includes(pathWithoutSlash as any)) {
+  if (APP_ROUTES.includes(pathWithoutSlash as (typeof APP_ROUTES)[number])) {
     return { type: 'app' };
   }
 
@@ -203,7 +203,7 @@ export function parseRoute(pathname: string): {
     const slug = segments[0];
     
     // Check if it's a reserved app route
-    if (APP_ROUTES.includes(slug as any)) {
+    if (APP_ROUTES.includes(slug as (typeof APP_ROUTES)[number])) {
       return { type: 'app' };
     }
     
@@ -250,8 +250,8 @@ export function parseRoute(pathname: string): {
 }
 
 // ===== TYPE EXPORTS =====
-export type AppRoute = typeof APP_ROUTES[number];
-export type OrgLevelPage = typeof ORG_LEVEL_PAGES[number];
-export type SystemReserved = typeof SYSTEM_RESERVED[number];
-export type PublicRoute = typeof PUBLIC_ROUTES[number];
+export type AppRoute = (typeof APP_ROUTES)[number];
+export type OrgLevelPage = (typeof ORG_LEVEL_PAGES)[number];
+export type SystemReserved = (typeof SYSTEM_RESERVED)[number];
+export type PublicRoute = (typeof PUBLIC_ROUTES)[number];
 export type RouteType = ReturnType<typeof parseRoute>['type'];

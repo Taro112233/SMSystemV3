@@ -1,6 +1,7 @@
-// app/api/auth/logout/route.ts - WORKING VERSION  
+// app/api/auth/logout/route.ts - FIXED VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders } from '@/lib/auth-server';
+import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
@@ -15,15 +16,21 @@ export async function POST(request: NextRequest) {
         });
 
         if (userOrg) {
-          await prisma.auditLog.create({
-            data: {
-              organizationId: userOrg.organizationId,
-              userId: userInfo.userId,
-              action: 'users.logout',
-              payload: {
-                timestamp: new Date().toISOString(),
-                ip: request.headers.get('x-forwarded-for') || 'unknown'
-              }
+          // ✅ FIXED: ใช้ createAuditLog helper แทนการ create โดยตรง
+          const { ipAddress, userAgent } = getRequestMetadata(request);
+          
+          await createAuditLog({
+            organizationId: userOrg.organizationId,
+            userId: userInfo.userId,
+            action: 'auth.logout',
+            category: 'AUTH',              // ✅ Required field
+            severity: 'INFO',               // ✅ Required field (default)
+            description: `${userInfo.username} ออกจากระบบ`, // ✅ Required field
+            ipAddress,
+            userAgent,
+            payload: {
+              timestamp: new Date().toISOString(),
+              username: userInfo.username
             }
           });
         }
@@ -34,22 +41,36 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({ success: true, message: 'Logout successful' });
     response.cookies.set('auth-token', '', {
-      httpOnly: true, secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', maxAge: 0, path: '/',
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', 
+      maxAge: 0, 
+      path: '/',
     });
 
     return response;
   } catch (error) {
     console.error('Logout error:', error);
-    const response = NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    const response = NextResponse.json({ 
+      success: false, 
+      error: 'Internal server error' 
+    }, { status: 500 });
+    
     response.cookies.set('auth-token', '', {
-      httpOnly: true, secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', maxAge: 0, path: '/',
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', 
+      maxAge: 0, 
+      path: '/',
     });
+    
     return response;
   }
 }
 
 export async function GET() {
-  return NextResponse.json({ success: false, error: 'Method not allowed' }, { status: 405 });
+  return NextResponse.json({ 
+    success: false, 
+    error: 'Method not allowed' 
+  }, { status: 405 });
 }
