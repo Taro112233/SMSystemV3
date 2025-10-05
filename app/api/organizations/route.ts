@@ -1,5 +1,5 @@
 // FILE: app/api/organizations/route.ts
-// Organizations API - FIXED: Correct Prisma enum types
+// Organizations API - FIXED: Remove audit log for organization creation
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,8 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerUser } from '@/lib/auth-server';
 import { z } from 'zod';
 import arcjet, { shield, tokenBucket } from "@arcjet/next";
-import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
-import { ColorTheme, IconType } from '@prisma/client'; // ✅ Import Prisma enums
+import { ColorTheme, IconType } from '@prisma/client';
 
 const aj = arcjet({
   key: process.env.ARCJET_KEY!,
@@ -24,7 +23,7 @@ const aj = arcjet({
   ],
 });
 
-// ✅ FIXED: Validation schema matches Prisma enums exactly
+// ✅ Validation schema matches Prisma enums exactly
 const CreateOrganizationSchema = z.object({
   name: z.string().min(2).max(100).trim(),
   slug: z.string().min(3).max(50).regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'),
@@ -32,7 +31,6 @@ const CreateOrganizationSchema = z.object({
   email: z.string().email().max(255).optional().or(z.literal('')),
   phone: z.string().max(20).optional().or(z.literal('')),
   timezone: z.string().max(50).default('Asia/Bangkok'),
-  // ✅ Use nativeEnum from Zod to match Prisma enums
   color: z.nativeEnum(ColorTheme).optional().default(ColorTheme.BLUE),
   icon: z.nativeEnum(IconType).optional().default(IconType.BUILDING),
 });
@@ -151,7 +149,7 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
-    // ✅ Create with properly typed data (Zod validation ensures correct types)
+    // ✅ FIXED: Remove audit log from transaction
     const result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
         data: {
@@ -162,8 +160,8 @@ export async function POST(request: NextRequest) {
           phone: phone?.trim() || null,
           status: 'ACTIVE',
           timezone,
-          color,              // ✅ Already correct type from Zod
-          icon,               // ✅ Already correct type from Zod
+          color,
+          icon,
           inviteEnabled: true,
         },
         select: {
@@ -195,27 +193,9 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      const { ipAddress, userAgent } = getRequestMetadata(request);
-      
-      await createAuditLog({
-        organizationId: organization.id,
-        userId: user.userId,
-        action: 'organization.create',
-        category: 'ORGANIZATION',
-        severity: 'INFO',
-        description: `สร้างองค์กร ${organization.name}`,
-        resourceId: organization.id,
-        resourceType: 'Organization',
-        payload: {
-          organizationName: organization.name,
-          organizationSlug: organization.slug,
-          timezone: organization.timezone,
-          color: organization.color,
-          icon: organization.icon,
-        },
-        ipAddress,
-        userAgent,
-      });
+      // ❌ REMOVED: No audit log for organization creation
+      // เหตุผล: Organization creation เป็น user-initiated action
+      // ไม่จำเป็นต้อง log เพราะสามารถ track ได้จาก createdAt และ OWNER
 
       return { organization, organizationUser };
     });

@@ -1,5 +1,5 @@
 // FILE: components/OrganizationList/CreateOrganizationModal.tsx
-// CreateOrganizationModal - UPDATED with slug validation
+// CreateOrganizationModal - UPDATED: Stay on /dashboard after creation
 // ============================================
 
 import React, { useState } from 'react';
@@ -25,7 +25,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Building2, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAvailableColors, getAvailableIcons, getIconComponent } from '@/lib/department-helpers';
-import { validateOrgSlug, generateSafeSlug } from '@/lib/slug-validator'; // ✅ NEW
+import { validateOrgSlug, generateSafeSlug } from '@/lib/slug-validator';
 
 interface CreateOrganizationModalProps {
   open: boolean;
@@ -57,7 +57,7 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [slugError, setSlugError] = useState(''); // ✅ NEW - Separate slug error
+  const [slugError, setSlugError] = useState('');
 
   const colors = getAvailableColors();
   const icons = getAvailableIcons();
@@ -65,9 +65,8 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
   const selectedColor = colors.find(c => c.value === formData.color);
   const SelectedIcon = getIconComponent(formData.icon);
 
-  // ✅ UPDATED: Generate safe slug with validation
   const handleNameChange = (value: string) => {
-    const safeslug = generateSafeSlug(value, true); // true = organization
+    const safeslug = generateSafeSlug(value, true);
     
     setFormData(prev => ({
       ...prev,
@@ -75,7 +74,6 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
       slug: safeslug
     }));
 
-    // Validate generated slug
     const validation = validateOrgSlug(safeslug);
     if (!validation.isValid) {
       setSlugError(validation.error || 'Slug ไม่ถูกต้อง');
@@ -86,14 +84,12 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
     if (error) setError('');
   };
 
-  // ✅ UPDATED: Manual slug change with validation
   const handleSlugChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
       slug: value
     }));
 
-    // Validate slug in real-time
     const validation = validateOrgSlug(value);
     if (!validation.isValid) {
       setSlugError(validation.error || 'Slug ไม่ถูกต้อง');
@@ -121,7 +117,6 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
     }));
   };
 
-  // ✅ UPDATED: Enhanced validation
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
       setError('กรุณากรอกชื่อองค์กร');
@@ -133,7 +128,6 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
       return false;
     }
 
-    // ✅ Validate slug format and reserved words
     const slugValidation = validateOrgSlug(formData.slug);
     if (!slugValidation.isValid) {
       setSlugError(slugValidation.error || 'Slug ไม่ถูกต้อง');
@@ -171,13 +165,17 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
         throw new Error(data.error || 'ไม่สามารถสร้างองค์กรได้');
       }
 
+      // ✅ UPDATED: แสดง success message และ refresh หน้า /dashboard แทนการ redirect
       toast.success('สร้างองค์กรสำเร็จ!', {
-        description: 'กำลังนำไปยังหน้าจัดการองค์กร...'
+        description: `องค์กร "${data.organization.name}" ถูกสร้างแล้ว กำลังรีเฟรชหน้า...`
       });
 
+      // ปิด modal
       onOpenChange(false);
+      
+      // ✅ UPDATED: Reload หน้า /dashboard เพื่อโหลดองค์กรใหม่
       setTimeout(() => {
-        window.location.href = `/${data.organization.slug}`;
+        window.location.reload();
       }, 1000);
 
     } catch (error) {
@@ -206,7 +204,7 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
         icon: 'BUILDING',
       });
       setError('');
-      setSlugError(''); // ✅ Clear slug error
+      setSlugError('');
       onOpenChange(false);
     }
   };
@@ -269,7 +267,6 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
               className={slugError ? 'border-red-500' : ''}
             />
             
-            {/* ✅ NEW: Slug error message */}
             {slugError && (
               <p className="text-xs text-red-600 flex items-start gap-1">
                 <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
