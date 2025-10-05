@@ -185,17 +185,6 @@ export const DepartmentFormFields = ({
             </div>
           </div>
         </div>
-        
-        {/* ✅ NEW: Slug rules */}
-        <div className="text-xs text-gray-500 space-y-1 bg-gray-50 p-2 rounded">
-          <p className="font-medium text-gray-700">กฎการตั้งชื่อ Slug:</p>
-          <ul className="list-disc list-inside space-y-0.5">
-            <li>ใช้ได้เฉพาะตัวพิมพ์เล็ก (a-z), ตัวเลข (0-9), และเครื่องหมาย -</li>
-            <li>ความยาว 2-50 ตัวอักษร</li>
-            <li>ไม่สามารถใช้คำสงวนของระบบ เช่น: api, dashboard, admin</li>
-            <li>สามารถใช้ชื่อเดียวกับหน้าระบบได้ แต่ไม่แนะนำ (เช่น: settings, members)</li>
-          </ul>
-        </div>
       </div>
 
       {/* Description */}
