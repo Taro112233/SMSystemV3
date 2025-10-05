@@ -1,4 +1,4 @@
-// FILE: components/SettingsManagement/OrganizationSettings/OrganizationForm.tsx
+// components/SettingsManagement/OrganizationSettings/OrganizationForm.tsx
 // OrganizationSettings/OrganizationForm - UPDATED with slug validation
 // ============================================
 
@@ -14,10 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, X, Globe, Mail, Phone, Clock, Link2, AlertTriangle } from 'lucide-react';
 import { getAvailableColors, getAvailableIcons, getIconComponent } from '@/lib/department-helpers';
-import { validateOrgSlug } from '@/lib/slug-validator'; // ✅ NEW
+import { validateOrgSlug } from '@/lib/slug-validator';
 
 interface OrganizationData {
   name: string;
@@ -44,7 +43,7 @@ export const OrganizationForm = ({
   onCancel
 }: OrganizationFormProps) => {
   const [isSaving, setIsSaving] = useState(false);
-  const [slugError, setSlugError] = useState(''); // ✅ NEW
+  const [slugError, setSlugError] = useState('');
   const [formData, setFormData] = useState<OrganizationData>({
     name: organization.name,
     slug: organization.slug,
@@ -66,7 +65,6 @@ export const OrganizationForm = ({
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
 
-    // ✅ Validate slug in real-time (only if user is OWNER)
     if (name === 'slug' && isOwner) {
       const validation = validateOrgSlug(value);
       if (!validation.isValid) {
@@ -84,7 +82,6 @@ export const OrganizationForm = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // ✅ Final validation before submit
     if (isOwner && formData.slug !== organization.slug) {
       const slugValidation = validateOrgSlug(formData.slug);
       if (!slugValidation.isValid) {
@@ -160,12 +157,12 @@ export const OrganizationForm = ({
           className={slugError ? 'border-red-500' : ''}
         />
         
-        {/* ✅ NEW: Slug error message */}
+        {/* ✅ FIXED: Removed X icon from circle, show only triangle icon with text */}
         {slugError && isOwner && (
-          <Alert variant="destructive" className="py-2">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="text-xs">{slugError}</AlertDescription>
-          </Alert>
+          <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-red-600" />
+            <p className="text-xs text-red-700 flex-1">{slugError}</p>
+          </div>
         )}
         
         <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">

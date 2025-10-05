@@ -1,4 +1,4 @@
-// FILE: components/SettingsManagement/DepartmentSettings/DepartmentFormFields.tsx
+// components/SettingsManagement/DepartmentSettings/DepartmentFormFields.tsx
 // DepartmentFormFields - UPDATED with slug validation
 // ============================================
 
@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Link2, AlertTriangle, Info } from 'lucide-react';
 import { getAvailableColors, getAvailableIcons } from '@/lib/department-helpers';
-import { validateDeptSlug, shouldWarnDeptSlug, generateSafeSlug } from '@/lib/slug-validator'; // ✅ NEW
+import { validateDeptSlug, shouldWarnDeptSlug, generateSafeSlug } from '@/lib/slug-validator';
 
 interface DepartmentFormData {
   name: string;
@@ -44,7 +44,6 @@ export const DepartmentFormFields = ({
   const colors = getAvailableColors();
   const icons = getAvailableIcons();
   
-  // ✅ NEW: Validation states
   const [slugError, setSlugError] = React.useState('');
   const [slugWarning, setSlugWarning] = React.useState('');
 
@@ -55,17 +54,14 @@ export const DepartmentFormFields = ({
       const newData = {
         ...prev,
         [name]: value,
-        // ✅ Auto-generate slug from name (only when creating new)
         ...(name === 'name' && !isEditing ? {
-          slug: generateSafeSlug(value, false) // false = department
+          slug: generateSafeSlug(value, false)
         } : {})
       };
 
-      // ✅ Validate slug if it changed
       if (name === 'slug' || (name === 'name' && !isEditing)) {
         const slugToValidate = name === 'slug' ? value : newData.slug;
         
-        // Validate format and reserved words
         const validation = validateDeptSlug(slugToValidate);
         if (!validation.isValid) {
           setSlugError(validation.error || '');
@@ -73,7 +69,6 @@ export const DepartmentFormFields = ({
           setSlugError('');
         }
 
-        // Check for warnings (reserved org pages used as dept slug)
         const warning = shouldWarnDeptSlug(slugToValidate);
         if (warning.shouldWarn) {
           setSlugWarning(warning.message || '');
@@ -155,22 +150,20 @@ export const DepartmentFormFields = ({
           className={slugError ? 'border-red-500' : slugWarning ? 'border-amber-500' : ''}
         />
         
-        {/* ✅ NEW: Slug error */}
+        {/* ✅ FIXED: Removed X icon, show only text with triangle icon */}
         {slugError && (
-          <Alert variant="destructive" className="py-2">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="text-xs">{slugError}</AlertDescription>
-          </Alert>
+          <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-red-600" />
+            <p className="text-xs text-red-700 flex-1">{slugError}</p>
+          </div>
         )}
 
-        {/* ✅ NEW: Slug warning (reserved org page) */}
+        {/* ✅ FIXED: Removed i icon, show only text with info icon */}
         {slugWarning && !slugError && (
-          <Alert className="py-2 bg-amber-50 border-amber-200">
-            <Info className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-xs text-amber-700">
-              {slugWarning}
-            </AlertDescription>
-          </Alert>
+          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-600" />
+            <p className="text-xs text-amber-700 flex-1">{slugWarning}</p>
+          </div>
         )}
         
         {/* URL Preview */}
