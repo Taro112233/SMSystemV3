@@ -1,5 +1,6 @@
-// components/OrganizationLayout/index.tsx
-// DashboardSidebar - Main sidebar navigation component
+// FILE: components/OrganizationLayout/index.tsx
+// DashboardSidebar - UPDATED to pass Icon & Color to child components
+// ============================================
 
 import React from 'react';
 import { SidebarHeader } from './SidebarHeader';
@@ -14,7 +15,8 @@ interface OrganizationData {
   slug: string;
   description: string;
   logo: string;
-  color: string;
+  color: string;         // ✅ CRITICAL: Receive color
+  icon: string;          // ✅ CRITICAL: Receive icon
   userRole: string;
   stats: {
     totalProducts: number;
@@ -52,8 +54,17 @@ export const DashboardSidebar = ({
     dept.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // ✅ DEBUG: Log organization data to verify color & icon are passed
+  console.log('🎨 DashboardSidebar - Organization:', {
+    name: organization.name,
+    color: organization.color,
+    icon: organization.icon,
+    logo: organization.logo
+  });
+
   return (
     <div className={`${collapsed ? 'w-16' : 'w-80'} h-screen bg-white border-r border-gray-200 transition-all duration-200 flex flex-col fixed left-0 top-0 z-10`}>
+      {/* ✅ CRITICAL: Pass full organization object with color & icon */}
       <SidebarHeader
         organization={organization}
         collapsed={collapsed}

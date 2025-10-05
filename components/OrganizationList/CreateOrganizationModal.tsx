@@ -1,5 +1,6 @@
-// app/dashboard/components/CreateOrganizationModal.tsx
-// CreateOrganizationModal - Modal for creating new organization
+// FILE: components/OrganizationList/CreateOrganizationModal.tsx
+// CreateOrganizationModal - Modal for creating new organization with Icon & Color selection
+// ============================================
 
 import React, { useState } from 'react';
 import { 
@@ -23,6 +24,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Building2, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAvailableColors, getAvailableIcons, getIconComponent } from '@/lib/department-helpers';
 
 interface CreateOrganizationModalProps {
   open: boolean;
@@ -36,7 +38,8 @@ interface OrganizationForm {
   email: string;
   phone: string;
   timezone: string;
-  allowDepartments: boolean;
+  color: string;       // ✅ NEW
+  icon: string;        // ✅ NEW
 }
 
 export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizationModalProps) => {
@@ -47,11 +50,19 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
     email: '',
     phone: '',
     timezone: 'Asia/Bangkok',
-    allowDepartments: true
+    color: 'BLUE',       // ✅ NEW - Default color
+    icon: 'BUILDING',    // ✅ NEW - Default icon
   });
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const colors = getAvailableColors();
+  const icons = getAvailableIcons();
+
+  // ✅ Get current selected for preview
+  const selectedColor = colors.find(c => c.value === formData.color);
+  const SelectedIcon = getIconComponent(formData.icon);
 
   // Generate slug from name
   const generateSlug = (name: string) => {
@@ -81,6 +92,13 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
     if (error) setError('');
   };
 
+  const handleSelectChange = (field: keyof OrganizationForm, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
       setError('กรุณากรอกชื่อองค์กร');
@@ -97,7 +115,6 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
       return false;
     }
 
-    // Validate email format if provided
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       setError('รูปแบบอีเมลไม่ถูกต้อง');
       return false;
@@ -113,7 +130,6 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
     setError('');
 
     try {
-      // TODO: Call API to create organization
       const response = await fetch('/api/organizations', {
         method: 'POST',
         headers: {
@@ -133,10 +149,9 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
         description: 'กำลังนำไปยังหน้าจัดการองค์กร...'
       });
 
-      // Close modal and redirect to new organization
       onOpenChange(false);
       setTimeout(() => {
-        window.location.href = `/org/${data.organization.slug}`;
+        window.location.href = `/${data.organization.slug}`;
       }, 1000);
 
     } catch (error) {
@@ -161,7 +176,8 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
         email: '',
         phone: '',
         timezone: 'Asia/Bangkok',
-        allowDepartments: true
+        color: 'BLUE',
+        icon: 'BUILDING',
       });
       setError('');
       onOpenChange(false);
@@ -170,7 +186,7 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5" />
@@ -182,6 +198,24 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* ✅ NEW: Organization Preview */}
+          <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <div className="text-sm text-gray-600 mb-2">ตัวอย่าง:</div>
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 ${selectedColor?.class || 'bg-blue-500'} rounded-xl flex items-center justify-center`}>
+                <SelectedIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <div className="font-bold text-gray-900 text-lg">
+                  {formData.name || 'ชื่อองค์กร'}
+                </div>
+                <div className="text-sm text-gray-500 font-mono">
+                  {formData.slug || 'slug'}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Organization Name */}
           <div className="space-y-2">
             <Label htmlFor="org-name">ชื่อองค์กร *</Label>
@@ -207,8 +241,60 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
               required
             />
             <p className="text-xs text-gray-500">
-              จะใช้เป็น URL: /org/{formData.slug || 'your-org-slug'}
+              จะใช้เป็น URL: /{formData.slug || 'your-org-slug'}
             </p>
+          </div>
+
+          {/* ✅ NEW: Color & Icon Selection */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="color">สีองค์กร</Label>
+              <Select
+                value={formData.color}
+                onValueChange={(value) => handleSelectChange('color', value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="color">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {colors.map(color => (
+                    <SelectItem key={color.value} value={color.value}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-4 h-4 ${color.class} rounded`} />
+                        {color.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="icon">ไอคอนองค์กร</Label>
+              <Select
+                value={formData.icon}
+                onValueChange={(value) => handleSelectChange('icon', value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="icon">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {icons.map(icon => {
+                    const IconComp = icon.component;
+                    return (
+                      <SelectItem key={icon.value} value={icon.value}>
+                        <div className="flex items-center gap-2">
+                          <IconComp className="w-4 h-4" />
+                          {icon.label}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Description */}
@@ -255,7 +341,7 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
             <Label>เขตเวลา</Label>
             <Select 
               value={formData.timezone} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, timezone: value }))}
+              onValueChange={(value) => handleSelectChange('timezone', value)}
               disabled={isLoading}
             >
               <SelectTrigger>

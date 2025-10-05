@@ -1,4 +1,4 @@
-// app/[orgSlug]/layout.tsx - Final Fixed Layout (Complete)
+// FILE: app/[orgSlug]/layout.tsx - FINAL FIX for Icon & Color
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, AlertTriangle, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// Import dashboard components
 import { DashboardSidebar } from '@/components/OrganizationLayout';
 import { DashboardHeader } from '@/components/OrganizationLayout/OrganizationHeader';
 import { findDepartmentBySlug, type FrontendDepartment } from '@/lib/department-helpers';
@@ -25,6 +24,8 @@ interface OrganizationData {
   name: string;
   slug: string;
   description?: string;
+  color: string | null;      // ✅ Receive from API (nullable)
+  icon: string | null;       // ✅ Receive from API (nullable)
   role: string;
 }
 
@@ -38,7 +39,6 @@ export default function OrganizationLayout({
   const deptSlug = params.deptSlug as string;
   const router = useRouter();
   
-  // Core states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<UserData | null>(null);
@@ -46,11 +46,9 @@ export default function OrganizationLayout({
   const [departments, setDepartments] = useState<FrontendDepartment[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<FrontendDepartment | null>(null);
   
-  // Dashboard state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Load organization data once when layout mounts
   useEffect(() => {
     const loadOrganizationData = async () => {
       try {
@@ -59,7 +57,6 @@ export default function OrganizationLayout({
 
         console.log('🔍 Loading organization layout data for:', orgSlug);
 
-        // Get current user with organization context
         const userResponse = await fetch(`/api/auth/me?orgSlug=${orgSlug}`, {
           credentials: 'include',
         });
@@ -82,7 +79,6 @@ export default function OrganizationLayout({
         console.log('✅ User data loaded:', userData.data.user.username);
         console.log('✅ Current organization:', userData.data.currentOrganization?.name);
 
-        // Check if user has access to this organization
         if (!userData.data.currentOrganization || userData.data.currentOrganization.slug !== orgSlug) {
           console.log('❌ No access to organization:', orgSlug);
           setError('No access to this organization');
@@ -90,17 +86,28 @@ export default function OrganizationLayout({
           return;
         }
 
-        // Set user and organization data
+        // ✅ CRITICAL: Log received data from API
+        console.log('🎨 Layout - Received from API:', {
+          name: userData.data.currentOrganization.name,
+          color: userData.data.currentOrganization.color,
+          icon: userData.data.currentOrganization.icon,
+          colorType: typeof userData.data.currentOrganization.color,
+          iconType: typeof userData.data.currentOrganization.icon
+        });
+
         setUser(userData.data.user);
+        
+        // ✅ CRITICAL: Store color and icon from API
         setOrganizationData({
           id: userData.data.currentOrganization.id,
           name: userData.data.currentOrganization.name,
           slug: userData.data.currentOrganization.slug,
           description: userData.data.currentOrganization.description,
+          color: userData.data.currentOrganization.color,      // ✅ Store as-is (can be null)
+          icon: userData.data.currentOrganization.icon,        // ✅ Store as-is (can be null)
           role: userData.data.permissions.currentRole
         });
 
-        // Load departments from organization API
         console.log('🔍 Loading departments for organization...');
         const deptResponse = await fetch(`/api/${orgSlug}`, {
           credentials: 'include',
@@ -116,7 +123,6 @@ export default function OrganizationLayout({
           throw new Error(deptData.error || 'Failed to load departments');
         }
 
-        // Use transformed departments from API response (already transformed)
         setDepartments(deptData.departments);
         console.log('✅ Departments loaded:', deptData.departments.length);
         setLoading(false);
@@ -133,7 +139,6 @@ export default function OrganizationLayout({
     }
   }, [orgSlug, router]);
 
-  // Update selected department when URL changes
   useEffect(() => {
     if (deptSlug && departments.length > 0) {
       const foundDepartment = findDepartmentBySlug(departments, deptSlug);
@@ -144,31 +149,46 @@ export default function OrganizationLayout({
     }
   }, [deptSlug, departments]);
 
-  // Create organization object for components
+  // ✅ CRITICAL: Create organization object with proper defaults
   const organization = organizationData ? {
     id: organizationData.id,
     name: organizationData.name,
     slug: organizationData.slug,
     description: organizationData.description || `องค์กร ${organizationData.name}`,
+    
+    // ✅ CRITICAL: Use color and icon from API, with defaults if null
+    color: organizationData.color || 'BLUE',
+    icon: organizationData.icon || 'BUILDING',
+    
+    // Keep old logo for backward compatibility
     logo: organizationData.name.substring(0, 2).toUpperCase(),
-    color: 'bg-blue-500',
+    
     userRole: organizationData.role,
     stats: {
       totalProducts: departments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.stockItems, 0),
       lowStockItems: departments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.lowStock, 0),
-      pendingTransfers: 15, // TODO: Get from API
+      pendingTransfers: 15,
       activeUsers: departments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.memberCount, 0),
-      totalValue: '12.5M', // TODO: Calculate from API
+      totalValue: '12.5M',
       departments: departments.length
     }
   } : null;
 
-  // Handle department selection from sidebar
+  // ✅ DEBUG: Log final organization object
+  if (organization) {
+    console.log('🎨 Layout - Final Organization Object:', {
+      name: organization.name,
+      color: organization.color,
+      icon: organization.icon,
+      colorType: typeof organization.color,
+      iconType: typeof organization.icon
+    });
+  }
+
   const handleSidebarDepartmentSelect = (dept: FrontendDepartment) => {
     router.push(`/${orgSlug}/${dept.slug}`);
   };
 
-  // Show loading state (only on initial load)
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -185,7 +205,6 @@ export default function OrganizationLayout({
     );
   }
 
-  // Show error state
   if (error || !user || !organization) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -226,10 +245,9 @@ export default function OrganizationLayout({
     );
   }
 
-  // Render layout with persistent sidebar and header
   return (
     <div className="h-screen bg-gray-50 flex">
-      {/* Fixed Sidebar - จะไม่หายไปเมื่อ navigate */}
+      {/* ✅ CRITICAL: Pass organization object with color & icon */}
       <DashboardSidebar
         organization={organization}
         departments={departments}
@@ -241,15 +259,12 @@ export default function OrganizationLayout({
         onSearchChange={setSearchTerm}
       />
 
-      {/* Main Content Area */}
       <div className={`flex-1 flex flex-col ${sidebarCollapsed ? 'ml-16' : 'ml-80'} transition-all duration-200`}>
-        {/* Fixed Header - จะไม่หายไปเมื่อ navigate */}
         <DashboardHeader
           organization={organization}
           selectedDepartment={selectedDepartment}
         />
 
-        {/* Content area - เฉพาะส่วนนี้ที่เปลี่ยนเมื่อ navigate */}
         <main className="flex-1 p-6 overflow-y-auto bg-gray-50">
           {children}
         </main>

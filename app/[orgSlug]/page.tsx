@@ -1,15 +1,14 @@
-// app/[orgSlug]/page.tsx - UPDATED with Real Audit Logs for Recent Activity
+// FILE: app/[orgSlug]/page.tsx - UPDATED to pass Icon & Color
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { OrganizationOverview } from '@/components/OrganizationDashboard';
-import { type FrontendDepartment } from '@/lib/department-helpers'; // ✅ เอา transformDepartmentData ออก
+import { type FrontendDepartment } from '@/lib/department-helpers';
 import { transformAuditLogsToActivities, type AuditLog } from '@/lib/audit-helpers';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// ✅ Types matching backend API responses
 import type { ActivityItem } from '@/components/OrganizationDashboard/RecentActivity';
 
 interface OrganizationStats {
@@ -27,7 +26,8 @@ interface OrganizationData {
   slug: string;
   description: string;
   logo: string;
-  color: string;
+  color: string;        // ✅ CRITICAL: Add color
+  icon: string;         // ✅ CRITICAL: Add icon
   userRole: string;
   stats: OrganizationStats;
 }
@@ -54,7 +54,7 @@ export default function OrganizationPage() {
 
         console.log('🔍 Loading organization page data for:', orgSlug);
 
-        // ✅ 1. Load organization and departments data
+        // Load organization and departments data
         const orgResponse = await fetch(`/api/${orgSlug}`, {
           credentials: 'include',
         });
@@ -69,7 +69,7 @@ export default function OrganizationPage() {
           throw new Error(orgData.error || 'Failed to load organization data');
         }
 
-        // ✅ 2. Load recent audit logs (async, non-blocking)
+        // Load recent audit logs
         let recentActivities: ActivityItem[] = [];
         try {
           const auditResponse = await fetch(`/api/${orgSlug}/audit-logs?limit=20`, {
@@ -79,7 +79,6 @@ export default function OrganizationPage() {
           if (auditResponse.ok) {
             const auditData = await auditResponse.json();
             if (auditData.success && auditData.logs) {
-              // Transform audit logs to activities
               recentActivities = transformAuditLogsToActivities(auditData.logs as AuditLog[]);
               console.log(`✅ Loaded ${recentActivities.length} recent activities`);
             }
@@ -88,27 +87,31 @@ export default function OrganizationPage() {
           }
         } catch (auditError) {
           console.warn('Audit logs not available:', auditError);
-          // Continue without activities - not critical
         }
 
-        // ✅ FIXED: ไม่ต้อง transform ซ้ำ เพราะ API ทำให้แล้ว
         const transformedDepartments: FrontendDepartment[] = orgData.departments;
         
-        // Create organization object with calculated stats
+        // ✅ UPDATED: Create organization object with color and icon from API
         const organization: OrganizationData = {
           id: orgData.organization.id,
           name: orgData.organization.name,
           slug: orgData.organization.slug,
           description: orgData.organization.description || `องค์กร ${orgData.organization.name}`,
+          
+          // ✅ CRITICAL: Get color and icon from API response
+          color: orgData.organization.color || 'BLUE',
+          icon: orgData.organization.icon || 'BUILDING',
+          
+          // Keep old logo for backward compatibility
           logo: orgData.organization.name.substring(0, 2).toUpperCase(),
-          color: 'bg-blue-500',
+          
           userRole: orgData.userRole || 'MEMBER',
           stats: {
             totalProducts: transformedDepartments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.stockItems, 0),
             lowStockItems: transformedDepartments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.lowStock, 0),
-            pendingTransfers: 0, // Will be calculated from real transfers API later
+            pendingTransfers: 0,
             activeUsers: transformedDepartments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.memberCount, 0),
-            totalValue: '0', // Will be calculated from real stock values later
+            totalValue: '0',
             departments: transformedDepartments.length
           }
         };
@@ -116,10 +119,10 @@ export default function OrganizationPage() {
         setPageData({
           organization,
           departments: transformedDepartments,
-          recentActivities // ✅ Real data from audit logs
+          recentActivities
         });
 
-        console.log('✅ Organization page data loaded');
+        console.log('✅ Organization page data loaded with color:', organization.color, 'and icon:', organization.icon);
         setLoading(false);
 
       } catch (err) {
@@ -134,7 +137,6 @@ export default function OrganizationPage() {
     }
   }, [orgSlug]);
 
-  // Show loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -146,7 +148,6 @@ export default function OrganizationPage() {
     );
   }
 
-  // Show error state
   if (error || !pageData) {
     return (
       <div className="text-center py-12">
@@ -166,7 +167,6 @@ export default function OrganizationPage() {
       departments={pageData.departments}
       recentActivities={pageData.recentActivities}
       onSelectDepartment={(dept) => {
-        // Navigation handled by router.push in parent
         console.log('Selected department:', dept.name);
       }}
     />

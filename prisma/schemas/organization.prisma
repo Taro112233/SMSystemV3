@@ -1,5 +1,5 @@
 // prisma/schemas/organization.prisma
-// ===== SIMPLIFIED ORGANIZATION SCHEMA WITH INVITE CODE ONLY =====
+// ===== ORGANIZATION SCHEMA WITH ICON & COLOR SUPPORT =====
 
 model Organization {
   id          String             @id @default(cuid())
@@ -10,6 +10,10 @@ model Organization {
   // Contact Information
   email       String?
   phone       String?
+  
+  // ✅ NEW: Visual Customization
+  color       ColorTheme?        @default(BLUE)   // Organization color theme
+  icon        IconType?          @default(BUILDING) // Organization icon
   
   // Settings
   status      OrganizationStatus @default(ACTIVE)
@@ -88,7 +92,6 @@ model Department {
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
   
-  // ✅ FIXED: Audit Log Relation
   auditLogs      AuditLog[]
   
   @@unique([organizationId, slug])

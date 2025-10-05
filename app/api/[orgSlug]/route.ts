@@ -1,5 +1,5 @@
 // FILE: app/api/[orgSlug]/route.ts
-// Organization API - Get organization data with ACTIVE departments only (NO AUDIT - READ ONLY)
+// Organization API - UPDATED to return Icon & Color
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -8,7 +8,6 @@ import { prisma } from '@/lib/prisma';
 import { transformDepartmentData } from '@/lib/department-helpers';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 
-// GET - NO AUDIT LOG (READ ONLY)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -31,7 +30,7 @@ export async function GET(
 
     console.log(`✅ User has access with role: ${access.role}`);
 
-    // Get organization details
+    // ✅ UPDATED: Get organization with color and icon
     const organization = await prisma.organization.findUnique({
       where: { 
         slug: orgSlug,
@@ -46,6 +45,8 @@ export async function GET(
         timezone: true,
         email: true,
         phone: true,
+        color: true,         // ✅ CRITICAL: Include color
+        icon: true,          // ✅ CRITICAL: Include icon
         createdAt: true,
         updatedAt: true,
         inviteCode: true,
@@ -57,7 +58,7 @@ export async function GET(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // Get ONLY ACTIVE departments for Sidebar
+    // Get ONLY ACTIVE departments
     const departments = await prisma.department.findMany({
       where: {
         organizationId: access.organizationId,
@@ -85,7 +86,7 @@ export async function GET(
 
     console.log(`✅ Found ${departments.length} ACTIVE departments for ${orgSlug}`);
 
-    // Transform departments for frontend
+    // Transform departments
     const transformedDepartments = departments.map(dept => transformDepartmentData({
       id: dept.id,
       name: dept.name,
@@ -99,22 +100,21 @@ export async function GET(
       updatedAt: dept.updatedAt
     }));
 
-    // Count all organization members
     const memberCount = await prisma.organizationUser.count({
       where: { organizationId: access.organizationId }
     });
 
-    // Prepare organization data
+    // ✅ UPDATED: Include color and icon in organization data
     const organizationData = {
       ...organization,
+      color: organization.color || 'BLUE',      // ✅ Default if null
+      icon: organization.icon || 'BUILDING',    // ✅ Default if null
       memberCount,
       ...(['ADMIN', 'OWNER'].includes(access.role) && {
         inviteCode: organization.inviteCode,
         inviteEnabled: organization.inviteEnabled,
       })
     };
-
-    // ❌ NO AUDIT LOG - GET/Read operations are not logged
 
     return NextResponse.json({
       success: true,
@@ -140,7 +140,7 @@ export async function GET(
   }
 }
 
-// POST - Create new department (for ADMIN/OWNER only)
+// POST - Create new department
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -153,27 +153,22 @@ export async function POST(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Check organization access and permissions
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json({ error: 'No access to organization' }, { status: 403 });
     }
 
-    // Check if user has permission to create departments
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const body = await request.json();
-    
-    // Validate required fields
     const { name, slug, description, color, icon } = body;
     
     if (!name || !slug) {
       return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 });
     }
 
-    // Check if department slug already exists in this organization
     const existingDept = await prisma.department.findFirst({
       where: {
         organizationId: access.organizationId,
@@ -185,7 +180,6 @@ export async function POST(
       return NextResponse.json({ error: 'Department slug already exists' }, { status: 409 });
     }
 
-    // Create new department
     const newDepartment = await prisma.department.create({
       data: {
         name,
@@ -201,7 +195,6 @@ export async function POST(
 
     console.log(`✅ Created new department: ${newDepartment.name} (${newDepartment.slug})`);
 
-    // ✅ Create audit log
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
     await createAuditLog({
@@ -222,7 +215,6 @@ export async function POST(
       userAgent,
     });
 
-    // Transform for frontend
     const transformedDept = transformDepartmentData({
       id: newDepartment.id,
       name: newDepartment.name,

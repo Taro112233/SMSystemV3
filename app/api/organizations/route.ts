@@ -1,5 +1,6 @@
-// app/api/organizations/route.ts - FIXED FOR NEW SCHEMA
-// Organizations API - Create and list organizations
+// FILE: app/api/organizations/route.ts
+// Organizations API - FIXED: Correct Prisma enum types
+// ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -7,8 +8,8 @@ import { getServerUser } from '@/lib/auth-server';
 import { z } from 'zod';
 import arcjet, { shield, tokenBucket } from "@arcjet/next";
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
+import { ColorTheme, IconType } from '@prisma/client'; // ✅ Import Prisma enums
 
-// ===== ARCJET SECURITY =====
 const aj = arcjet({
   key: process.env.ARCJET_KEY!,
   rules: [
@@ -16,14 +17,14 @@ const aj = arcjet({
     tokenBucket({
       mode: "LIVE",
       characteristics: ["ip.src"],
-      refillRate: 2, // 2 requests per interval
-      interval: "10m", // 10 minutes
-      capacity: 5, // 5 requests max
+      refillRate: 2,
+      interval: "10m",
+      capacity: 5,
     }),
   ],
 });
 
-// ===== VALIDATION SCHEMAS - UPDATED FOR NEW SCHEMA =====
+// ✅ FIXED: Validation schema matches Prisma enums exactly
 const CreateOrganizationSchema = z.object({
   name: z.string().min(2).max(100).trim(),
   slug: z.string().min(3).max(50).regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'),
@@ -31,6 +32,9 @@ const CreateOrganizationSchema = z.object({
   email: z.string().email().max(255).optional().or(z.literal('')),
   phone: z.string().max(20).optional().or(z.literal('')),
   timezone: z.string().max(50).default('Asia/Bangkok'),
+  // ✅ Use nativeEnum from Zod to match Prisma enums
+  color: z.nativeEnum(ColorTheme).optional().default(ColorTheme.BLUE),
+  icon: z.nativeEnum(IconType).optional().default(IconType.BUILDING),
 });
 
 interface ValidationError {
@@ -38,22 +42,18 @@ interface ValidationError {
   message: string;
 }
 
-// ===== GET - List user's organizations (NO AUDIT LOG - READ ONLY) =====
 export async function GET(request: NextRequest) {
   try {
-    // Security check
     const decision = await aj.protect(request, { requested: 1 });
     if (decision.isDenied()) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Authentication
     const user = await getServerUser();
     if (!user) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // Updated organization select to match new schema
     const organizationUsers = await prisma.organizationUser.findMany({
       where: {
         userId: user.userId,
@@ -70,6 +70,8 @@ export async function GET(request: NextRequest) {
             phone: true,
             status: true,
             timezone: true,
+            color: true,
+            icon: true,
             inviteCode: true,
             inviteEnabled: true,
             createdAt: true,
@@ -82,15 +84,12 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Format response
     const organizations = organizationUsers.map(orgUser => ({
       ...orgUser.organization,
       userRole: orgUser.roles,
       isOwner: orgUser.isOwner,
       joinedAt: orgUser.joinedAt,
     }));
-
-    // ❌ NO AUDIT LOG - GET/Read operations are not logged
 
     return NextResponse.json({
       success: true,
@@ -104,10 +103,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ===== POST - Create new organization =====
 export async function POST(request: NextRequest) {
   try {
-    // Security check with stricter rate limiting for creation
     const decision = await aj.protect(request, { requested: 2 });
     if (decision.isDenied()) {
       if (decision.reason.isRateLimit()) {
@@ -119,13 +116,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Authentication
     const user = await getServerUser();
     if (!user) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // Parse and validate request body
     const body = await request.json();
     const validation = CreateOrganizationSchema.safeParse(body);
     
@@ -142,9 +137,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { name, slug, description, email, phone, timezone } = validation.data;
+    const { name, slug, description, email, phone, timezone, color, icon } = validation.data;
 
-    // Check if slug is already taken
     const existingOrg = await prisma.organization.findUnique({
       where: { slug }
     });
@@ -157,9 +151,8 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
-    // Create organization with transaction
+    // ✅ Create with properly typed data (Zod validation ensures correct types)
     const result = await prisma.$transaction(async (tx) => {
-      // Create organization with new schema fields
       const organization = await tx.organization.create({
         data: {
           name: name.trim(),
@@ -169,6 +162,8 @@ export async function POST(request: NextRequest) {
           phone: phone?.trim() || null,
           status: 'ACTIVE',
           timezone,
+          color,              // ✅ Already correct type from Zod
+          icon,               // ✅ Already correct type from Zod
           inviteEnabled: true,
         },
         select: {
@@ -180,6 +175,8 @@ export async function POST(request: NextRequest) {
           phone: true,
           status: true,
           timezone: true,
+          color: true,
+          icon: true,
           inviteCode: true,
           inviteEnabled: true,
           createdAt: true,
@@ -187,7 +184,6 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // Add user as organization owner
       const organizationUser = await tx.organizationUser.create({
         data: {
           organizationId: organization.id,
@@ -199,7 +195,6 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // ✅ Create audit log with proper structure
       const { ipAddress, userAgent } = getRequestMetadata(request);
       
       await createAuditLog({
@@ -215,6 +210,8 @@ export async function POST(request: NextRequest) {
           organizationName: organization.name,
           organizationSlug: organization.slug,
           timezone: organization.timezone,
+          color: organization.color,
+          icon: organization.icon,
         },
         ipAddress,
         userAgent,
@@ -239,7 +236,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Create organization error:', error);
     
-    // Handle specific Prisma errors
     if (error && typeof error === 'object' && 'code' in error) {
       const prismaError = error as { code: string; meta?: { target?: string[] } };
       
@@ -261,14 +257,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ===== PATCH - Update organization (for completeness) =====
 export async function PATCH() {
   return NextResponse.json({
     error: "Use PATCH /api/organizations/[orgId] for updates"
   }, { status: 405 });
 }
 
-// ===== DELETE - Not allowed at organization level =====
 export async function DELETE() {
   return NextResponse.json({
     error: "Use DELETE /api/organizations/[orgId] for deletion"

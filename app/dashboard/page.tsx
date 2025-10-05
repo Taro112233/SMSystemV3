@@ -1,6 +1,4 @@
-// app/dashboard/page.tsx
-// OrganizationSelector - Real dashboard with API integration (old style)
-
+// FILE: app/dashboard/page.tsx - UPDATED to handle Icon & Color
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -18,7 +16,8 @@ interface Organization {
   slug: string;
   description: string;
   logo: string;
-  color: string;
+  color: string;          // ✅ CRITICAL: Receive from API
+  icon: string;           // ✅ CRITICAL: Receive from API
   userRole: 'OWNER' | 'ADMIN' | 'MEMBER';
   isOwner: boolean;
   joinedAt: string;
@@ -32,6 +31,7 @@ interface Organization {
   };
   notifications: number;
   isActive: boolean;
+  status?: string;
 }
 
 interface DashboardData {
@@ -54,7 +54,6 @@ const OrganizationSelector = () => {
 
   const { logout } = useAuth();
 
-  // Fetch organizations on component mount
   useEffect(() => {
     fetchOrganizations();
   }, []);
@@ -75,6 +74,8 @@ const OrganizationSelector = () => {
       }
 
       if (data.success) {
+        // ✅ Data already includes color and icon from API
+        console.log('✅ Organizations loaded with color & icon:', data.organizations.length);
         setOrganizations(data.organizations);
         setUser(data.user);
       } else {
@@ -94,7 +95,6 @@ const OrganizationSelector = () => {
   };
 
   const handleOrganizationClick = (slug: string) => {
-    // Redirect to organization
     window.location.href = `/${slug}`;
   };
 
@@ -129,7 +129,6 @@ const OrganizationSelector = () => {
           <p className="text-gray-600">คลิกที่การ์ดองค์กรเพื่อเข้าสู่ระบบจัดการ</p>
         </div>
 
-        {/* Error Message */}
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
@@ -138,6 +137,7 @@ const OrganizationSelector = () => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* ✅ Organizations already have color & icon from API */}
           <OrganizationGrid 
             organizations={organizations}
             onOrganizationClick={handleOrganizationClick}

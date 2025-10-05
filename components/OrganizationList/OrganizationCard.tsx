@@ -1,17 +1,20 @@
-// app/dashboard/components/OrganizationCard.tsx
-// OrganizationCard - Individual organization display card
+// FILE: components/OrganizationList/OrganizationCard.tsx
+// OrganizationCard - Individual organization display card with Icon & Color
+// ============================================
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Package, AlertTriangle, Users, Crown, Shield, User, ChevronRight } from 'lucide-react';
+import { Package, AlertTriangle, Users, Crown, Shield, User, ChevronRight } from 'lucide-react';
+import { getIconComponent, mapColorThemeToTailwind } from '@/lib/department-helpers';
 
 interface Organization {
   id: string;
   name: string;
   description: string;
-  logo: string;
-  color: string;
+  logo?: string;         // ✅ Keep for backward compatibility
+  color?: string;        // ✅ NEW - ColorTheme enum value
+  icon?: string;         // ✅ NEW - IconType enum value
   userRole: string;
   stats: {
     departments: number;
@@ -21,7 +24,7 @@ interface Organization {
   };
   notifications: number;
   isActive: boolean;
-  status?: string; // Organization status (ACTIVE, SUSPENDED, TRIAL)
+  status?: string;
 }
 
 interface OrganizationCardProps {
@@ -30,6 +33,10 @@ interface OrganizationCardProps {
 }
 
 export const OrganizationCard = ({ organization: org, onClick }: OrganizationCardProps) => {
+  // ✅ Get icon component and color class from database values
+  const IconComponent = getIconComponent(org.icon || 'BUILDING');
+  const colorClass = mapColorThemeToTailwind(org.color || 'BLUE');
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'OWNER': return <Crown className="w-4 h-4 text-yellow-600" />;
@@ -76,7 +83,6 @@ export const OrganizationCard = ({ organization: org, onClick }: OrganizationCar
     return null;
   };
 
-  // Truncate description to max 50 characters
   const truncateText = (text: string, maxLength: number = 50) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength).trim() + '...';
@@ -93,8 +99,9 @@ export const OrganizationCard = ({ organization: org, onClick }: OrganizationCar
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className={`w-12 h-12 ${org.color} rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
-              {org.logo}
+            {/* ✅ UPDATED: Use icon from database instead of text logo */}
+            <div className={`w-12 h-12 ${colorClass} rounded-xl flex items-center justify-center shadow-md`}>
+              <IconComponent className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
               <CardTitle className="text-base leading-tight truncate">{org.name}</CardTitle>
@@ -104,13 +111,11 @@ export const OrganizationCard = ({ organization: org, onClick }: OrganizationCar
             </div>
           </div>
           
-          {/* Organization Status Badge - Top Right */}
           <div className="flex-shrink-0 ml-2">
             {getStatusBadge(org.status, org.isActive)}
           </div>
         </div>
         
-        {/* Notifications Only */}
         {org.notifications > 0 && (
           <div className="flex justify-end mt-2">
             <Badge variant="destructive" className="h-5 text-xs px-1">
@@ -124,7 +129,7 @@ export const OrganizationCard = ({ organization: org, onClick }: OrganizationCar
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-gray-400" />
+            <IconComponent className="w-4 h-4 text-gray-400" />
             <div>
               <p className="text-sm font-medium text-gray-900">{org.stats.departments}</p>
               <p className="text-xs text-gray-500">หน่วยงาน</p>
@@ -156,7 +161,7 @@ export const OrganizationCard = ({ organization: org, onClick }: OrganizationCar
           </div>
         </div>
 
-        {/* Footer - User Position in Organization */}
+        {/* Footer - User Position */}
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">
           <div className="flex items-center gap-1 text-xs text-gray-600">
             {getRoleIcon(org.userRole)}

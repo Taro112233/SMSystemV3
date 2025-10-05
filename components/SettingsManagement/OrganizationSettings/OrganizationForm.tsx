@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/OrganizationSettings/OrganizationForm.tsx
-// OrganizationSettings/OrganizationForm - Edit form with buttons at bottom-right + URL Preview
+// OrganizationSettings/OrganizationForm - Edit form with Icon & Color selection
 // ============================================
 
 import React, { useState } from 'react';
@@ -7,7 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Save, X, Globe, Mail, Phone, Clock, Link2 } from 'lucide-react';
+import { getAvailableColors, getAvailableIcons, getIconComponent, mapColorThemeToTailwind } from '@/lib/department-helpers';
 
 interface OrganizationData {
   name: string;
@@ -16,12 +24,14 @@ interface OrganizationData {
   email?: string;
   phone?: string;
   timezone: string;
+  color?: string;  // ✅ NEW
+  icon?: string;   // ✅ NEW
 }
 
 interface OrganizationFormProps {
   organization: OrganizationData;
   isOwner: boolean;
-  onSave: (data: OrganizationData) => Promise<void>;  // ✅ แก้จาก any
+  onSave: (data: OrganizationData) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -32,17 +42,30 @@ export const OrganizationForm = ({
   onCancel
 }: OrganizationFormProps) => {
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<OrganizationData>({  // ✅ เพิ่ม type
+  const [formData, setFormData] = useState<OrganizationData>({
     name: organization.name,
     slug: organization.slug,
     description: organization.description || '',
     email: organization.email || '',
     phone: organization.phone || '',
     timezone: organization.timezone,
+    color: organization.color || 'BLUE',     // ✅ NEW
+    icon: organization.icon || 'BUILDING',   // ✅ NEW
   });
+
+  const colors = getAvailableColors();
+  const icons = getAvailableIcons();
+
+  // ✅ Get current selected icon and color for preview
+  const selectedColor = colors.find(c => c.value === formData.color);
+  const SelectedIcon = getIconComponent(formData.icon || 'BUILDING');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -59,7 +82,6 @@ export const OrganizationForm = ({
     }
   };
 
-  // ✅ Generate example URL from slug
   const getExampleUrl = () => {
     const baseUrl = typeof window !== 'undefined' 
       ? window.location.origin 
@@ -69,6 +91,24 @@ export const OrganizationForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* ✅ NEW: Organization Preview Card */}
+      <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+        <div className="text-sm text-gray-600 mb-2">ตัวอย่าง:</div>
+        <div className="flex items-center gap-3">
+          <div className={`w-12 h-12 ${selectedColor?.class || 'bg-blue-500'} rounded-xl flex items-center justify-center`}>
+            <SelectedIcon className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <div className="font-bold text-gray-900 text-lg">
+              {formData.name || 'ชื่อองค์กร'}
+            </div>
+            <div className="text-sm text-gray-500 font-mono">
+              {formData.slug || 'slug'}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Organization Name */}
       <div className="space-y-2">
         <Label htmlFor="name">ชื่อองค์กร *</Label>
@@ -98,7 +138,6 @@ export const OrganizationForm = ({
           required
         />
         
-        {/* ✅ URL Preview - แสดงตัวอย่าง URL จริง */}
         <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <Link2 className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -119,6 +158,56 @@ export const OrganizationForm = ({
             เฉพาะ OWNER เท่านั้นที่แก้ไข URL Slug ได้
           </p>
         )}
+      </div>
+
+      {/* ✅ NEW: Color & Icon Selection */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="color">สีองค์กร</Label>
+          <Select
+            value={formData.color}
+            onValueChange={(value) => handleSelectChange('color', value)}
+          >
+            <SelectTrigger id="color">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {colors.map(color => (
+                <SelectItem key={color.value} value={color.value}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-4 h-4 ${color.class} rounded`} />
+                    {color.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="icon">ไอคอนองค์กร</Label>
+          <Select
+            value={formData.icon}
+            onValueChange={(value) => handleSelectChange('icon', value)}
+          >
+            <SelectTrigger id="icon">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {icons.map(icon => {
+                const IconComp = icon.component;
+                return (
+                  <SelectItem key={icon.value} value={icon.value}>
+                    <div className="flex items-center gap-2">
+                      <IconComp className="w-4 h-4" />
+                      {icon.label}
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Description */}
@@ -180,7 +269,7 @@ export const OrganizationForm = ({
         />
       </div>
 
-      {/* Action Buttons - BOTTOM RIGHT */}
+      {/* Action Buttons */}
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button
           type="button"

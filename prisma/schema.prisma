@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-10-05T05:05:11.081Z
+// Last generated: 2025-10-05T07:12:09.461Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -141,7 +141,7 @@ model User {
 // ==========================================
 
 // prisma/schemas/organization.prisma
-// ===== SIMPLIFIED ORGANIZATION SCHEMA WITH INVITE CODE ONLY =====
+// ===== ORGANIZATION SCHEMA WITH ICON & COLOR SUPPORT =====
 
 model Organization {
   id          String             @id @default(cuid())
@@ -152,6 +152,10 @@ model Organization {
   // Contact Information
   email       String?
   phone       String?
+  
+  // ✅ NEW: Visual Customization
+  color       ColorTheme?        @default(BLUE)   // Organization color theme
+  icon        IconType?          @default(BUILDING) // Organization icon
   
   // Settings
   status      OrganizationStatus @default(ACTIVE)
@@ -230,7 +234,6 @@ model Department {
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
   
-  // ✅ FIXED: Audit Log Relation
   auditLogs      AuditLog[]
   
   @@unique([organizationId, slug])

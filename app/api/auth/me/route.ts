@@ -1,10 +1,12 @@
-// app/api/auth/me/route.ts - DYNAMIC ORGANIZATION CONTEXT
+// FILE: app/api/auth/me/route.ts
+// UPDATED: Return color and icon for currentOrganization
+// ============================================
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerUser } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import type { JWTUser } from '@/lib/auth';
 
-// ===== RESPONSE INTERFACE =====
 interface CompleteUserData {
   user: {
     id: string;
@@ -29,10 +31,12 @@ interface CompleteUserData {
     description: string | null;
     status: string;
     timezone: string;
+    color: string | null;        // ✅ CRITICAL: Add color
+    icon: string | null;         // ✅ CRITICAL: Add icon
     memberCount: number;
     departmentCount: number;
-    inviteCode?: string | null;       // Only for ADMIN/OWNER
-    inviteEnabled?: boolean;          // Only for ADMIN/OWNER
+    inviteCode?: string | null;
+    inviteEnabled?: boolean;
   } | null;
   organizations: Array<{
     id: string;
@@ -44,6 +48,8 @@ interface CompleteUserData {
       id: string;
       name: string;
       slug: string;
+      color: string | null;      // ✅ CRITICAL: Add color
+      icon: string | null;       // ✅ CRITICAL: Add icon
       memberCount: number;
       departmentCount: number;
     };
@@ -65,7 +71,6 @@ interface CompleteUserData {
 
 export async function GET(request: NextRequest) {
   try {
-    // ===== AUTHENTICATION CHECK =====
     const user: JWTUser | null = await getServerUser();
     
     if (!user) {
@@ -76,12 +81,11 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // ===== GET ORGANIZATION CONTEXT FROM URL/HEADERS =====
     const url = new URL(request.url);
     const orgSlug = url.searchParams.get('orgSlug') || 
                     request.headers.get('x-current-org');
 
-    // ===== SINGLE OPTIMIZED QUERY =====
+    // ✅ UPDATED: Select color and icon from organization
     const userData = await prisma.user.findUnique({
       where: { id: user.userId },
       select: {
@@ -97,7 +101,10 @@ export async function GET(request: NextRequest) {
             organization: {
               select: {
                 id: true, name: true, slug: true, description: true,
-                status: true, timezone: true, inviteCode: true, inviteEnabled: true,
+                status: true, timezone: true, 
+                color: true,         // ✅ CRITICAL: Select color
+                icon: true,          // ✅ CRITICAL: Select icon
+                inviteCode: true, inviteEnabled: true,
                 _count: {
                   select: {
                     users: { where: { isActive: true } },
@@ -120,7 +127,6 @@ export async function GET(request: NextRequest) {
       }, { status: 403 });
     }
 
-    // ===== DETERMINE CURRENT ORGANIZATION =====
     const userOrganizations = userData.organizationUsers;
     let currentOrganization = null;
     let currentRole: string | null = null;
@@ -129,13 +135,11 @@ export async function GET(request: NextRequest) {
       let targetOrgUser = null;
       
       if (orgSlug) {
-        // Find organization by slug
         targetOrgUser = userOrganizations.find(org => 
           org.organization.slug === orgSlug
         );
       }
       
-      // Fallback to first organization if slug not found or not provided
       if (!targetOrgUser) {
         targetOrgUser = userOrganizations[0];
       }
@@ -144,6 +148,7 @@ export async function GET(request: NextRequest) {
         const orgData = targetOrgUser.organization;
         currentRole = targetOrgUser.roles as string;
         
+        // ✅ CRITICAL: Include color and icon in response
         currentOrganization = {
           id: orgData.id,
           name: orgData.name,
@@ -151,9 +156,10 @@ export async function GET(request: NextRequest) {
           description: orgData.description,
           status: orgData.status,
           timezone: orgData.timezone,
+          color: orgData.color,              // ✅ CRITICAL: Return color
+          icon: orgData.icon,                // ✅ CRITICAL: Return icon
           memberCount: orgData._count.users,
           departmentCount: orgData._count.departments,
-          // Only show join code info for ADMIN/OWNER
           ...((['ADMIN', 'OWNER'].includes(currentRole)) && {
             inviteCode: orgData.inviteCode,
             inviteEnabled: orgData.inviteEnabled,
@@ -162,7 +168,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // ===== CALCULATE PERMISSIONS =====
     const permissions = {
       currentRole,
       canManageOrganization: currentRole === 'OWNER',
@@ -172,7 +177,7 @@ export async function GET(request: NextRequest) {
       organizationPermissions: getPermissionsByRole(currentRole)
     };
 
-    // ===== PREPARE ORGANIZATIONS LIST =====
+    // ✅ CRITICAL: Include color and icon in organizations list
     const organizationsList = userOrganizations.map(orgUser => ({
       id: orgUser.id,
       organizationId: orgUser.organizationId,
@@ -183,12 +188,13 @@ export async function GET(request: NextRequest) {
         id: orgUser.organization.id,
         name: orgUser.organization.name,
         slug: orgUser.organization.slug,
+        color: orgUser.organization.color,              // ✅ CRITICAL: Return color
+        icon: orgUser.organization.icon,                // ✅ CRITICAL: Return icon
         memberCount: orgUser.organization._count.users,
         departmentCount: orgUser.organization._count.departments,
       }
     }));
 
-    // ===== BUILD RESPONSE =====
     const response: CompleteUserData = {
       user: {
         id: userData.id,
@@ -216,6 +222,13 @@ export async function GET(request: NextRequest) {
       },
     };
 
+    // ✅ DEBUG: Log to verify color and icon are included
+    console.log('✅ /api/auth/me - Response includes color & icon:', {
+      orgName: currentOrganization?.name,
+      color: currentOrganization?.color,
+      icon: currentOrganization?.icon
+    });
+
     return NextResponse.json({
       success: true,
       data: response,
@@ -231,8 +244,6 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
-
-// ===== HELPER FUNCTIONS =====
 
 function getPermissionsByRole(role: string | null): string[] {
   if (!role) return [];
@@ -274,7 +285,7 @@ function checkTokenExpiry(user: JWTUser): boolean {
   if (user.exp) {
     const now = Math.floor(Date.now() / 1000);
     const timeToExpiry = user.exp - now;
-    return timeToExpiry < 24 * 60 * 60; // < 24 hours
+    return timeToExpiry < 24 * 60 * 60;
   }
   return false;
 }

@@ -1,13 +1,14 @@
 // FILE: app/api/[orgSlug]/settings/route.ts
-// Settings API - UPDATED to support inviteCode + inviteEnabled
+// Settings API - FIXED: Correct Prisma enum types for color & icon
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
+import { ColorTheme, IconType } from '@prisma/client'; // ✅ Import Prisma enums
 
-// ✅ Define interface for update data - compatible with Prisma JsonValue
+// ✅ FIXED: Use Prisma enum types with index signature for JSON compatibility
 interface OrganizationUpdateData {
   name?: string;
   slug?: string;
@@ -15,12 +16,13 @@ interface OrganizationUpdateData {
   email?: string | null;
   phone?: string | null;
   timezone?: string;
+  color?: ColorTheme;           // ✅ Use Prisma ColorTheme enum
+  icon?: IconType;              // ✅ Use Prisma IconType enum
   inviteEnabled?: boolean;
   inviteCode?: string;
-  [key: string]: string | boolean | null | undefined; // Index signature for Prisma compatibility
+  [key: string]: string | boolean | ColorTheme | IconType | null | undefined; // ✅ Index signature for Prisma JSON
 }
 
-// GET - Get organization settings (NO AUDIT LOG - READ ONLY)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -56,6 +58,8 @@ export async function GET(
         email: true,
         phone: true,
         timezone: true,
+        color: true,
+        icon: true,
         inviteCode: true,
         inviteEnabled: true,
         status: true,
@@ -71,8 +75,6 @@ export async function GET(
       );
     }
 
-    // ❌ NO AUDIT LOG - GET/Read operations are not logged
-
     return NextResponse.json({
       success: true,
       organization,
@@ -87,7 +89,6 @@ export async function GET(
   }
 }
 
-// PATCH - Update organization settings - UPDATED
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -111,7 +112,6 @@ export async function PATCH(
       );
     }
 
-    // Check permission - only ADMIN and OWNER can update
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { error: 'Insufficient permissions. ADMIN or OWNER required.' },
@@ -127,11 +127,12 @@ export async function PATCH(
       email, 
       phone, 
       timezone, 
+      color,
+      icon,
       inviteEnabled,
       inviteCode
     } = body;
 
-    // If only updating invite settings, allow OWNER
     const isInviteOnlyUpdate = inviteCode !== undefined || inviteEnabled !== undefined;
     
     if (isInviteOnlyUpdate && access.role !== 'OWNER') {
@@ -141,7 +142,6 @@ export async function PATCH(
       );
     }
 
-    // Validate required fields (only if updating basic info)
     if (name !== undefined || slug !== undefined || timezone !== undefined) {
       if (!name || !slug || !timezone) {
         return NextResponse.json(
@@ -150,7 +150,6 @@ export async function PATCH(
         );
       }
 
-      // Validate slug format
       if (!/^[a-z0-9-]+$/.test(slug)) {
         return NextResponse.json(
           { error: 'Slug must contain only lowercase letters, numbers, and hyphens' },
@@ -159,7 +158,6 @@ export async function PATCH(
       }
     }
 
-    // Get current organization data for audit log
     const currentOrg = await prisma.organization.findUnique({
       where: { id: access.organizationId },
       select: {
@@ -169,6 +167,8 @@ export async function PATCH(
         email: true,
         phone: true,
         timezone: true,
+        color: true,
+        icon: true,
         inviteCode: true,
         inviteEnabled: true,
       },
@@ -181,21 +181,22 @@ export async function PATCH(
       );
     }
 
-    // Prepare update data - ✅ Using proper interface
+    // ✅ Build update data with proper types
     const updateData: OrganizationUpdateData = {};
 
-    // Basic info updates
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description || null;
     if (email !== undefined) updateData.email = email || null;
     if (phone !== undefined) updateData.phone = phone || null;
     if (timezone !== undefined) updateData.timezone = timezone;
     
-    // Invite settings updates
+    // ✅ FIXED: Cast to Prisma enum types
+    if (color !== undefined) updateData.color = color as ColorTheme;
+    if (icon !== undefined) updateData.icon = icon as IconType;
+    
     if (inviteEnabled !== undefined) updateData.inviteEnabled = inviteEnabled;
     if (inviteCode !== undefined) updateData.inviteCode = inviteCode;
 
-    // Slug update (only OWNER)
     if (slug !== undefined && slug !== orgSlug) {
       if (access.role !== 'OWNER') {
         return NextResponse.json(
@@ -218,7 +219,7 @@ export async function PATCH(
       updateData.slug = slug;
     }
 
-    // Update organization
+    // ✅ Update with properly typed data
     const updatedOrg = await prisma.organization.update({
       where: {
         id: access.organizationId,
@@ -226,10 +227,8 @@ export async function PATCH(
       data: updateData,
     });
 
-    // ✅ Create audit log
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
-    // Determine severity based on changes
     let severity: 'INFO' | 'WARNING' = 'INFO';
     if (updateData.slug || updateData.inviteCode || updateData.inviteEnabled !== undefined) {
       severity = 'WARNING';
