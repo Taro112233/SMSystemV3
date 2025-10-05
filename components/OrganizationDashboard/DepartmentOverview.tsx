@@ -3,8 +3,8 @@
 // ============================================
 
 import React from 'react';
+import { useRouter, useParams } from 'next/navigation'; // ✅ เพิ่ม useRouter, useParams
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Package, AlertTriangle, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { getIconComponent, type FrontendDepartment } from '@/lib/department-helpers';
@@ -18,16 +18,18 @@ export const DepartmentOverview = ({
   departments,
   onSelectDepartment
 }: DepartmentOverviewProps) => {
+  const router = useRouter();
+  const params = useParams();
+  const orgSlug = params.orgSlug as string;
   
-  // Sort departments: show those with alerts first
-  const sortedDepartments = [...departments].sort((a, b) => {
-    const alertsA = (a.lowStock || 0) + (a.notifications || 0);
-    const alertsB = (b.lowStock || 0) + (b.notifications || 0);
-    return alertsB - alertsA;
-  });
-
-  // Limit to top 6 departments for overview
-  const topDepartments = sortedDepartments.slice(0, 6);
+  // ✅ ใช้ลำดับจาก API โดยตรง (เรียงตาม parentId, name แล้ว)
+  // ✅ แสดงทั้งหมดไม่จำกัด
+  
+  // ✅ Handle department click - navigate to department page
+  const handleDepartmentClick = (dept: FrontendDepartment) => {
+    router.push(`/${orgSlug}/${dept.slug}`);
+    onSelectDepartment(dept); // เรียก callback ด้วย (ถ้ามี)
+  };
 
   return (
     <Card>
@@ -41,7 +43,7 @@ export const DepartmentOverview = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {topDepartments.map((dept) => {
+          {departments.map((dept) => {
             const IconComponent = getIconComponent(dept.icon || 'BUILDING');
             const hasLowStock = (dept.lowStock || 0) > 0;
             
@@ -49,10 +51,10 @@ export const DepartmentOverview = ({
               <div
                 key={dept.id}
                 className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group"
-                onClick={() => onSelectDepartment(dept)}
+                onClick={() => handleDepartmentClick(dept)}
               >
-                {/* Department Icon */}
-                <div className={`w-12 h-12 ${dept.color || 'bg-gray-500'} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                {/* Department Icon - ✅ ใช้สีจาก database ที่ผ่าน transform แล้ว */}
+                <div className={`w-12 h-12 ${dept.color || 'bg-blue-500'} rounded-lg flex items-center justify-center flex-shrink-0`}>
                   <IconComponent className="w-6 h-6 text-white" />
                 </div>
 
@@ -94,21 +96,6 @@ export const DepartmentOverview = ({
               </div>
             );
           })}
-
-          {/* View All Button */}
-          {departments.length > 6 && (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                // This could navigate to a full departments list page
-                console.log('View all departments');
-              }}
-            >
-              <Building2 className="w-4 h-4 mr-2" />
-              ดูทั้งหมด ({departments.length} หน่วยงาน)
-            </Button>
-          )}
 
           {/* Empty State */}
           {departments.length === 0 && (

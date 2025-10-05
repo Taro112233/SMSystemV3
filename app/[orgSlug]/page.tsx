@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { OrganizationOverview } from '@/components/OrganizationDashboard';
-import { transformDepartmentData, type FrontendDepartment } from '@/lib/department-helpers';
+import { type FrontendDepartment } from '@/lib/department-helpers'; // ✅ เอา transformDepartmentData ออก
 import { transformAuditLogsToActivities, type AuditLog } from '@/lib/audit-helpers';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -91,8 +91,8 @@ export default function OrganizationPage() {
           // Continue without activities - not critical
         }
 
-        // Transform departments for frontend
-        const transformedDepartments: FrontendDepartment[] = orgData.departments.map(transformDepartmentData);
+        // ✅ FIXED: ไม่ต้อง transform ซ้ำ เพราะ API ทำให้แล้ว
+        const transformedDepartments: FrontendDepartment[] = orgData.departments;
         
         // Create organization object with calculated stats
         const organization: OrganizationData = {
