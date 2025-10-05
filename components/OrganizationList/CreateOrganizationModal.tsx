@@ -1,5 +1,5 @@
 // FILE: components/OrganizationList/CreateOrganizationModal.tsx
-// CreateOrganizationModal - Modal for creating new organization with Icon & Color selection
+// CreateOrganizationModal - UPDATED with slug validation
 // ============================================
 
 import React, { useState } from 'react';
@@ -25,6 +25,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Building2, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAvailableColors, getAvailableIcons, getIconComponent } from '@/lib/department-helpers';
+import { validateOrgSlug, generateSafeSlug } from '@/lib/slug-validator'; // ✅ NEW
 
 interface CreateOrganizationModalProps {
   open: boolean;
@@ -38,8 +39,8 @@ interface OrganizationForm {
   email: string;
   phone: string;
   timezone: string;
-  color: string;       // ✅ NEW
-  icon: string;        // ✅ NEW
+  color: string;
+  icon: string;
 }
 
 export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizationModalProps) => {
@@ -50,36 +51,57 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
     email: '',
     phone: '',
     timezone: 'Asia/Bangkok',
-    color: 'BLUE',       // ✅ NEW - Default color
-    icon: 'BUILDING',    // ✅ NEW - Default icon
+    color: 'BLUE',
+    icon: 'BUILDING',
   });
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [slugError, setSlugError] = useState(''); // ✅ NEW - Separate slug error
 
   const colors = getAvailableColors();
   const icons = getAvailableIcons();
 
-  // ✅ Get current selected for preview
   const selectedColor = colors.find(c => c.value === formData.color);
   const SelectedIcon = getIconComponent(formData.icon);
 
-  // Generate slug from name
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-  };
-
+  // ✅ UPDATED: Generate safe slug with validation
   const handleNameChange = (value: string) => {
+    const safeslug = generateSafeSlug(value, true); // true = organization
+    
     setFormData(prev => ({
       ...prev,
       name: value,
-      slug: generateSlug(value)
+      slug: safeslug
     }));
+
+    // Validate generated slug
+    const validation = validateOrgSlug(safeslug);
+    if (!validation.isValid) {
+      setSlugError(validation.error || 'Slug ไม่ถูกต้อง');
+    } else {
+      setSlugError('');
+    }
+    
+    if (error) setError('');
+  };
+
+  // ✅ UPDATED: Manual slug change with validation
+  const handleSlugChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      slug: value
+    }));
+
+    // Validate slug in real-time
+    const validation = validateOrgSlug(value);
+    if (!validation.isValid) {
+      setSlugError(validation.error || 'Slug ไม่ถูกต้อง');
+    } else {
+      setSlugError('');
+    }
+    
+    if (error) setError('');
   };
 
   const handleInputChange = (field: keyof OrganizationForm) => (
@@ -99,6 +121,7 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
     }));
   };
 
+  // ✅ UPDATED: Enhanced validation
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
       setError('กรุณากรอกชื่อองค์กร');
@@ -109,9 +132,12 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
       setError('กรุณากรอก URL slug');
       return false;
     }
-    
-    if (formData.slug.length < 3) {
-      setError('URL slug ต้องมีอย่างน้อย 3 ตัวอักษร');
+
+    // ✅ Validate slug format and reserved words
+    const slugValidation = validateOrgSlug(formData.slug);
+    if (!slugValidation.isValid) {
+      setSlugError(slugValidation.error || 'Slug ไม่ถูกต้อง');
+      setError('กรุณาแก้ไข Slug ให้ถูกต้อง');
       return false;
     }
 
@@ -180,6 +206,7 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
         icon: 'BUILDING',
       });
       setError('');
+      setSlugError(''); // ✅ Clear slug error
       onOpenChange(false);
     }
   };
@@ -198,7 +225,7 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* ✅ NEW: Organization Preview */}
+          {/* Organization Preview */}
           <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
             <div className="text-sm text-gray-600 mb-2">ตัวอย่าง:</div>
             <div className="flex items-center gap-3">
@@ -229,23 +256,43 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
             />
           </div>
 
-          {/* URL Slug */}
+          {/* URL Slug with validation */}
           <div className="space-y-2">
             <Label htmlFor="org-slug">URL Slug *</Label>
             <Input
               id="org-slug"
               placeholder="siriraj-hospital"
               value={formData.slug}
-              onChange={handleInputChange('slug')}
+              onChange={(e) => handleSlugChange(e.target.value)}
               disabled={isLoading}
               required
+              className={slugError ? 'border-red-500' : ''}
             />
+            
+            {/* ✅ NEW: Slug error message */}
+            {slugError && (
+              <p className="text-xs text-red-600 flex items-start gap-1">
+                <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                <span>{slugError}</span>
+              </p>
+            )}
+            
             <p className="text-xs text-gray-500">
               จะใช้เป็น URL: /{formData.slug || 'your-org-slug'}
             </p>
+            
+            {/* ✅ NEW: Slug rules hint */}
+            <div className="text-xs text-gray-500 space-y-1 bg-blue-50 p-2 rounded">
+              <p className="font-medium text-blue-900">กฎการตั้งชื่อ Slug:</p>
+              <ul className="list-disc list-inside space-y-0.5 text-blue-700">
+                <li>ใช้ได้เฉพาะตัวพิมพ์เล็ก (a-z), ตัวเลข (0-9), และเครื่องหมาย -</li>
+                <li>ความยาว 3-50 ตัวอักษร</li>
+                <li>ไม่สามารถใช้คำสงวน เช่น: api, dashboard, admin, settings</li>
+              </ul>
+            </div>
           </div>
 
-          {/* ✅ NEW: Color & Icon Selection */}
+          {/* Color & Icon Selection */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="color">สีองค์กร</Label>
@@ -376,7 +423,7 @@ export const CreateOrganizationModal = ({ open, onOpenChange }: CreateOrganizati
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isLoading}
+              disabled={isLoading || !!slugError}
               className="flex-1"
             >
               {isLoading ? (

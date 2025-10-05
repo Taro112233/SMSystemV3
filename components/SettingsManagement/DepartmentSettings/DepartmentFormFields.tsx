@@ -1,9 +1,13 @@
-// components/SettingsManagement/DepartmentSettings/DepartmentFormFields.tsx
+// FILE: components/SettingsManagement/DepartmentSettings/DepartmentFormFields.tsx
+// DepartmentFormFields - UPDATED with slug validation
+// ============================================
+
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -11,10 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Link2 } from 'lucide-react';
+import { Link2, AlertTriangle, Info } from 'lucide-react';
 import { getAvailableColors, getAvailableIcons } from '@/lib/department-helpers';
+import { validateDeptSlug, shouldWarnDeptSlug, generateSafeSlug } from '@/lib/slug-validator'; // ✅ NEW
 
-// ✅ เพิ่ม interface สำหรับ FormData
 interface DepartmentFormData {
   name: string;
   slug: string;
@@ -26,7 +30,7 @@ interface DepartmentFormData {
 
 interface DepartmentFormFieldsProps {
   formData: DepartmentFormData;
-  setFormData: React.Dispatch<React.SetStateAction<DepartmentFormData>>; // ✅ เปลี่ยนจาก any
+  setFormData: React.Dispatch<React.SetStateAction<DepartmentFormData>>;
   isEditing: boolean;
   organizationSlug?: string;
 }
@@ -39,27 +43,55 @@ export const DepartmentFormFields = ({
 }: DepartmentFormFieldsProps) => {
   const colors = getAvailableColors();
   const icons = getAvailableIcons();
+  
+  // ✅ NEW: Validation states
+  const [slugError, setSlugError] = React.useState('');
+  const [slugWarning, setSlugWarning] = React.useState('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ // ✅ ลบ any type
-      ...prev,
-      [name]: value,
-      ...(name === 'name' && !isEditing ? {
-        slug: value
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '')
-      } : {})
-    }));
+    
+    setFormData((prev) => {
+      const newData = {
+        ...prev,
+        [name]: value,
+        // ✅ Auto-generate slug from name (only when creating new)
+        ...(name === 'name' && !isEditing ? {
+          slug: generateSafeSlug(value, false) // false = department
+        } : {})
+      };
+
+      // ✅ Validate slug if it changed
+      if (name === 'slug' || (name === 'name' && !isEditing)) {
+        const slugToValidate = name === 'slug' ? value : newData.slug;
+        
+        // Validate format and reserved words
+        const validation = validateDeptSlug(slugToValidate);
+        if (!validation.isValid) {
+          setSlugError(validation.error || '');
+        } else {
+          setSlugError('');
+        }
+
+        // Check for warnings (reserved org pages used as dept slug)
+        const warning = shouldWarnDeptSlug(slugToValidate);
+        if (warning.shouldWarn) {
+          setSlugWarning(warning.message || '');
+        } else {
+          setSlugWarning('');
+        }
+      }
+
+      return newData;
+    });
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value })); // ✅ ลบ any type
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSwitchChange = (checked: boolean) => {
-    setFormData((prev) => ({ ...prev, isActive: checked })); // ✅ ลบ any type
+    setFormData((prev) => ({ ...prev, isActive: checked }));
   };
 
   const getExampleUrl = () => {
@@ -78,6 +110,7 @@ export const DepartmentFormFields = ({
 
   return (
     <>
+      {/* Preview */}
       <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <div className="text-sm text-gray-600 mb-2">ตัวอย่าง:</div>
         <div className="flex items-center gap-3">
@@ -95,6 +128,7 @@ export const DepartmentFormFields = ({
         </div>
       </div>
 
+      {/* Name */}
       <div className="space-y-2">
         <Label htmlFor="name">ชื่อหน่วยงาน *</Label>
         <Input
@@ -107,6 +141,7 @@ export const DepartmentFormFields = ({
         />
       </div>
 
+      {/* Slug with validation */}
       <div className="space-y-2">
         <Label htmlFor="slug">Slug *</Label>
         <Input
@@ -117,8 +152,28 @@ export const DepartmentFormFields = ({
           placeholder="เช่น: emergency, main-pharmacy"
           pattern="[a-z0-9-]+"
           required
+          className={slugError ? 'border-red-500' : slugWarning ? 'border-amber-500' : ''}
         />
         
+        {/* ✅ NEW: Slug error */}
+        {slugError && (
+          <Alert variant="destructive" className="py-2">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs">{slugError}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* ✅ NEW: Slug warning (reserved org page) */}
+        {slugWarning && !slugError && (
+          <Alert className="py-2 bg-amber-50 border-amber-200">
+            <Info className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-xs text-amber-700">
+              {slugWarning}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* URL Preview */}
         <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <Link2 className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -131,11 +186,19 @@ export const DepartmentFormFields = ({
           </div>
         </div>
         
-        <p className="text-xs text-gray-500">
-          ใช้ตัวพิมพ์เล็ก ตัวเลข และเครื่องหมาย - เท่านั้น
-        </p>
+        {/* ✅ NEW: Slug rules */}
+        <div className="text-xs text-gray-500 space-y-1 bg-gray-50 p-2 rounded">
+          <p className="font-medium text-gray-700">กฎการตั้งชื่อ Slug:</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            <li>ใช้ได้เฉพาะตัวพิมพ์เล็ก (a-z), ตัวเลข (0-9), และเครื่องหมาย -</li>
+            <li>ความยาว 2-50 ตัวอักษร</li>
+            <li>ไม่สามารถใช้คำสงวนของระบบ เช่น: api, dashboard, admin</li>
+            <li>สามารถใช้ชื่อเดียวกับหน้าระบบได้ แต่ไม่แนะนำ (เช่น: settings, members)</li>
+          </ul>
+        </div>
       </div>
 
+      {/* Description */}
       <div className="space-y-2">
         <Label htmlFor="description">คำอธิบาย</Label>
         <Textarea
@@ -148,6 +211,7 @@ export const DepartmentFormFields = ({
         />
       </div>
 
+      {/* Color & Icon */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="color">สี</Label>
@@ -197,6 +261,7 @@ export const DepartmentFormFields = ({
         </div>
       </div>
 
+      {/* Active Status */}
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div className="space-y-1">
           <div className="font-medium">เปิดใช้งานหน่วยงาน</div>

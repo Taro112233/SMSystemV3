@@ -1,4 +1,7 @@
-// components/SettingsManagement/DepartmentSettings/DepartmentFormModal.tsx
+// FILE: components/SettingsManagement/DepartmentSettings/DepartmentFormModal.tsx
+// DepartmentFormModal - UPDATED with slug validation
+// ============================================
+
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -11,8 +14,8 @@ import { DepartmentFormFields } from './DepartmentFormFields';
 import { Button } from '@/components/ui/button';
 import { Save, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { validateDeptSlug } from '@/lib/slug-validator'; // ✅ NEW
 
-// ✅ เพิ่ม interface สำหรับ Department
 interface Department {
   id: string;
   name: string;
@@ -23,7 +26,6 @@ interface Department {
   isActive: boolean;
 }
 
-// ✅ เพิ่ม interface สำหรับ FormData
 interface DepartmentFormData {
   name: string;
   slug: string;
@@ -40,7 +42,7 @@ interface DepartmentFormModalProps {
   organizationId: string;
   organizationSlug?: string;
   department?: Department;
-  onSubmit: (data: DepartmentFormData) => Promise<void>; // ✅ เปลี่ยนจาก any
+  onSubmit: (data: DepartmentFormData) => Promise<void>;
 }
 
 export const DepartmentFormModal = ({
@@ -52,7 +54,7 @@ export const DepartmentFormModal = ({
   onSubmit,
 }: DepartmentFormModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<DepartmentFormData>({ // ✅ เพิ่ม type
+  const [formData, setFormData] = useState<DepartmentFormData>({
     name: department?.name || '',
     slug: department?.slug || '',
     description: department?.description || '',
@@ -74,6 +76,7 @@ export const DepartmentFormModal = ({
     }
   }, [open, department]);
 
+  // ✅ UPDATED: Enhanced validation with slug checking
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
       toast.error('กรุณากรอกชื่อหน่วยงาน');
@@ -85,8 +88,12 @@ export const DepartmentFormModal = ({
       return false;
     }
 
-    if (!/^[a-z0-9-]+$/.test(formData.slug)) {
-      toast.error('Slug ต้องเป็นตัวพิมพ์เล็ก ตัวเลข และ - เท่านั้น');
+    // ✅ Validate slug format and reserved words
+    const slugValidation = validateDeptSlug(formData.slug);
+    if (!slugValidation.isValid) {
+      toast.error('Slug ไม่ถูกต้อง', {
+        description: slugValidation.error
+      });
       return false;
     }
 

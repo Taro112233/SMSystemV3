@@ -1,5 +1,5 @@
 // FILE: components/SettingsManagement/OrganizationSettings/OrganizationForm.tsx
-// OrganizationSettings/OrganizationForm - Edit form with Icon & Color selection
+// OrganizationSettings/OrganizationForm - UPDATED with slug validation
 // ============================================
 
 import React, { useState } from 'react';
@@ -14,8 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Save, X, Globe, Mail, Phone, Clock, Link2 } from 'lucide-react';
-import { getAvailableColors, getAvailableIcons, getIconComponent, mapColorThemeToTailwind } from '@/lib/department-helpers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Save, X, Globe, Mail, Phone, Clock, Link2, AlertTriangle } from 'lucide-react';
+import { getAvailableColors, getAvailableIcons, getIconComponent } from '@/lib/department-helpers';
+import { validateOrgSlug } from '@/lib/slug-validator'; // ✅ NEW
 
 interface OrganizationData {
   name: string;
@@ -24,8 +26,8 @@ interface OrganizationData {
   email?: string;
   phone?: string;
   timezone: string;
-  color?: string;  // ✅ NEW
-  icon?: string;   // ✅ NEW
+  color?: string;
+  icon?: string;
 }
 
 interface OrganizationFormProps {
@@ -42,6 +44,7 @@ export const OrganizationForm = ({
   onCancel
 }: OrganizationFormProps) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [slugError, setSlugError] = useState(''); // ✅ NEW
   const [formData, setFormData] = useState<OrganizationData>({
     name: organization.name,
     slug: organization.slug,
@@ -49,20 +52,29 @@ export const OrganizationForm = ({
     email: organization.email || '',
     phone: organization.phone || '',
     timezone: organization.timezone,
-    color: organization.color || 'BLUE',     // ✅ NEW
-    icon: organization.icon || 'BUILDING',   // ✅ NEW
+    color: organization.color || 'BLUE',
+    icon: organization.icon || 'BUILDING',
   });
 
   const colors = getAvailableColors();
   const icons = getAvailableIcons();
 
-  // ✅ Get current selected icon and color for preview
   const selectedColor = colors.find(c => c.value === formData.color);
   const SelectedIcon = getIconComponent(formData.icon || 'BUILDING');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+
+    // ✅ Validate slug in real-time (only if user is OWNER)
+    if (name === 'slug' && isOwner) {
+      const validation = validateOrgSlug(value);
+      if (!validation.isValid) {
+        setSlugError(validation.error || 'Slug ไม่ถูกต้อง');
+      } else {
+        setSlugError('');
+      }
+    }
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -72,6 +84,15 @@ export const OrganizationForm = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // ✅ Final validation before submit
+    if (isOwner && formData.slug !== organization.slug) {
+      const slugValidation = validateOrgSlug(formData.slug);
+      if (!slugValidation.isValid) {
+        setSlugError(slugValidation.error || 'Slug ไม่ถูกต้อง');
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       await onSave(formData);
@@ -91,7 +112,7 @@ export const OrganizationForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* ✅ NEW: Organization Preview Card */}
+      {/* Organization Preview Card */}
       <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <div className="text-sm text-gray-600 mb-2">ตัวอย่าง:</div>
         <div className="flex items-center gap-3">
@@ -121,7 +142,7 @@ export const OrganizationForm = ({
         />
       </div>
 
-      {/* Slug with URL Preview */}
+      {/* Slug with URL Preview and Validation */}
       <div className="space-y-2">
         <Label htmlFor="slug" className="flex items-center gap-2">
           <Globe className="w-4 h-4" />
@@ -136,7 +157,16 @@ export const OrganizationForm = ({
           placeholder="organization-name"
           pattern="[a-z0-9-]+"
           required
+          className={slugError ? 'border-red-500' : ''}
         />
+        
+        {/* ✅ NEW: Slug error message */}
+        {slugError && isOwner && (
+          <Alert variant="destructive" className="py-2">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs">{slugError}</AlertDescription>
+          </Alert>
+        )}
         
         <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <Link2 className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -150,9 +180,18 @@ export const OrganizationForm = ({
           </div>
         </div>
         
-        <p className="text-xs text-gray-500">
-          ใช้ตัวอักษรพิมพ์เล็ก ตัวเลข และเครื่องหมาย - เท่านั้น
-        </p>
+        {/* ✅ NEW: Slug rules hint for OWNER */}
+        {isOwner && (
+          <div className="text-xs text-gray-500 space-y-1 bg-amber-50 p-2 rounded border border-amber-200">
+            <p className="font-medium text-amber-900">⚠️ กฎการตั้งชื่อ Slug:</p>
+            <ul className="list-disc list-inside space-y-0.5 text-amber-700">
+              <li>ใช้ได้เฉพาะตัวพิมพ์เล็ก (a-z), ตัวเลข (0-9), และเครื่องหมาย -</li>
+              <li>ความยาว 3-50 ตัวอักษร</li>
+              <li>ไม่สามารถใช้คำสงวน เช่น: api, dashboard, admin, settings, members</li>
+            </ul>
+          </div>
+        )}
+        
         {!isOwner && (
           <p className="text-xs text-orange-600">
             เฉพาะ OWNER เท่านั้นที่แก้ไข URL Slug ได้
@@ -160,7 +199,7 @@ export const OrganizationForm = ({
         )}
       </div>
 
-      {/* ✅ NEW: Color & Icon Selection */}
+      {/* Color & Icon Selection */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="color">สีองค์กร</Label>
@@ -282,7 +321,7 @@ export const OrganizationForm = ({
         </Button>
         <Button
           type="submit"
-          disabled={isSaving}
+          disabled={isSaving || !!slugError}
         >
           {isSaving ? (
             <>
