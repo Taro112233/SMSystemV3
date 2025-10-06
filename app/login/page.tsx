@@ -1,10 +1,9 @@
-// app/login/page.tsx - FIXED IMPORTS
+// app/login/page.tsx - FIXED NAVIGATION ISSUE
 
 "use client";
 
-import React, { useState, useEffect } from "react";
-// ✅ แก้ไข import ให้ถูกต้อง
-import { useAuth } from "@/app/utils/auth"; // ← เปลี่ยนจาก auth-client เป็น auth
+import React, { useState } from "react";
+import { useAuth } from "@/app/utils/auth";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -24,14 +23,12 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  ArrowRight,
   Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 
-// ✅ ปรับ interface ให้ตรงกับ current schema
 interface LoginFormData {
-  username: string;  // ✅ Primary credential ตาม schema
+  username: string;
   password: string;
 }
 
@@ -43,45 +40,12 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [loginSuccess, setLoginSuccess] = useState(false);
 
-  // ✅ ใช้ useAuth hook จาก auth.tsx
-  const { login, loading, user } = useAuth();
+  const { login, loading } = useAuth();
   const router = useRouter();
 
-  // ตรวจสอบสถานะ auth ทุก 2 วินาที หลัง login success
-  useEffect(() => {
-    let authCheckInterval: NodeJS.Timeout;
-
-    if (loginSuccess && !user) {
-      authCheckInterval = setInterval(async () => {
-        try {
-          const response = await fetch("/api/auth/me", {
-            credentials: "include",
-          });
-
-          if (response.ok) {
-            const userData = await response.json();
-            if (userData.success && userData.data?.user) {
-              toast.success("พร้อมใช้งาน!", {
-                description: "การยืนยันตัวตนเสร็จสมบูรณ์",
-                icon: <CheckCircle2 className="w-4 h-4" />,
-              });
-              router.push("/dashboard");
-            }
-          }
-        } catch (error) {
-          console.error("Auth check error:", error);
-        }
-      }, 2000);
-    }
-
-    return () => {
-      if (authCheckInterval) {
-        clearInterval(authCheckInterval);
-      }
-    };
-  }, [loginSuccess, user, router]);
+  // ✅ FIXED: ลบ useEffect ที่ทำ auth check ออก (ไม่จำเป็น)
+  // ✅ FIXED: ลบ loginSuccess state ออก (ไม่จำเป็น)
 
   const validateForm = (): boolean => {
     if (!formData.username?.trim()) {
@@ -116,29 +80,30 @@ export default function LoginPage() {
 
     setIsLoading(true);
     setError("");
-    setLoginSuccess(false);
 
     const loadingToast = toast.loading("กำลังเข้าสู่ระบบ...", {
       description: "กรุณารอสักครู่",
     });
 
     try {
-      // ✅ ใช้ login function จาก useAuth hook
+      // ✅ FIXED: รอให้ login เสร็จก่อน แล้ว redirect ทันที
       await login({
-        username: formData.username.trim(), // ✅ ใช้ username ตาม schema
+        username: formData.username.trim(),
         password: formData.password,
       });
 
       toast.dismiss(loadingToast);
-      setLoginSuccess(true);
 
       toast.success("เข้าสู่ระบบสำเร็จ!", {
         description: `ยินดีต้อนรับเข้าสู่ระบบจัดการสต็อก`,
-        duration: 3000,
+        duration: 2000,
       });
 
-      // Navigate based on organizations
-      router.push("/dashboard");
+      // ✅ FIXED: ใช้ window.location.href แทน router.push 
+      // เพื่อให้แน่ใจว่า full page reload และ auth state update ถูกต้อง
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
       
     } catch (error) {
       toast.dismiss(loadingToast);
@@ -147,7 +112,6 @@ export default function LoginPage() {
       const errorMsg = error instanceof Error ? error.message : "เข้าสู่ระบบไม่สำเร็จ";
       setError(errorMsg);
       
-      // ✅ แสดง error message ที่เฉพาะเจาะจง
       if (errorMsg.includes("Username") || errorMsg.includes("username")) {
         toast.error("Username ไม่ถูกต้อง", {
           description: "ไม่พบ Username นี้ในระบบ กรุณาตรวจสอบอีกครั้ง",
@@ -247,7 +211,7 @@ export default function LoginPage() {
                   value={formData.username}
                   onChange={handleInputChange}
                   placeholder="กรอก Username"
-                  disabled={isLoading || loginSuccess}
+                  disabled={isLoading}
                   className="h-11"
                   autoComplete="username"
                   required
@@ -264,7 +228,7 @@ export default function LoginPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder="กรอกรหัสผ่าน"
-                    disabled={isLoading || loginSuccess}
+                    disabled={isLoading}
                     className="h-11 pr-10"
                     autoComplete="current-password"
                     required
@@ -275,7 +239,7 @@ export default function LoginPage() {
                     size="icon"
                     className="absolute right-0 top-0 h-11 w-10 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={isLoading || loginSuccess}
+                    disabled={isLoading}
                   >
                     {showPassword ? (
                       <EyeOff className="w-4 h-4 text-gray-400" />
@@ -293,62 +257,37 @@ export default function LoginPage() {
                 </Alert>
               )}
 
-              {/* Login Button */}
-              {!loginSuccess && (
-                <Button
-                  type="submit"
-                  className="w-full h-11 text-base bg-blue-500 hover:bg-blue-600"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      กำลังเข้าสู่ระบบ...
-                    </>
-                  ) : (
-                    "เข้าสู่ระบบ"
-                  )}
-                </Button>
-              )}
-
-              {/* Success State */}
-              {loginSuccess && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center p-4 bg-green-50 rounded-lg border border-green-200">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2" />
-                    <p className="text-sm text-green-700 font-medium">
-                      เข้าสู่ระบบสำเร็จ! กำลังนำไปยัง Dashboard...
-                    </p>
-                  </div>
-
-                  <Button
-                    variant="secondary"
-                    className="w-full h-11 text-base bg-green-500 hover:bg-green-600 text-white"
-                    onClick={() => router.push('/dashboard')}
-                  >
-                    เข้าสู่ Dashboard
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              )}
+              {/* ✅ FIXED: ปุ่ม login เดียว ไม่มี conditional rendering */}
+              <Button
+                type="submit"
+                className="w-full h-11 text-base bg-blue-500 hover:bg-blue-600"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    กำลังเข้าสู่ระบบ...
+                  </>
+                ) : (
+                  "เข้าสู่ระบบ"
+                )}
+              </Button>
             </form>
 
             {/* Registration link */}
-            {!loginSuccess && (
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
-                  ยังไม่มีบัญชี?{" "}
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-blue-600 hover:text-blue-800"
-                    onClick={handleRegisterClick}
-                    disabled={isLoading}
-                  >
-                    สมัครสมาชิก
-                  </Button>
-                </p>
-              </div>
-            )}
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                ยังไม่มีบัญชี?{" "}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-blue-600 hover:text-blue-800"
+                  onClick={handleRegisterClick}
+                  disabled={isLoading}
+                >
+                  สมัครสมาชิก
+                </Button>
+              </p>
+            </div>
           </CardContent>
         </Card>
 
