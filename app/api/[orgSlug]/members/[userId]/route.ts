@@ -1,5 +1,5 @@
-// FILE: app/api/[orgSlug]/members/[userId]/route.ts
-// Members API - Remove member - FIXED WITH HIERARCHY-BASED DELETION
+// app/api/[orgSlug]/members/[userId]/route.ts
+// UPDATED: Add targetSnapshot for member removal
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,6 +7,7 @@ import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { getRoleHierarchy, type OrganizationRole } from '@/lib/role-helpers';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
+import { createUserSnapshot } from '@/lib/user-snapshot';
 
 export async function DELETE(
   request: NextRequest,
@@ -25,27 +26,22 @@ export async function DELETE(
       return NextResponse.json({ error: 'No access to organization' }, { status: 403 });
     }
 
-    // Check if user can delete based on hierarchy
     if (!['OWNER', 'ADMIN'].includes(access.role)) {
       return NextResponse.json({ 
         error: 'Only OWNER or ADMIN can remove members' 
       }, { status: 403 });
     }
 
-    // Cannot delete yourself
     if (userId === user.userId) {
       return NextResponse.json({ error: 'Cannot remove yourself' }, { status: 400 });
     }
 
-    // Use transaction to prevent race condition
     await prisma.$transaction(async (tx) => {
-      // Lock organization to prevent concurrent deletions
       await tx.organization.findUnique({
         where: { id: access.organizationId },
         select: { id: true }
       });
 
-      // Get target member
       const targetMember = await tx.organizationUser.findFirst({
         where: { organizationId: access.organizationId, userId },
         include: {
@@ -62,7 +58,6 @@ export async function DELETE(
       const targetRole = targetMember.roles as OrganizationRole;
       const managerRole = access.role as OrganizationRole;
 
-      // Check hierarchy - can only delete lower roles
       const managerLevel = getRoleHierarchy(managerRole);
       const targetLevel = getRoleHierarchy(targetRole);
 
@@ -70,7 +65,6 @@ export async function DELETE(
         throw new Error(`Cannot remove ${targetRole}. You can only remove members with lower roles.`);
       }
 
-      // Extra protection: If target is OWNER, check remaining OWNERs
       if (targetRole === 'OWNER') {
         const remainingOwners = await tx.organizationUser.count({
           where: { 
@@ -86,7 +80,6 @@ export async function DELETE(
         }
       }
 
-      // Delete member
       await tx.organizationUser.delete({
         where: {
           organizationId_userId: {
@@ -96,13 +89,19 @@ export async function DELETE(
         },
       });
 
-      // ✅ Create audit log
+      // ✅ NEW: Create snapshots for both actor and target
+      const actorSnapshot = await createUserSnapshot(user.userId, access.organizationId);
+      const targetSnapshot = await createUserSnapshot(userId, access.organizationId);
+      
+      // ✅ Create audit log with both snapshots
       const { ipAddress, userAgent } = getRequestMetadata(request);
       
       await createAuditLog({
         organizationId: access.organizationId,
         userId: user.userId,
+        userSnapshot: actorSnapshot, // ✅ Who removed
         targetUserId: userId,
+        targetSnapshot: targetSnapshot, // ✅ Who was removed
         action: 'members.removed',
         category: 'USER',
         severity: 'CRITICAL',
@@ -128,7 +127,6 @@ export async function DELETE(
   } catch (error) {
     console.error('Remove member failed:', error);
     
-    // Handle specific errors
     if (error instanceof Error) {
       return NextResponse.json({ 
         error: error.message 

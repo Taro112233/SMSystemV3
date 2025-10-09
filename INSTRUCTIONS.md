@@ -506,20 +506,25 @@ export async function GET(
 
 ### 📊 Audit Log System
 
-#### **Schema Overview**
+#### **Schema Overview with Snapshots**
 ```prisma
 model AuditLog {
   id             String        @id @default(cuid())
   organizationId String
-  userId         String?       // ผู้ทำ action
-  targetUserId   String?       // ผู้ถูกกระทำ (optional)
-  departmentId   String?       // หน่วยงานที่เกี่ยวข้อง
   
-  action         String        // "products.create"
-  category       AuditCategory // PRODUCT, STOCK, TRANSFER, USER, ORG
-  severity       AuditSeverity // INFO, WARNING, CRITICAL
-  description    String        // "สมชาย สร้างสินค้า Paracetamol ที่คลังยา"
+  // ✅ Actor (ผู้ทำ) - Snapshot + Relation
+  userId         String?       // User ID (for query)
+  userSnapshot   Json?         // ✅ User info ณ ขณะนั้น
   
+  // ✅ Target (ผู้ถูกกระทำ) - Snapshot + Relation
+  targetUserId   String?       // Target User ID
+  targetSnapshot Json?         // ✅ Target user info ณ ขณะนั้น
+  
+  departmentId   String?
+  action         String
+  category       AuditCategory
+  severity       AuditSeverity
+  description    String
   resourceId     String?
   resourceType   String?
   payload        Json?
@@ -527,9 +532,18 @@ model AuditLog {
   userAgent      String?
   createdAt      DateTime @default(now())
 }
+
+model Department {
+  // ...
+  createdBy         String
+  createdBySnapshot Json?    // ✅ Creator snapshot
+  updatedBy         String?
+  updatedBySnapshot Json?    // ✅ Updater snapshot
+  // ...
+}
 ```
 
-#### **When to Log Audit**
+When to Log Audit
 ```typescript
 // ✅ Log these actions:
 - CREATE, UPDATE, DELETE operations (NOT Read)
@@ -539,32 +553,32 @@ model AuditLog {
 
 // ❌ Don't log:
 - GET/Read operations
+- Organization creation (tracked by createdAt + OWNER role)
 - Health checks
-- Static asset requests
 ```
 
-#### **Severity Guidelines**
-```typescript
-INFO      // Normal operations (90%) - สร้าง/แก้ไข/ตรวจนับ
-WARNING   // Important changes (8%) - เปลี่ยนบทบาท, ลบข้อมูล
-CRITICAL  // Security events (2%) - ลบสมาชิก, login failed
-```
-
-#### **Usage Pattern**
+Usage Pattern with Snapshots
 ```typescript
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
+import { createUserSnapshot } from '@/lib/user-snapshot';
 
 // In API routes
 const { ipAddress, userAgent } = getRequestMetadata(request);
 
+// ✅ Create snapshot before logging
+const userSnapshot = await createUserSnapshot(user.userId, organizationId);
+
 await createAuditLog({
   organizationId: access.organizationId,
   userId: user.userId,
-  departmentId: department?.id,        // ✅ ถ้ามี dept context
+  userSnapshot,              // ✅ Pass actor snapshot
+  targetUserId: targetId,    // ✅ For role changes/member removal
+  targetSnapshot,            // ✅ Pass target snapshot
+  departmentId: department?.id,
   action: 'products.create',
   category: 'PRODUCT',
   severity: 'INFO',
-  description: `สร้างสินค้า ${product.name} ที่${department.name}`,
+  description: `สร้างสินค้า ${product.name}`,
   resourceId: product.id,
   resourceType: 'Product',
   payload: { productName: product.name },
@@ -573,43 +587,47 @@ await createAuditLog({
 });
 ```
 
-#### **Action Naming Convention**
+Record Creation/Update Pattern
 ```typescript
-// Pattern: {resource}.{operation}
-'products.create'
-'products.update'
-'products.delete'
-'departments.create'
-'members.role_updated'
-'members.removed'
-'stocks.adjust'
-'transfers.create'
-'transfers.approve'
-'organization.settings_updated'
+// ✅ When creating/updating records (e.g., Department)
+const userSnapshot = await createUserSnapshot(user.userId, organizationId);
+
+await prisma.department.create({
+  data: {
+    // ... other fields
+    createdBy: user.userId,
+    createdBySnapshot: userSnapshot,  // ✅ Store creator snapshot
+  }
+});
+
+// ✅ On update
+const updaterSnapshot = await createUserSnapshot(user.userId, organizationId);
+
+await prisma.department.update({
+  data: {
+    // ... other fields
+    updatedBy: user.userId,
+    updatedBySnapshot: updaterSnapshot,  // ✅ Store updater snapshot
+  }
+});
 ```
 
-#### **Department Context Rule**
-```typescript
-// ✅ Include departmentId when:
-- Action happens in specific department
-- Resource belongs to department
-- Example: สร้างสินค้าที่คลังยา, ตรวจนับที่ OPD
+Snapshot Benefits
 
-// ❌ departmentId = null when:
-- Organization-level actions
-- Example: สร้างหน่วยงาน, เปลี่ยนบทบาทสมาชิก
-```
+- Immutable History: User data ณ ขณะนั้นไม่เปลี่ยนแปลง
+- Complete Context: เห็นชื่อ, role, email ของผู้ทำ action ตอนนั้น
+- Audit Integrity: ถ้า user ถูกลบ ยังมีข้อมูลใน snapshot
 
-#### **Helper Functions Available**
+Helper Functions
 ```typescript
+// lib/user-snapshot.ts
+createUserSnapshot(userId, organizationId?)  // Create snapshot
+createUserSnapshotFromJWT(jwtUser, role?)   // From JWT payload
+
 // lib/audit-logger.ts
-createAuditLog(params)              // Create audit log
+createAuditLog(params)              // Create log with snapshots
 getRequestMetadata(request)         // Get IP + User-Agent
-getOrganizationAuditLogs(orgId)     // Get org logs
-getDepartmentAuditLogs(deptId)      // Get dept logs
-getCriticalAuditLogs(orgId)         // Get CRITICAL only
 ```
-
 ---
 
 ### **Component Architecture**

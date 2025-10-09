@@ -1,11 +1,12 @@
-// FILE: app/api/[orgSlug]/departments/route.ts
-// Departments API - List all departments (UPDATED: Show all for Settings)
+// app/api/[orgSlug]/departments/route.ts
+// UPDATED: Add createdBySnapshot for department creation
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
+import { createUserSnapshot } from '@/lib/user-snapshot';
 
 // GET - List all departments (including inactive)
 export async function GET(
@@ -15,7 +16,6 @@ export async function GET(
   try {
     const { orgSlug } = await params;
     
-    // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -24,7 +24,6 @@ export async function GET(
       );
     }
 
-    // Check organization access
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
@@ -33,7 +32,6 @@ export async function GET(
       );
     }
 
-    // Get ALL departments (no isActive filter)
     const departments = await prisma.department.findMany({
       where: {
         organizationId: access.organizationId,
@@ -70,7 +68,6 @@ export async function POST(
   try {
     const { orgSlug } = await params;
     
-    // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -79,7 +76,6 @@ export async function POST(
       );
     }
 
-    // Check organization access
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
@@ -88,7 +84,6 @@ export async function POST(
       );
     }
 
-    // Check permission - only ADMIN and OWNER can create departments
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { error: 'Insufficient permissions. ADMIN or OWNER required.' },
@@ -96,11 +91,9 @@ export async function POST(
       );
     }
 
-    // Get request body
     const body = await request.json();
     const { name, slug, description, color, icon, isActive } = body;
 
-    // Validate required fields
     if (!name || !slug) {
       return NextResponse.json(
         { error: 'Name and slug are required' },
@@ -108,7 +101,6 @@ export async function POST(
       );
     }
 
-    // Validate slug format
     if (!/^[a-z0-9-]+$/.test(slug)) {
       return NextResponse.json(
         { error: 'Slug must contain only lowercase letters, numbers, and hyphens' },
@@ -116,7 +108,6 @@ export async function POST(
       );
     }
 
-    // Check if slug already exists in this organization
     const existingDept = await prisma.department.findFirst({
       where: {
         organizationId: access.organizationId,
@@ -131,7 +122,10 @@ export async function POST(
       );
     }
 
-    // Create department
+    // ✅ NEW: Create user snapshot
+    const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
+
+    // Create department with snapshot
     const department = await prisma.department.create({
       data: {
         organizationId: access.organizationId,
@@ -142,15 +136,17 @@ export async function POST(
         icon: icon || 'BUILDING',
         isActive: isActive ?? true,
         createdBy: user.userId,
+        createdBySnapshot: userSnapshot, // ✅ Store creator snapshot
       },
     });
 
-    // ✅ Create audit log
+    // ✅ Create audit log with snapshot
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
     await createAuditLog({
       organizationId: access.organizationId,
       userId: user.userId,
+      userSnapshot, // ✅ Pass snapshot
       departmentId: department.id,
       action: 'departments.create',
       category: 'DEPARTMENT',

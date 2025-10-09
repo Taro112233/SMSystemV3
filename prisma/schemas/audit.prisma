@@ -1,40 +1,45 @@
 // prisma/schemas/audit.prisma
-// ===== PRODUCTION-READY AUDIT SYSTEM - InvenStock V2.0 =====
+// ===== PRODUCTION-READY AUDIT SYSTEM WITH USER SNAPSHOTS =====
 
 model AuditLog {
   id             String        @id @default(cuid())
   organizationId String
   
-  // Actor & Target
-  userId         String?       // ผู้ทำ action
-  targetUserId   String?       // ผู้ถูกกระทำ (optional)
+  // ✅ Actor (ผู้ทำ) - Snapshot + Optional Relation
+  userId         String?       // User ID (for relation/query)
+  userSnapshot   Json?         // ✅ NEW: User info ณ ขณะนั้น
+  // Example: { userId, username, fullName, email, role }
+  
+  // ✅ Target (ผู้ถูกกระทำ) - Snapshot + Optional Relation
+  targetUserId   String?       // Target User ID
+  targetSnapshot Json?         // ✅ NEW: Target user info ณ ขณะนั้น
   
   // Department Context
-  departmentId   String?       // หน่วยงานที่เกี่ยวข้อง
+  departmentId   String?
   
   // Action Classification
   action         String        // "products.create"
   category       AuditCategory // PRODUCT, STOCK, TRANSFER, USER, ORG
   severity       AuditSeverity @default(INFO)
   
-  // Human-Readable
+  // Human-Readable Description
   description    String        // "สมชาย สร้างสินค้า Paracetamol ที่คลังยา"
   
   // Resource Tracking
   resourceId     String?       // ID ของ record
   resourceType   String?       // "Product", "Stock", "Transfer"
   
-  // Detailed Data
+  // Detailed Data (before/after comparison)
   payload        Json?         // { before, after, metadata }
   
   // Request Context
   ipAddress      String?
-  userAgent      String?       // Browser/device info
+  userAgent      String?
   
   // Timestamp
   createdAt      DateTime @default(now())
   
-  // Relations
+  // ✅ Relations (ยังคงไว้สำหรับ query/join)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User? @relation("AuditLogUser", fields: [userId], references: [id], onDelete: SetNull)
   targetUser     User? @relation("AuditLogTarget", fields: [targetUserId], references: [id], onDelete: SetNull)

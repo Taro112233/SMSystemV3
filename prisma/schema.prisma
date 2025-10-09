@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-10-09T11:16:29.591Z
+// Last generated: 2025-10-09T17:20:26.338Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -92,6 +92,17 @@ enum IconType {
   TRIANGLE     // 🔺 สามเหลี่ยม
 }
 
+// ===== ✅ NEW: USER SNAPSHOT TYPE =====
+// ใช้ใน Audit Logs และ Records ต่างๆ เพื่อเก็บข้อมูล user ณ ขณะนั้น
+// Structure:
+// {
+//   "userId": "clxxx",
+//   "username": "admin01",
+//   "fullName": "สมชาย ใจดี",
+//   "email": "somchai@hospital.com",
+//   "role": "ADMIN" // Role ณ ขณะนั้น (ถ้ามี context)
+// }
+
 // ==========================================
 // USER SCHEMA - V1.0
 // ==========================================
@@ -124,8 +135,6 @@ model User {
   
   // Relations
   organizationUsers   OrganizationUser[]
-  
-  // ✅ FIXED: Audit Log Relations
   auditLogsAsUser     AuditLog[] @relation("AuditLogUser")
   auditLogsAsTarget   AuditLog[] @relation("AuditLogTarget")
   
@@ -141,29 +150,29 @@ model User {
 // ==========================================
 
 // prisma/schemas/organization.prisma
-// ===== ORGANIZATION SCHEMA WITH ICON & COLOR SUPPORT =====
+// ===== ORGANIZATION SCHEMA WITH USER SNAPSHOTS =====
 
 model Organization {
   id          String             @id @default(cuid())
   name        String
-  slug        String             @unique // URL-friendly identifier
+  slug        String             @unique
   description String?
   
   // Contact Information
   email       String?
   phone       String?
   
-  // ✅ NEW: Visual Customization
-  color       ColorTheme?        @default(BLUE)   // Organization color theme
-  icon        IconType?          @default(BUILDING) // Organization icon
+  // Visual Customization
+  color       ColorTheme?        @default(BLUE)
+  icon        IconType?          @default(BUILDING)
   
   // Settings
   status      OrganizationStatus @default(ACTIVE)
   timezone    String             @default("Asia/Bangkok")
   
-  // Invite Code System Only
-  inviteCode     String?    @unique // Organization-generated invite code
-  inviteEnabled  Boolean    @default(true) // Allow joining via invite code
+  // Invite Code System
+  inviteCode     String?    @unique
+  inviteEnabled  Boolean    @default(true)
   
   // Timestamps
   createdAt   DateTime           @default(now())
@@ -180,7 +189,7 @@ model Organization {
   @@map("organizations")
 }
 
-// User-Organization Relationship (Many-to-Many)
+// User-Organization Relationship
 model OrganizationUser {
   id             String       @id @default(cuid())
   organizationId String
@@ -205,25 +214,30 @@ model OrganizationUser {
   @@map("organization_users")
 }
 
-// Simplified Departments (Data Organization Only)
+// ✅ UPDATED: Department with User Snapshots
 model Department {
   id             String       @id @default(cuid())
   organizationId String
-  parentId       String?      // For hierarchical structure (optional)
+  parentId       String?
   
   // Department Details
   name           String
-  slug           String       // Short slug (e.g., "ICU", "OPD", "PHARMACY")
+  slug           String
   description    String?
   color          ColorTheme?
   icon           IconType?
   
-  // Simple Status
+  // Status
   isActive       Boolean      @default(true)
   
-  // Audit Fields (for tracking who created/modified)
-  createdBy      String       // User who created
-  updatedBy      String?      // User who last updated
+  // ✅ NEW: Created By - Snapshot + Relation
+  createdBy      String       // User ID
+  createdBySnapshot Json?     // ✅ NEW: Creator info ณ ขณะนั้น
+  // Example: { userId, username, fullName, email, role }
+  
+  // ✅ NEW: Updated By - Snapshot + Relation
+  updatedBy      String?      // Last updater ID
+  updatedBySnapshot Json?     // ✅ NEW: Last updater info ณ ขณะนั้น
   
   // Timestamps
   createdAt      DateTime     @default(now())
@@ -233,7 +247,6 @@ model Department {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
-  
   auditLogs      AuditLog[]
   
   @@unique([organizationId, slug])
@@ -247,42 +260,47 @@ model Department {
 // ==========================================
 
 // prisma/schemas/audit.prisma
-// ===== PRODUCTION-READY AUDIT SYSTEM - InvenStock V2.0 =====
+// ===== PRODUCTION-READY AUDIT SYSTEM WITH USER SNAPSHOTS =====
 
 model AuditLog {
   id             String        @id @default(cuid())
   organizationId String
   
-  // Actor & Target
-  userId         String?       // ผู้ทำ action
-  targetUserId   String?       // ผู้ถูกกระทำ (optional)
+  // ✅ Actor (ผู้ทำ) - Snapshot + Optional Relation
+  userId         String?       // User ID (for relation/query)
+  userSnapshot   Json?         // ✅ NEW: User info ณ ขณะนั้น
+  // Example: { userId, username, fullName, email, role }
+  
+  // ✅ Target (ผู้ถูกกระทำ) - Snapshot + Optional Relation
+  targetUserId   String?       // Target User ID
+  targetSnapshot Json?         // ✅ NEW: Target user info ณ ขณะนั้น
   
   // Department Context
-  departmentId   String?       // หน่วยงานที่เกี่ยวข้อง
+  departmentId   String?
   
   // Action Classification
   action         String        // "products.create"
   category       AuditCategory // PRODUCT, STOCK, TRANSFER, USER, ORG
   severity       AuditSeverity @default(INFO)
   
-  // Human-Readable
+  // Human-Readable Description
   description    String        // "สมชาย สร้างสินค้า Paracetamol ที่คลังยา"
   
   // Resource Tracking
   resourceId     String?       // ID ของ record
   resourceType   String?       // "Product", "Stock", "Transfer"
   
-  // Detailed Data
+  // Detailed Data (before/after comparison)
   payload        Json?         // { before, after, metadata }
   
   // Request Context
   ipAddress      String?
-  userAgent      String?       // Browser/device info
+  userAgent      String?
   
   // Timestamp
   createdAt      DateTime @default(now())
   
-  // Relations
+  // ✅ Relations (ยังคงไว้สำหรับ query/join)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User? @relation("AuditLogUser", fields: [userId], references: [id], onDelete: SetNull)
   targetUser     User? @relation("AuditLogTarget", fields: [targetUserId], references: [id], onDelete: SetNull)

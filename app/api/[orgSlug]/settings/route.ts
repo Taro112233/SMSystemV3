@@ -1,27 +1,13 @@
-// FILE: app/api/[orgSlug]/settings/route.ts
-// Settings API - FIXED: Correct Prisma enum types for color & icon
+// app/api/[orgSlug]/settings/route.ts
+// UPDATED: Add userSnapshot for organization settings updates
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
-import { ColorTheme, IconType } from '@prisma/client'; // ✅ Import Prisma enums
-
-// ✅ FIXED: Use Prisma enum types with index signature for JSON compatibility
-interface OrganizationUpdateData {
-  name?: string;
-  slug?: string;
-  description?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  timezone?: string;
-  color?: ColorTheme;           // ✅ Use Prisma ColorTheme enum
-  icon?: IconType;              // ✅ Use Prisma IconType enum
-  inviteEnabled?: boolean;
-  inviteCode?: string;
-  [key: string]: string | boolean | ColorTheme | IconType | null | undefined; // ✅ Index signature for Prisma JSON
-}
+import { ColorTheme, IconType } from '@prisma/client';
+import { createUserSnapshot } from '@/lib/user-snapshot';
 
 export async function GET(
   request: NextRequest,
@@ -181,19 +167,15 @@ export async function PATCH(
       );
     }
 
-    // ✅ Build update data with proper types
-    const updateData: OrganizationUpdateData = {};
+    const updateData: any = {};
 
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description || null;
     if (email !== undefined) updateData.email = email || null;
     if (phone !== undefined) updateData.phone = phone || null;
     if (timezone !== undefined) updateData.timezone = timezone;
-    
-    // ✅ FIXED: Cast to Prisma enum types
     if (color !== undefined) updateData.color = color as ColorTheme;
     if (icon !== undefined) updateData.icon = icon as IconType;
-    
     if (inviteEnabled !== undefined) updateData.inviteEnabled = inviteEnabled;
     if (inviteCode !== undefined) updateData.inviteCode = inviteCode;
 
@@ -219,7 +201,9 @@ export async function PATCH(
       updateData.slug = slug;
     }
 
-    // ✅ Update with properly typed data
+    // ✅ NEW: Create user snapshot
+    const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
+
     const updatedOrg = await prisma.organization.update({
       where: {
         id: access.organizationId,
@@ -227,6 +211,7 @@ export async function PATCH(
       data: updateData,
     });
 
+    // ✅ Create audit log with snapshot
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
     let severity: 'INFO' | 'WARNING' = 'INFO';
@@ -237,6 +222,7 @@ export async function PATCH(
     await createAuditLog({
       organizationId: access.organizationId,
       userId: user.userId,
+      userSnapshot, // ✅ Pass snapshot
       action: 'organization.settings_updated',
       category: 'ORGANIZATION',
       severity,

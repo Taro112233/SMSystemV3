@@ -1,5 +1,5 @@
-// FILE: app/api/organizations/join-by-code/route.ts
-// Join Organization by Invite Code API - WITH AUDIT LOG
+// app/api/organizations/join-by-code/route.ts
+// UPDATED: Add userSnapshot for join by code
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -8,6 +8,7 @@ import { getServerUser } from '@/lib/auth-server';
 import { z } from 'zod';
 import arcjet, { shield, tokenBucket } from "@arcjet/next";
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
+import { createUserSnapshot } from '@/lib/user-snapshot';
 
 // ===== ARCJET SECURITY =====
 const aj = arcjet({
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!organization) {
-      // ✅ Log failed join attempt with IP only (userAgent ไม่จำเป็นต้องใช้)
+      // ✅ Log failed join attempt with IP only
       const { ipAddress } = getRequestMetadata(request);
       
       console.log(`❌ Invalid invite code attempt: ${inviteCode} by user: ${user.userId} from IP: ${ipAddress}`);
@@ -144,12 +145,16 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // ✅ Create audit log
+      // ✅ NEW: Create user snapshot (without org context since just joining)
+      const userSnapshot = await createUserSnapshot(user.userId);
+      
+      // ✅ Create audit log with snapshot
       const { ipAddress, userAgent } = getRequestMetadata(request);
       
       await createAuditLog({
         organizationId: organization.id,
         userId: user.userId,
+        userSnapshot, // ✅ Pass snapshot
         action: 'members.joined_by_code',
         category: 'USER',
         severity: 'INFO',

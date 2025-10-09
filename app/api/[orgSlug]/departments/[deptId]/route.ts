@@ -1,11 +1,12 @@
-// FILE: app/api/[orgSlug]/departments/[deptId]/route.ts
-// Departments API - Get, Update, Delete specific department
+// app/api/[orgSlug]/departments/[deptId]/route.ts
+// UPDATED: Add updatedBySnapshot for department updates
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
+import { createUserSnapshot } from '@/lib/user-snapshot';
 
 // GET - Get specific department
 export async function GET(
@@ -15,7 +16,6 @@ export async function GET(
   try {
     const { orgSlug, deptId } = await params;
     
-    // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -24,7 +24,6 @@ export async function GET(
       );
     }
 
-    // Check organization access
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
@@ -33,7 +32,6 @@ export async function GET(
       );
     }
 
-    // Get department
     const department = await prisma.department.findFirst({
       where: {
         id: deptId,
@@ -69,7 +67,6 @@ export async function PATCH(
   try {
     const { orgSlug, deptId } = await params;
     
-    // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -78,7 +75,6 @@ export async function PATCH(
       );
     }
 
-    // Check organization access
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
@@ -87,7 +83,6 @@ export async function PATCH(
       );
     }
 
-    // Check permission
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
@@ -95,7 +90,6 @@ export async function PATCH(
       );
     }
 
-    // Check if department exists and belongs to organization
     const existingDept = await prisma.department.findFirst({
       where: {
         id: deptId,
@@ -110,11 +104,9 @@ export async function PATCH(
       );
     }
 
-    // Get request body
     const body = await request.json();
     const { name, slug, description, color, icon, isActive } = body;
 
-    // Validate required fields
     if (!name || !slug) {
       return NextResponse.json(
         { error: 'Name and slug are required' },
@@ -122,7 +114,6 @@ export async function PATCH(
       );
     }
 
-    // Validate slug format
     if (!/^[a-z0-9-]+$/.test(slug)) {
       return NextResponse.json(
         { error: 'Slug must contain only lowercase letters, numbers, and hyphens' },
@@ -130,7 +121,6 @@ export async function PATCH(
       );
     }
 
-    // Check if new slug conflicts with another department
     if (slug !== existingDept.slug) {
       const slugConflict = await prisma.department.findFirst({
         where: {
@@ -148,7 +138,10 @@ export async function PATCH(
       }
     }
 
-    // Update department
+    // ✅ NEW: Create user snapshot for updater
+    const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
+
+    // Update department with snapshot
     const updatedDept = await prisma.department.update({
       where: {
         id: deptId,
@@ -161,15 +154,17 @@ export async function PATCH(
         icon: icon || 'BUILDING',
         isActive: isActive ?? true,
         updatedBy: user.userId,
+        updatedBySnapshot: userSnapshot, // ✅ Store updater snapshot
       },
     });
 
-    // ✅ Create audit log
+    // ✅ Create audit log with snapshot
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
     await createAuditLog({
       organizationId: access.organizationId,
       userId: user.userId,
+      userSnapshot, // ✅ Pass snapshot
       departmentId: deptId,
       action: 'departments.update',
       category: 'DEPARTMENT',
@@ -221,7 +216,6 @@ export async function DELETE(
   try {
     const { orgSlug, deptId } = await params;
     
-    // Check authentication
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -230,7 +224,6 @@ export async function DELETE(
       );
     }
 
-    // Check organization access
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
@@ -239,7 +232,6 @@ export async function DELETE(
       );
     }
 
-    // Check permission
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
@@ -247,7 +239,6 @@ export async function DELETE(
       );
     }
 
-    // Check if department exists
     const department = await prisma.department.findFirst({
       where: {
         id: deptId,
@@ -262,19 +253,22 @@ export async function DELETE(
       );
     }
 
-    // Delete department
+    // ✅ Create user snapshot before deletion
+    const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
+
     await prisma.department.delete({
       where: {
         id: deptId,
       },
     });
 
-    // ✅ Create audit log
+    // ✅ Create audit log with snapshot
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
     await createAuditLog({
       organizationId: access.organizationId,
       userId: user.userId,
+      userSnapshot, // ✅ Pass snapshot
       action: 'departments.delete',
       category: 'DEPARTMENT',
       severity: 'WARNING',

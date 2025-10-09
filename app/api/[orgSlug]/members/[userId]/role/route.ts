@@ -1,5 +1,5 @@
-// FILE: app/api/[orgSlug]/members/[userId]/role/route.ts
-// Members API - Update member role - FIXED WITH VALIDATION
+// app/api/[orgSlug]/members/[userId]/role/route.ts
+// UPDATED: Add userSnapshot + targetSnapshot for role changes
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,6 +7,7 @@ import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { isValidRole, canChangeRole, MAX_ADMINS, type OrganizationRole } from '@/lib/role-helpers';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
+import { createUserSnapshot } from '@/lib/user-snapshot';
 
 export async function PATCH(
   request: NextRequest,
@@ -28,14 +29,11 @@ export async function PATCH(
     const body = await request.json();
     const { role } = body;
 
-    // Validate role using centralized helper
     if (!isValidRole(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
-    // Use transaction to prevent race conditions
     const result = await prisma.$transaction(async (tx) => {
-      // Get target member's current role
       const targetMember = await tx.organizationUser.findFirst({
         where: { organizationId: access.organizationId, userId },
         include: {
@@ -51,17 +49,14 @@ export async function PATCH(
 
       const currentRole = targetMember.roles as OrganizationRole;
 
-      // Check if manager can change this role
       if (!canChangeRole(access.role as OrganizationRole, currentRole, role)) {
         throw new Error(`You don't have permission to change ${currentRole} to ${role}`);
       }
 
-      // Prevent ADMIN from changing their own role
       if (access.role === 'ADMIN' && userId === user.userId) {
         throw new Error('Cannot change your own role. Ask another ADMIN or OWNER.');
       }
 
-      // If demoting an OWNER, check if there are other OWNERs
       if (currentRole === 'OWNER' && role !== 'OWNER') {
         const otherOwnerCount = await tx.organizationUser.count({
           where: { 
@@ -77,12 +72,10 @@ export async function PATCH(
         }
       }
 
-      // If OWNER is trying to demote themselves
       if (userId === user.userId && currentRole === 'OWNER' && role !== 'OWNER') {
         throw new Error('Cannot demote yourself. Ask another OWNER to change your role.');
       }
 
-      // Check ADMIN quota limit
       if (role === 'ADMIN' && currentRole !== 'ADMIN') {
         const adminCount = await tx.organizationUser.count({
           where: { 
@@ -97,7 +90,6 @@ export async function PATCH(
         }
       }
 
-      // Update member role
       const updatedMember = await tx.organizationUser.update({
         where: {
           organizationId_userId: {
@@ -113,13 +105,19 @@ export async function PATCH(
         },
       });
 
-      // ✅ Create audit log
+      // ✅ NEW: Create snapshots for both actor and target
+      const actorSnapshot = await createUserSnapshot(user.userId, access.organizationId);
+      const targetSnapshot = await createUserSnapshot(userId, access.organizationId);
+      
+      // ✅ Create audit log with both snapshots
       const { ipAddress, userAgent } = getRequestMetadata(request);
       
       await createAuditLog({
         organizationId: access.organizationId,
         userId: user.userId,
+        userSnapshot: actorSnapshot, // ✅ Who made the change
         targetUserId: userId,
+        targetSnapshot: targetSnapshot, // ✅ Who was affected
         action: 'members.role_updated',
         category: 'USER',
         severity: 'WARNING',
@@ -148,7 +146,6 @@ export async function PATCH(
   } catch (error) {
     console.error('Update member role failed:', error);
     
-    // Handle specific errors
     if (error instanceof Error) {
       return NextResponse.json({ 
         error: error.message 

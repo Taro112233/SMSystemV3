@@ -1,5 +1,9 @@
 // lib/audit-logger.ts
+// UPDATED: Include user snapshots in audit logs
+// ============================================
+
 import { prisma } from '@/lib/prisma';
+import { createUserSnapshot, createUserSnapshotFromJWT, type UserSnapshot } from '@/lib/user-snapshot';
 import type { Prisma } from '@prisma/client';
 
 type AuditCategory = 'PRODUCT' | 'STOCK' | 'TRANSFER' | 'USER' | 'ORGANIZATION' | 'DEPARTMENT' | 'AUTH' | 'SYSTEM';
@@ -8,7 +12,9 @@ type AuditSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
 interface AuditLogParams {
   organizationId: string;
   userId?: string;
+  userSnapshot?: UserSnapshot;    // ✅ NEW: Optional if already created
   targetUserId?: string;
+  targetSnapshot?: UserSnapshot;  // ✅ NEW: Optional if already created
   departmentId?: string;
   action: string;
   category: AuditCategory;
@@ -16,21 +22,35 @@ interface AuditLogParams {
   description: string;
   resourceId?: string;
   resourceType?: string;
-  payload?: Prisma.InputJsonValue;  // ✅ เปลี่ยนจาก JsonValue เป็น Prisma.InputJsonValue
+  payload?: Prisma.InputJsonValue;
   ipAddress?: string;
   userAgent?: string;
 }
 
 /**
- * Create audit log with full context
+ * ✅ Create audit log with user snapshots
  */
 export async function createAuditLog(params: AuditLogParams) {
   try {
+    // ✅ Create user snapshots if not provided
+    let userSnapshot = params.userSnapshot;
+    let targetSnapshot = params.targetSnapshot;
+
+    if (params.userId && !userSnapshot) {
+      userSnapshot = await createUserSnapshot(params.userId, params.organizationId);
+    }
+
+    if (params.targetUserId && !targetSnapshot) {
+      targetSnapshot = await createUserSnapshot(params.targetUserId, params.organizationId);
+    }
+
     return await prisma.auditLog.create({
       data: {
         organizationId: params.organizationId,
         userId: params.userId,
+        userSnapshot: userSnapshot as Prisma.InputJsonValue, // ✅ Store snapshot
         targetUserId: params.targetUserId,
+        targetSnapshot: targetSnapshot as Prisma.InputJsonValue, // ✅ Store snapshot
         departmentId: params.departmentId,
         action: params.action,
         category: params.category,
@@ -72,21 +92,6 @@ export async function getCriticalAuditLogs(
       organizationId,
       severity: 'CRITICAL',
     },
-    include: {
-      user: {
-        select: {
-          firstName: true,
-          lastName: true,
-          email: true,
-        },
-      },
-      department: {
-        select: {
-          name: true,
-          slug: true,
-        },
-      },
-    },
     orderBy: { createdAt: 'desc' },
     take: limit,
   });
@@ -104,20 +109,6 @@ export async function getAuditLogsByCategory(
     where: {
       organizationId,
       category,
-    },
-    include: {
-      user: {
-        select: {
-          firstName: true,
-          lastName: true,
-        },
-      },
-      department: {
-        select: {
-          name: true,
-          slug: true,
-        },
-      },
     },
     orderBy: { createdAt: 'desc' },
     take: limit,

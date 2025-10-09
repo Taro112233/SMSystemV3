@@ -1,5 +1,5 @@
-// FILE: app/api/organizations/route.ts
-// Organizations API - FIXED: Remove audit log for organization creation
+// app/api/organizations/route.ts
+// UPDATED: Remove audit log for organization creation
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -23,7 +23,6 @@ const aj = arcjet({
   ],
 });
 
-// ✅ Validation schema matches Prisma enums exactly
 const CreateOrganizationSchema = z.object({
   name: z.string().min(2).max(100).trim(),
   slug: z.string().min(3).max(50).regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'),

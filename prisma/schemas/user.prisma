@@ -26,8 +26,6 @@ model User {
   
   // Relations
   organizationUsers   OrganizationUser[]
-  
-  // ✅ FIXED: Audit Log Relations
   auditLogsAsUser     AuditLog[] @relation("AuditLogUser")
   auditLogsAsTarget   AuditLog[] @relation("AuditLogTarget")
   

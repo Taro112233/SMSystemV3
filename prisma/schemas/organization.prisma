@@ -1,27 +1,27 @@
 // prisma/schemas/organization.prisma
-// ===== ORGANIZATION SCHEMA WITH ICON & COLOR SUPPORT =====
+// ===== ORGANIZATION SCHEMA WITH USER SNAPSHOTS =====
 
 model Organization {
   id          String             @id @default(cuid())
   name        String
-  slug        String             @unique // URL-friendly identifier
+  slug        String             @unique
   description String?
   
   // Contact Information
   email       String?
   phone       String?
   
-  // ✅ NEW: Visual Customization
-  color       ColorTheme?        @default(BLUE)   // Organization color theme
-  icon        IconType?          @default(BUILDING) // Organization icon
+  // Visual Customization
+  color       ColorTheme?        @default(BLUE)
+  icon        IconType?          @default(BUILDING)
   
   // Settings
   status      OrganizationStatus @default(ACTIVE)
   timezone    String             @default("Asia/Bangkok")
   
-  // Invite Code System Only
-  inviteCode     String?    @unique // Organization-generated invite code
-  inviteEnabled  Boolean    @default(true) // Allow joining via invite code
+  // Invite Code System
+  inviteCode     String?    @unique
+  inviteEnabled  Boolean    @default(true)
   
   // Timestamps
   createdAt   DateTime           @default(now())
@@ -38,7 +38,7 @@ model Organization {
   @@map("organizations")
 }
 
-// User-Organization Relationship (Many-to-Many)
+// User-Organization Relationship
 model OrganizationUser {
   id             String       @id @default(cuid())
   organizationId String
@@ -63,25 +63,30 @@ model OrganizationUser {
   @@map("organization_users")
 }
 
-// Simplified Departments (Data Organization Only)
+// ✅ UPDATED: Department with User Snapshots
 model Department {
   id             String       @id @default(cuid())
   organizationId String
-  parentId       String?      // For hierarchical structure (optional)
+  parentId       String?
   
   // Department Details
   name           String
-  slug           String       // Short slug (e.g., "ICU", "OPD", "PHARMACY")
+  slug           String
   description    String?
   color          ColorTheme?
   icon           IconType?
   
-  // Simple Status
+  // Status
   isActive       Boolean      @default(true)
   
-  // Audit Fields (for tracking who created/modified)
-  createdBy      String       // User who created
-  updatedBy      String?      // User who last updated
+  // ✅ NEW: Created By - Snapshot + Relation
+  createdBy      String       // User ID
+  createdBySnapshot Json?     // ✅ NEW: Creator info ณ ขณะนั้น
+  // Example: { userId, username, fullName, email, role }
+  
+  // ✅ NEW: Updated By - Snapshot + Relation
+  updatedBy      String?      // Last updater ID
+  updatedBySnapshot Json?     // ✅ NEW: Last updater info ณ ขณะนั้น
   
   // Timestamps
   createdAt      DateTime     @default(now())
@@ -91,7 +96,6 @@ model Department {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
-  
   auditLogs      AuditLog[]
   
   @@unique([organizationId, slug])
