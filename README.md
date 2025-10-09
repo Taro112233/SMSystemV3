@@ -184,6 +184,7 @@ Directory structure:
     │   ├── role-helpers.ts
     │   ├── security-logger.ts
     │   ├── slug-validator.ts
+    │   ├── user-snapshot.ts
     │   └── utils.ts
     ├── prisma/
     │   ├── schema.prisma
