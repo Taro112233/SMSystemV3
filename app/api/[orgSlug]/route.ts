@@ -1,25 +1,29 @@
 // FILE: app/api/[orgSlug]/route.ts
-// Organization API - UPDATED to return Icon & Color
+// Organization API - FIXED: Proper async params handling
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { transformDepartmentData } from '@/lib/department-helpers';
-import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ orgSlug: string }> }
+  context: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
-    const { orgSlug } = await params;
+    // ✅ CRITICAL FIX: Get headers BEFORE awaiting params
+    const headers = request.headers;
+    const user = getUserFromHeaders(headers);
     
-    const user = getUserFromHeaders(request.headers);
     if (!user) {
+      console.log('❌ No user headers found in request');
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    // ✅ Now await params after headers are read
+    const { orgSlug } = await context.params;
+    
     console.log(`🔍 Loading organization data for: ${orgSlug} by user: ${user.userId}`);
 
     const access = await getUserOrgRole(user.userId, orgSlug);
@@ -30,7 +34,7 @@ export async function GET(
 
     console.log(`✅ User has access with role: ${access.role}`);
 
-    // ✅ UPDATED: Get organization with color and icon
+    // Get organization with color and icon
     const organization = await prisma.organization.findUnique({
       where: { 
         slug: orgSlug,
@@ -45,8 +49,8 @@ export async function GET(
         timezone: true,
         email: true,
         phone: true,
-        color: true,         // ✅ CRITICAL: Include color
-        icon: true,          // ✅ CRITICAL: Include icon
+        color: true,
+        icon: true,
         createdAt: true,
         updatedAt: true,
         inviteCode: true,
@@ -104,11 +108,10 @@ export async function GET(
       where: { organizationId: access.organizationId }
     });
 
-    // ✅ UPDATED: Include color and icon in organization data
     const organizationData = {
       ...organization,
-      color: organization.color || 'BLUE',      // ✅ Default if null
-      icon: organization.icon || 'BUILDING',    // ✅ Default if null
+      color: organization.color || 'BLUE',
+      icon: organization.icon || 'BUILDING',
       memberCount,
       ...(['ADMIN', 'OWNER'].includes(access.role) && {
         inviteCode: organization.inviteCode,
@@ -140,18 +143,21 @@ export async function GET(
   }
 }
 
-// POST - Create new department
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ orgSlug: string }> }
+  context: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
-    const { orgSlug } = await params;
+    // ✅ CRITICAL FIX: Get headers BEFORE awaiting params
+    const headers = request.headers;
+    const user = getUserFromHeaders(headers);
     
-    const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+
+    // ✅ Now await params
+    const { orgSlug } = await context.params;
 
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
@@ -194,26 +200,6 @@ export async function POST(
     });
 
     console.log(`✅ Created new department: ${newDepartment.name} (${newDepartment.slug})`);
-
-    const { ipAddress, userAgent } = getRequestMetadata(request);
-    
-    await createAuditLog({
-      organizationId: access.organizationId,
-      userId: user.userId,
-      departmentId: newDepartment.id,
-      action: 'departments.create',
-      category: 'DEPARTMENT',
-      severity: 'INFO',
-      description: `สร้างหน่วยงาน ${newDepartment.name}`,
-      resourceId: newDepartment.id,
-      resourceType: 'Department',
-      payload: {
-        departmentName: name,
-        departmentSlug: slug,
-      },
-      ipAddress,
-      userAgent,
-    });
 
     const transformedDept = transformDepartmentData({
       id: newDepartment.id,

@@ -1,4 +1,4 @@
-// lib/auth-server.ts - DYNAMIC ORGANIZATION CHECKING + MIDDLEWARE SUPPORT
+// lib/auth-server.ts - FIXED: Handle null email/phone in headers
 // InvenStock - Server-side User Verification Utilities (Next.js 15 Compatible)
 
 import { cookies } from 'next/headers';
@@ -57,7 +57,7 @@ export async function getServerUser(): Promise<JWTUser | null> {
 }
 
 /**
- * Get user from request headers (for API routes with middleware)
+ * ✅ FIXED: Get user from request headers (handle null values)
  */
 export function getUserFromHeaders(headers: Headers): {
   userId: string;
@@ -68,11 +68,18 @@ export function getUserFromHeaders(headers: Headers): {
   const email = headers.get('x-user-email');
   const username = headers.get('x-username');
 
-  if (!userId || !email || !username) {
+  // ✅ CRITICAL FIX: Only userId and username are required
+  // email can be empty string (converted from null)
+  if (!userId || !username) {
+    console.log('❌ Missing required headers:', { userId: !!userId, username: !!username });
     return null;
   }
 
-  return { userId, email, username };
+  return { 
+    userId, 
+    email: email || '',  // ✅ Default to empty string if null
+    username 
+  };
 }
 
 /**
