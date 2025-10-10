@@ -58,11 +58,20 @@ Directory structure:
     │   │   │   ├── route.ts
     │   │   │   └── join-by-code/
     │   │   │       └── route.ts
-    │   │   └── security/
-    │   │       └── monitoring/
+    │   │   ├── security/
+    │   │   │   └── monitoring/
+    │   │   │       └── route.ts
+    │   │   └── user/
+    │   │       ├── change-password/
+    │   │       │   └── route.ts
+    │   │       └── profile/
     │   │           └── route.ts
     │   ├── dashboard/
-    │   │   └── page.tsx
+    │   │   ├── layout.tsx
+    │   │   ├── page.tsx
+    │   │   └── settings/
+    │   │       └── profile/
+    │   │           └── page.tsx
     │   ├── login/
     │   │   └── page.tsx
     │   ├── register/
@@ -97,6 +106,11 @@ Directory structure:
     │   │   ├── JoinOrganizationModal.tsx
     │   │   ├── OrganizationCard.tsx
     │   │   └── OrganizationGrid.tsx
+    │   ├── ProfileSettings/
+    │   │   ├── index.tsx
+    │   │   ├── PasswordChange.tsx
+    │   │   ├── ProfileForm.tsx
+    │   │   └── ProfileInfo.tsx
     │   ├── SettingsManagement/
     │   │   ├── index.tsx
     │   │   ├── DepartmentSettings/
@@ -171,7 +185,8 @@ Directory structure:
     │       └── tooltip.tsx
     ├── hooks/
     │   ├── use-mobile.ts
-    │   └── use-org-access.ts
+    │   ├── use-org-access.ts
+    │   └── use-sidebar-state.ts
     ├── lib/
     │   ├── audit-helpers.ts
     │   ├── audit-logger.ts
