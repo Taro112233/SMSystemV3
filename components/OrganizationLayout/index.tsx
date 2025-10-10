@@ -1,5 +1,5 @@
-// FILE: components/OrganizationLayout/index.tsx
-// DashboardSidebar - UPDATED to pass Icon & Color to child components
+// FILE 2: components/OrganizationLayout/index.tsx
+// UPDATED: Accept and pass user props to SidebarFooter
 // ============================================
 
 import React from 'react';
@@ -15,8 +15,8 @@ interface OrganizationData {
   slug: string;
   description: string;
   logo: string;
-  color: string;         // ✅ CRITICAL: Receive color
-  icon: string;          // ✅ CRITICAL: Receive icon
+  color: string;
+  icon: string;
   userRole: string;
   stats: {
     totalProducts: number;
@@ -28,6 +28,14 @@ interface OrganizationData {
   };
 }
 
+interface UserData {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+}
+
 interface DashboardSidebarProps {
   organization: OrganizationData;
   departments: FrontendDepartment[];
@@ -37,6 +45,9 @@ interface DashboardSidebarProps {
   onToggleCollapse: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  user?: UserData | null;          // ✅ NEW: User data
+  userRole?: string | null;        // ✅ NEW: User role
+  onLogout?: () => Promise<void>;  // ✅ NEW: Logout handler
 }
 
 export const DashboardSidebar = ({
@@ -47,24 +58,18 @@ export const DashboardSidebar = ({
   collapsed,
   onToggleCollapse,
   searchTerm,
-  onSearchChange
+  onSearchChange,
+  user,           // ✅ NEW
+  userRole,       // ✅ NEW
+  onLogout,       // ✅ NEW
 }: DashboardSidebarProps) => {
   const filteredDepartments = departments.filter(dept => 
     dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dept.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ✅ DEBUG: Log organization data to verify color & icon are passed
-  console.log('🎨 DashboardSidebar - Organization:', {
-    name: organization.name,
-    color: organization.color,
-    icon: organization.icon,
-    logo: organization.logo
-  });
-
   return (
     <div className={`${collapsed ? 'w-16' : 'w-80'} h-screen bg-white border-r border-gray-200 transition-all duration-200 flex flex-col fixed left-0 top-0 z-10`}>
-      {/* ✅ CRITICAL: Pass full organization object with color & icon */}
       <SidebarHeader
         organization={organization}
         collapsed={collapsed}
@@ -90,7 +95,13 @@ export const DashboardSidebar = ({
         </div>
       </div>
 
-      <SidebarFooter collapsed={collapsed} />
+      {/* ✅ UPDATED: Pass user props to SidebarFooter */}
+      <SidebarFooter 
+        collapsed={collapsed}
+        user={user}
+        userRole={userRole}
+        onLogout={onLogout}
+      />
     </div>
   );
 };

@@ -1,4 +1,7 @@
-// FILE: app/[orgSlug]/layout.tsx - FINAL FIX for Icon & Color
+// FILE 1: app/[orgSlug]/layout.tsx
+// UPDATED: Pass user data to DashboardSidebar
+// ============================================
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -24,8 +27,8 @@ interface OrganizationData {
   name: string;
   slug: string;
   description?: string;
-  color: string | null;      // ✅ Receive from API (nullable)
-  icon: string | null;       // ✅ Receive from API (nullable)
+  color: string | null;
+  icon: string | null;
   role: string;
 }
 
@@ -86,25 +89,15 @@ export default function OrganizationLayout({
           return;
         }
 
-        // ✅ CRITICAL: Log received data from API
-        console.log('🎨 Layout - Received from API:', {
-          name: userData.data.currentOrganization.name,
-          color: userData.data.currentOrganization.color,
-          icon: userData.data.currentOrganization.icon,
-          colorType: typeof userData.data.currentOrganization.color,
-          iconType: typeof userData.data.currentOrganization.icon
-        });
-
         setUser(userData.data.user);
         
-        // ✅ CRITICAL: Store color and icon from API
         setOrganizationData({
           id: userData.data.currentOrganization.id,
           name: userData.data.currentOrganization.name,
           slug: userData.data.currentOrganization.slug,
           description: userData.data.currentOrganization.description,
-          color: userData.data.currentOrganization.color,      // ✅ Store as-is (can be null)
-          icon: userData.data.currentOrganization.icon,        // ✅ Store as-is (can be null)
+          color: userData.data.currentOrganization.color,
+          icon: userData.data.currentOrganization.icon,
           role: userData.data.permissions.currentRole
         });
 
@@ -149,20 +142,28 @@ export default function OrganizationLayout({
     }
   }, [deptSlug, departments]);
 
-  // ✅ CRITICAL: Create organization object with proper defaults
+  // ✅ NEW: Logout handler
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+      window.location.href = '/login';
+    }
+  };
+
   const organization = organizationData ? {
     id: organizationData.id,
     name: organizationData.name,
     slug: organizationData.slug,
     description: organizationData.description || `องค์กร ${organizationData.name}`,
-    
-    // ✅ CRITICAL: Use color and icon from API, with defaults if null
     color: organizationData.color || 'BLUE',
     icon: organizationData.icon || 'BUILDING',
-    
-    // Keep old logo for backward compatibility
     logo: organizationData.name.substring(0, 2).toUpperCase(),
-    
     userRole: organizationData.role,
     stats: {
       totalProducts: departments.reduce((sum: number, dept: FrontendDepartment) => sum + dept.stockItems, 0),
@@ -173,17 +174,6 @@ export default function OrganizationLayout({
       departments: departments.length
     }
   } : null;
-
-  // ✅ DEBUG: Log final organization object
-  if (organization) {
-    console.log('🎨 Layout - Final Organization Object:', {
-      name: organization.name,
-      color: organization.color,
-      icon: organization.icon,
-      colorType: typeof organization.color,
-      iconType: typeof organization.icon
-    });
-  }
 
   const handleSidebarDepartmentSelect = (dept: FrontendDepartment) => {
     router.push(`/${orgSlug}/${dept.slug}`);
@@ -247,7 +237,7 @@ export default function OrganizationLayout({
 
   return (
     <div className="h-screen bg-gray-50 flex">
-      {/* ✅ CRITICAL: Pass organization object with color & icon */}
+      {/* ✅ UPDATED: Pass user, userRole, and onLogout to DashboardSidebar */}
       <DashboardSidebar
         organization={organization}
         departments={departments}
@@ -257,6 +247,9 @@ export default function OrganizationLayout({
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        user={user}
+        userRole={organization.userRole}
+        onLogout={handleLogout}
       />
 
       <div className={`flex-1 flex flex-col ${sidebarCollapsed ? 'ml-16' : 'ml-80'} transition-all duration-200`}>
