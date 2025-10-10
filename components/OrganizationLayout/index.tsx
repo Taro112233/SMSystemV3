@@ -1,5 +1,5 @@
-// FILE 2: components/OrganizationLayout/index.tsx
-// UPDATED: Accept and pass user props to SidebarFooter
+// FILE: components/OrganizationLayout/index.tsx
+// UPDATED: Enhanced sidebar with mobile overlay and better responsive behavior
 // ============================================
 
 import React from 'react';
@@ -45,9 +45,9 @@ interface DashboardSidebarProps {
   onToggleCollapse: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  user?: UserData | null;          // ✅ NEW: User data
-  userRole?: string | null;        // ✅ NEW: User role
-  onLogout?: () => Promise<void>;  // ✅ NEW: Logout handler
+  user?: UserData | null;
+  userRole?: string | null;
+  onLogout?: () => Promise<void>;
 }
 
 export const DashboardSidebar = ({
@@ -59,49 +59,78 @@ export const DashboardSidebar = ({
   onToggleCollapse,
   searchTerm,
   onSearchChange,
-  user,           // ✅ NEW
-  userRole,       // ✅ NEW
-  onLogout,       // ✅ NEW
+  user,
+  userRole,
+  onLogout,
 }: DashboardSidebarProps) => {
   const filteredDepartments = departments.filter(dept => 
     dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dept.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // ✅ UPDATED: Enhanced mobile detection
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // ✅ UPDATED: Handle mobile overlay clicks
+  const handleOverlayClick = () => {
+    if (isMobile && !collapsed) {
+      onToggleCollapse();
+    }
+  };
+
   return (
-    <div className={`${collapsed ? 'w-16' : 'w-80'} h-screen bg-white border-r border-gray-200 transition-all duration-200 flex flex-col fixed left-0 top-0 z-10`}>
-      <SidebarHeader
-        organization={organization}
-        collapsed={collapsed}
-        onToggleCollapse={onToggleCollapse}
-      />
+    <>
+      {/* ✅ NEW: Mobile overlay when sidebar is open */}
+      {isMobile && !collapsed && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+          onClick={handleOverlayClick}
+          aria-label="Close sidebar"
+        />
+      )}
 
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="p-3 flex-shrink-0">
-          <SidebarNavigation 
-            collapsed={collapsed}
-            searchTerm={searchTerm}
-            onSearchChange={onSearchChange}
-          />
+      {/* ✅ UPDATED: Enhanced sidebar with better mobile support */}
+      <div className={`
+        ${collapsed ? 'w-16' : 'w-80'} 
+        h-screen bg-white border-r border-gray-200 
+        transition-all duration-300 ease-in-out 
+        flex flex-col 
+        fixed left-0 top-0 z-30
+        ${isMobile && collapsed ? '-translate-x-full' : 'translate-x-0'}
+        lg:translate-x-0
+      `}>
+        <SidebarHeader
+          organization={organization}
+          collapsed={collapsed}
+          onToggleCollapse={onToggleCollapse}
+        />
+
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="p-3 flex-shrink-0">
+            <SidebarNavigation 
+              collapsed={collapsed}
+              searchTerm={searchTerm}
+              onSearchChange={onSearchChange}
+            />
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-3 pb-3">
+            <DepartmentList
+              departments={filteredDepartments}
+              selectedDepartment={selectedDepartment}
+              onSelectDepartment={onSelectDepartment}
+              collapsed={collapsed}
+            />
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 pb-3">
-          <DepartmentList
-            departments={filteredDepartments}
-            selectedDepartment={selectedDepartment}
-            onSelectDepartment={onSelectDepartment}
-            collapsed={collapsed}
-          />
-        </div>
+        <SidebarFooter 
+          collapsed={collapsed}
+          user={user}
+          userRole={userRole}
+          onLogout={onLogout}
+        />
       </div>
-
-      {/* ✅ UPDATED: Pass user props to SidebarFooter */}
-      <SidebarFooter 
-        collapsed={collapsed}
-        user={user}
-        userRole={userRole}
-        onLogout={onLogout}
-      />
-    </div>
+    </>
   );
 };
