@@ -26,11 +26,11 @@ interface DashboardHeaderProps {
   onLogout?: () => Promise<void>;
 }
 
-export const DashboardHeader = ({ 
-  organizations, 
-  user, 
-  onRefresh, 
-  onLogout 
+export const DashboardHeader = ({
+  organizations,
+  user,
+  onRefresh,
+  onLogout
 }: DashboardHeaderProps) => {
   const totalNotifications = organizations.reduce((sum, org) => sum + org.notifications, 0);
 
@@ -83,8 +83,8 @@ export const DashboardHeader = ({
             <Button variant="outline" size="icon" className="relative">
               <Bell className="w-4 h-4" />
               {totalNotifications > 0 && (
-                <Badge 
-                  variant="destructive" 
+                <Badge
+                  variant="destructive"
                   className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
                 >
                   {totalNotifications > 99 ? '99+' : totalNotifications}
@@ -110,9 +110,16 @@ export const DashboardHeader = ({
                 </p>
                 <p className="text-xs text-gray-500">{organizations.length} องค์กร</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={handleLogout}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:bg-red-100 hover:text-red-600 transition-colors"
+                onClick={handleLogout}
+                title="ออกจากระบบ"
+              >
                 <LogOut className="w-4 h-4" />
               </Button>
+
             </div>
           </div>
         </div>

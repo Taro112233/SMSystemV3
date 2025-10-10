@@ -31,13 +31,13 @@ export const SidebarFooter = ({ collapsed, user, userRole, onLogout }: SidebarFo
   // Get role display text in Thai
   const getRoleDisplay = () => {
     if (!userRole) return 'สมาชิก';
-    
+
     const roleMap: Record<string, string> = {
       OWNER: 'เจ้าขององค์กร',
       ADMIN: 'ผู้ดูแลระบบ',
       MEMBER: 'สมาชิก'
     };
-    
+
     return roleMap[userRole] || 'สมาชิก';
   };
 
@@ -91,15 +91,16 @@ export const SidebarFooter = ({ collapsed, user, userRole, onLogout }: SidebarFo
             {getRoleDisplay()}
           </div>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6 hover:bg-red-100 hover:text-red-600 transition-colors"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:bg-red-100 hover:text-red-600 transition-colors"
           onClick={handleLogout}
           title="ออกจากระบบ"
         >
-          <LogOut className="w-3 h-3" />
+          <LogOut className="w-4 h-4" />
         </Button>
+
       </div>
     </div>
   );

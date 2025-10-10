@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronsLeft, Menu } from 'lucide-react';
 import { getIconComponent, mapColorThemeToTailwind } from '@/lib/department-helpers';
 
 interface OrganizationData {
@@ -70,9 +70,9 @@ export const SidebarHeader = ({
             variant="ghost" 
             size="icon"
             onClick={onToggleCollapse}
-            className="h-10 w-8"
+            className="h-10 w-10"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronsLeft className="w-4 h-4" />
           </Button>
         </div>
       ) : (
@@ -82,9 +82,9 @@ export const SidebarHeader = ({
             variant="ghost" 
             size="icon"
             onClick={onToggleCollapse}
-            className="h-10 w-8"
+            className="h-10 w-10"
           >
-            <ChevronRight className="w-4 h-4" />
+            <Menu className="w-4 h-4" />
           </Button>
         </div>
       )}
