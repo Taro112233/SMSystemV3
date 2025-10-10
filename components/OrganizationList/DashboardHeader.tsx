@@ -1,11 +1,13 @@
-// app/dashboard/components/DashboardHeader.tsx
-// DashboardHeader - Updated header for organization dashboard
+// FILE: components/OrganizationList/DashboardHeader.tsx - UPDATED
+// DashboardHeader - Updated header with correct settings path
+// ============================================
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Building2, Bell, Settings, LogOut, RefreshCw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Organization {
   notifications: number;
@@ -32,21 +34,19 @@ export const DashboardHeader = ({
   onRefresh,
   onLogout
 }: DashboardHeaderProps) => {
+  const router = useRouter();
   const totalNotifications = organizations.reduce((sum, org) => sum + org.notifications, 0);
 
   const handleLogout = async () => {
     if (onLogout) {
       try {
         await onLogout();
-        // Navigate to login page after successful logout
         window.location.href = '/login';
       } catch (error) {
         console.error('Logout error:', error);
-        // Still redirect to login even if logout fails (for better UX)
         window.location.href = '/login';
       }
     } else {
-      // If no onLogout function provided, just redirect
       window.location.href = '/login';
     }
   };
@@ -57,12 +57,17 @@ export const DashboardHeader = ({
     }
   };
 
+  // ✅ UPDATED: Navigate to /dashboard/settings/profile
+  const handleSettings = () => {
+    router.push('/dashboard/settings/profile');
+  };
+
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Title */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/dashboard')}>
             <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
             </div>
@@ -74,11 +79,6 @@ export const DashboardHeader = ({
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            {/* Refresh Button */}
-            <Button variant="outline" size="icon" onClick={handleRefresh}>
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-
             {/* Notifications */}
             <Button variant="outline" size="icon" className="relative">
               <Bell className="w-4 h-4" />
@@ -93,7 +93,7 @@ export const DashboardHeader = ({
             </Button>
 
             {/* Settings */}
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" onClick={handleSettings}>
               <Settings className="w-4 h-4" />
             </Button>
 
@@ -119,7 +119,6 @@ export const DashboardHeader = ({
               >
                 <LogOut className="w-4 h-4" />
               </Button>
-
             </div>
           </div>
         </div>

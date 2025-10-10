@@ -1,4 +1,4 @@
-// middleware.ts - FINAL: Clean Centralized Route Management
+// FILE: middleware.ts - UPDATED: Better handling for app routes with sub-paths
 // InvenStock - Multi-Tenant Inventory Management System
 
 import { NextResponse } from 'next/server';
@@ -11,6 +11,7 @@ import {
   isAuthEndpoint,
   parseRoute,
   isSystemReserved,
+  APP_ROUTES, // ✅ Import APP_ROUTES
 } from './lib/reserved-routes';
 
 // ===== ARCJET SECURITY (AUTH ENDPOINTS ONLY) =====
@@ -87,6 +88,52 @@ export async function middleware(request: NextRequest) {
   if (isPublicRoute(pathname) || isPublicApiRoute(pathname)) {
     console.log(`✅ Public route: ${pathname}`);
     return NextResponse.next();
+  }
+
+  // ✅ NEW: Check for app routes with sub-paths (e.g., /settings/profile)
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length > 0) {
+    const firstSegment = segments[0];
+    
+    // Check if this is an app route (including sub-paths)
+    if (APP_ROUTES.includes(firstSegment as any)) {
+      console.log(`✅ App route (with sub-path): ${pathname}`);
+      
+      // Still require authentication for app routes
+      const token = request.cookies.get('auth-token')?.value;
+
+      if (!token) {
+        console.log(`❌ No token for app route ${pathname}, redirecting to login`);
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      // Verify token
+      try {
+        const payload = await verifyToken(token);
+
+        if (!payload || !payload.userId) {
+          throw new Error('Invalid token');
+        }
+
+        console.log(`✅ User authenticated for app route: ${payload.userId}`);
+        
+        // Pass with user headers
+        const requestHeaders = new Headers(request.headers);
+        requestHeaders.set('x-user-id', payload.userId);
+        requestHeaders.set('x-username', payload.username);
+        requestHeaders.set('x-user-email', payload.email || '');
+        
+        return NextResponse.next({
+          request: { headers: requestHeaders },
+        });
+
+      } catch (error) {
+        console.log(`❌ Token verification failed for ${pathname}`);
+        const response = NextResponse.redirect(new URL('/login', request.url));
+        response.cookies.delete('auth-token');
+        return response;
+      }
+    }
   }
 
   // ===== AUTH REQUIRED - CHECK TOKEN =====
