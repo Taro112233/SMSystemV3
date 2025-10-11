@@ -5,7 +5,7 @@
 import { 
   Package, UserPlus, Edit, Trash2, CheckCircle, 
   AlertTriangle, TrendingUp, Building2, Users,
-  FileText, Settings, Shield, ArrowRightLeft,
+  FileText, Settings, Shield, ArrowRightLeft, User, Lock,
   type LucideIcon 
 } from 'lucide-react';
 
@@ -24,6 +24,7 @@ export interface AuditLog {
   department?: {
     name: string;
   } | null;
+  organizationId?: string | null;  // ✅ UPDATED: Now optional
 }
 
 // ✅ Activity format for frontend
@@ -60,6 +61,8 @@ export function getActivityIcon(category: string, action: string): LucideIcon {
   if (action.includes('delete')) return Trash2;
   if (action.includes('approve')) return CheckCircle;
   if (action.includes('reject')) return AlertTriangle;
+  if (action.includes('profile')) return User;  // ✅ NEW: User profile icon
+  if (action.includes('password')) return Lock;  // ✅ NEW: Password icon
   
   return categoryIcons[category] || FileText;
 }
@@ -102,22 +105,41 @@ export function formatActivityTime(date: Date | string): string {
  * Get activity title from action
  */
 export function getActivityTitle(action: string, category: string): string {
-  // Simple Thai translations for common actions
+  // ✅ UPDATED: Added user-level actions
   const titles: Record<string, string> = {
+    // Product actions
     'products.create': 'สร้างสินค้าใหม่',
     'products.update': 'แก้ไขข้อมูลสินค้า',
     'products.delete': 'ลบสินค้า',
+    
+    // Department actions
     'departments.create': 'สร้างหน่วยงานใหม่',
     'departments.update': 'แก้ไขหน่วยงาน',
     'departments.delete': 'ลบหน่วยงาน',
+    
+    // Member actions
     'members.role_updated': 'เปลี่ยนบทบาทสมาชิก',
     'members.removed': 'ลบสมาชิก',
     'members.joined_by_code': 'สมาชิกใหม่เข้าร่วม',
+    
+    // Organization actions
     'organization.create': 'สร้างองค์กร',
     'organization.settings_updated': 'แก้ไขการตั้งค่าองค์กร',
+    
+    // Stock actions
     'stocks.adjust': 'ปรับปรุงสต็อก',
+    
+    // Transfer actions
     'transfers.create': 'สร้างคำขอโอนสินค้า',
     'transfers.approve': 'อนุมัติการโอนสินค้า',
+    
+    // ✅ NEW: User-level actions
+    'user.profile_updated': 'อัพเดทข้อมูลโปรไฟล์',
+    'user.password_changed': 'เปลี่ยนรหัสผ่าน',
+    'user.password_change_failed': 'พยายามเปลี่ยนรหัสผ่านล้มเหลว',
+    'user.login': 'เข้าสู่ระบบ',
+    'user.logout': 'ออกจากระบบ',
+    'user.login_failed': 'พยายามเข้าสู่ระบบล้มเหลว',
   };
 
   return titles[action] || `${category}: ${action}`;
@@ -148,4 +170,58 @@ export function transformAuditLogToActivity(log: AuditLog): Activity {
  */
 export function transformAuditLogsToActivities(logs: AuditLog[]): Activity[] {
   return logs.map(transformAuditLogToActivity);
+}
+
+/**
+ * ✅ NEW: Filter organization-level logs only
+ */
+export function filterOrganizationLogs(logs: AuditLog[]): AuditLog[] {
+  return logs.filter(log => log.organizationId !== null && log.organizationId !== undefined);
+}
+
+/**
+ * ✅ NEW: Filter user-level logs only
+ */
+export function filterUserLogs(logs: AuditLog[]): AuditLog[] {
+  return logs.filter(log => !log.organizationId);
+}
+
+/**
+ * ✅ NEW: Group logs by category
+ */
+export function groupLogsByCategory(logs: AuditLog[]): Record<string, AuditLog[]> {
+  return logs.reduce((acc, log) => {
+    const category = log.category;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(log);
+    return acc;
+  }, {} as Record<string, AuditLog[]>);
+}
+
+/**
+ * ✅ NEW: Get logs summary by severity
+ */
+export function getLogsSummaryBySeverity(logs: AuditLog[]): {
+  info: number;
+  warning: number;
+  critical: number;
+  total: number;
+} {
+  const summary = {
+    info: 0,
+    warning: 0,
+    critical: 0,
+    total: logs.length,
+  };
+
+  logs.forEach(log => {
+    const severity = log.severity.toLowerCase();
+    if (severity === 'info') summary.info++;
+    else if (severity === 'warning') summary.warning++;
+    else if (severity === 'critical') summary.critical++;
+  });
+
+  return summary;
 }

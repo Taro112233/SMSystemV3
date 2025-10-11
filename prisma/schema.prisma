@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-10-10T15:03:19.732Z
+// Last generated: 2025-10-11T16:50:40.681Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -264,22 +264,21 @@ model Department {
 
 model AuditLog {
   id             String        @id @default(cuid())
-  organizationId String
+  organizationId String?       // ✅ FIXED: Made optional for user-level actions
   
   // ✅ Actor (ผู้ทำ) - Snapshot + Optional Relation
   userId         String?       // User ID (for relation/query)
-  userSnapshot   Json?         // ✅ NEW: User info ณ ขณะนั้น
-  // Example: { userId, username, fullName, email, role }
+  userSnapshot   Json?         // ✅ User info ณ ขณะนั้น
   
   // ✅ Target (ผู้ถูกกระทำ) - Snapshot + Optional Relation
   targetUserId   String?       // Target User ID
-  targetSnapshot Json?         // ✅ NEW: Target user info ณ ขณะนั้น
+  targetSnapshot Json?         // ✅ Target user info ณ ขณะนั้น
   
   // Department Context
   departmentId   String?
   
   // Action Classification
-  action         String        // "products.create"
+  action         String        // "products.create", "user.profile_updated"
   category       AuditCategory // PRODUCT, STOCK, TRANSFER, USER, ORG
   severity       AuditSeverity @default(INFO)
   
@@ -288,7 +287,7 @@ model AuditLog {
   
   // Resource Tracking
   resourceId     String?       // ID ของ record
-  resourceType   String?       // "Product", "Stock", "Transfer"
+  resourceType   String?       // "Product", "Stock", "Transfer", "User"
   
   // Detailed Data (before/after comparison)
   payload        Json?         // { before, after, metadata }
@@ -300,8 +299,8 @@ model AuditLog {
   // Timestamp
   createdAt      DateTime @default(now())
   
-  // ✅ Relations (ยังคงไว้สำหรับ query/join)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // ✅ Relations (ยังคงไว้สำหรับ query/join) - Made optional
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User? @relation("AuditLogUser", fields: [userId], references: [id], onDelete: SetNull)
   targetUser     User? @relation("AuditLogTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
   department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
@@ -316,7 +315,7 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// Enums
+// Enums (ไม่เปลี่ยนแปลง)
 enum AuditCategory {
   PRODUCT       // สินค้า
   STOCK         // สต็อก
