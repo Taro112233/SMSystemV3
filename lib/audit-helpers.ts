@@ -1,6 +1,5 @@
 // lib/audit-helpers.ts
-// Audit Log Helper Functions - Transform audit logs to activity format
-// ============================================
+// UPDATED: Extract user name from userSnapshot instead of user relation
 
 import { 
   Package, UserPlus, Edit, Trash2, CheckCircle, 
@@ -9,7 +8,7 @@ import {
   type LucideIcon 
 } from 'lucide-react';
 
-// ✅ Types matching AuditLog schema
+// ✅ UPDATED: Add userSnapshot field
 export interface AuditLog {
   id: string;
   action: string;
@@ -17,17 +16,13 @@ export interface AuditLog {
   severity: string;
   description: string;
   createdAt: Date | string;
-  user?: {
-    firstName: string;
-    lastName: string;
-  } | null;
+  userSnapshot?: any;  // ✅ NEW: User snapshot JSON
   department?: {
     name: string;
   } | null;
-  organizationId?: string | null;  // ✅ UPDATED: Now optional
+  organizationId?: string | null;
 }
 
-// ✅ Activity format for frontend
 export interface Activity {
   id: string;
   type: string;
@@ -39,11 +34,7 @@ export interface Activity {
   user: string;
 }
 
-/**
- * Get Lucide icon based on audit category and action
- */
 export function getActivityIcon(category: string, action: string): LucideIcon {
-  // Category-based icons
   const categoryIcons: Record<string, LucideIcon> = {
     PRODUCT: Package,
     STOCK: TrendingUp,
@@ -55,21 +46,17 @@ export function getActivityIcon(category: string, action: string): LucideIcon {
     SYSTEM: Settings,
   };
 
-  // Action-specific overrides
   if (action.includes('create')) return UserPlus;
   if (action.includes('update')) return Edit;
   if (action.includes('delete')) return Trash2;
   if (action.includes('approve')) return CheckCircle;
   if (action.includes('reject')) return AlertTriangle;
-  if (action.includes('profile')) return User;  // ✅ NEW: User profile icon
-  if (action.includes('password')) return Lock;  // ✅ NEW: Password icon
+  if (action.includes('profile')) return User;
+  if (action.includes('password')) return Lock;
   
   return categoryIcons[category] || FileText;
 }
 
-/**
- * Map severity to activity status color
- */
 export function getActivityStatus(severity: string): 'success' | 'warning' | 'info' | 'error' {
   const statusMap: Record<string, 'success' | 'warning' | 'info' | 'error'> = {
     INFO: 'info',
@@ -80,16 +67,12 @@ export function getActivityStatus(severity: string): 'success' | 'warning' | 'in
   return statusMap[severity] || 'info';
 }
 
-/**
- * Format activity time as absolute datetime
- * Format: "4/10/2025 16:00"
- */
 export function formatActivityTime(date: Date | string): string {
   try {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     
     const day = dateObj.getDate();
-    const month = dateObj.getMonth() + 1; // 0-indexed
+    const month = dateObj.getMonth() + 1;
     const year = dateObj.getFullYear();
     const hours = String(dateObj.getHours()).padStart(2, '0');
     const minutes = String(dateObj.getMinutes()).padStart(2, '0');
@@ -101,39 +84,22 @@ export function formatActivityTime(date: Date | string): string {
   }
 }
 
-/**
- * Get activity title from action
- */
 export function getActivityTitle(action: string, category: string): string {
-  // ✅ UPDATED: Added user-level actions
   const titles: Record<string, string> = {
-    // Product actions
     'products.create': 'สร้างสินค้าใหม่',
     'products.update': 'แก้ไขข้อมูลสินค้า',
     'products.delete': 'ลบสินค้า',
-    
-    // Department actions
     'departments.create': 'สร้างหน่วยงานใหม่',
     'departments.update': 'แก้ไขหน่วยงาน',
     'departments.delete': 'ลบหน่วยงาน',
-    
-    // Member actions
     'members.role_updated': 'เปลี่ยนบทบาทสมาชิก',
     'members.removed': 'ลบสมาชิก',
     'members.joined_by_code': 'สมาชิกใหม่เข้าร่วม',
-    
-    // Organization actions
     'organization.create': 'สร้างองค์กร',
     'organization.settings_updated': 'แก้ไขการตั้งค่าองค์กร',
-    
-    // Stock actions
     'stocks.adjust': 'ปรับปรุงสต็อก',
-    
-    // Transfer actions
     'transfers.create': 'สร้างคำขอโอนสินค้า',
     'transfers.approve': 'อนุมัติการโอนสินค้า',
-    
-    // ✅ NEW: User-level actions
     'user.profile_updated': 'อัพเดทข้อมูลโปรไฟล์',
     'user.password_changed': 'เปลี่ยนรหัสผ่าน',
     'user.password_change_failed': 'พยายามเปลี่ยนรหัสผ่านล้มเหลว',
@@ -145,13 +111,42 @@ export function getActivityTitle(action: string, category: string): string {
   return titles[action] || `${category}: ${action}`;
 }
 
+// ✅ NEW: Extract user name from snapshot
+function extractUserNameFromSnapshot(snapshot: any): string {
+  if (!snapshot) return 'ระบบ';
+  
+  try {
+    // Handle string JSON
+    const data = typeof snapshot === 'string' 
+      ? JSON.parse(snapshot) 
+      : snapshot;
+    
+    // Extract fullName or construct from firstName/lastName
+    if (data.fullName) {
+      return data.fullName;
+    }
+    
+    if (data.firstName && data.lastName) {
+      return `${data.firstName} ${data.lastName}`;
+    }
+    
+    // Fallback to username
+    if (data.username) {
+      return data.username;
+    }
+    
+    return 'ผู้ใช้ที่ถูกลบ';
+  } catch (error) {
+    console.error('Error parsing user snapshot:', error);
+    return 'ระบบ';
+  }
+}
+
 /**
- * Transform AuditLog to Activity format
+ * ✅ UPDATED: Extract user name from userSnapshot
  */
 export function transformAuditLogToActivity(log: AuditLog): Activity {
-  const userName = log.user 
-    ? `${log.user.firstName} ${log.user.lastName}`
-    : 'ระบบ';
+  const userName = extractUserNameFromSnapshot(log.userSnapshot);
 
   return {
     id: log.id,
@@ -165,30 +160,18 @@ export function transformAuditLogToActivity(log: AuditLog): Activity {
   };
 }
 
-/**
- * Transform multiple audit logs to activities
- */
 export function transformAuditLogsToActivities(logs: AuditLog[]): Activity[] {
   return logs.map(transformAuditLogToActivity);
 }
 
-/**
- * ✅ NEW: Filter organization-level logs only
- */
 export function filterOrganizationLogs(logs: AuditLog[]): AuditLog[] {
   return logs.filter(log => log.organizationId !== null && log.organizationId !== undefined);
 }
 
-/**
- * ✅ NEW: Filter user-level logs only
- */
 export function filterUserLogs(logs: AuditLog[]): AuditLog[] {
   return logs.filter(log => !log.organizationId);
 }
 
-/**
- * ✅ NEW: Group logs by category
- */
 export function groupLogsByCategory(logs: AuditLog[]): Record<string, AuditLog[]> {
   return logs.reduce((acc, log) => {
     const category = log.category;
@@ -200,9 +183,6 @@ export function groupLogsByCategory(logs: AuditLog[]): Record<string, AuditLog[]
   }, {} as Record<string, AuditLog[]>);
 }
 
-/**
- * ✅ NEW: Get logs summary by severity
- */
 export function getLogsSummaryBySeverity(logs: AuditLog[]): {
   info: number;
   warning: number;

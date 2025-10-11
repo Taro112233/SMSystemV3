@@ -1,4 +1,5 @@
 // FILE: app/api/[orgSlug]/audit-logs/route.ts
+// UPDATED: Return userSnapshot instead of user relation
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
@@ -7,7 +8,7 @@ import type { Prisma } from '@prisma/client';
 
 /**
  * GET - Get recent audit logs for organization dashboard
- * NO AUDIT LOG - This is a read-only operation
+ * ✅ UPDATED: Use userSnapshot instead of user relation
  */
 export async function GET(
   request: NextRequest,
@@ -40,7 +41,6 @@ export async function GET(
     const category = searchParams.get('category');
     const severity = searchParams.get('severity');
 
-    // ✅ FIXED: Use Prisma.AuditLogWhereInput type
     const whereClause: Prisma.AuditLogWhereInput = {
       organizationId: access.organizationId,
     };
@@ -53,16 +53,17 @@ export async function GET(
       whereClause.severity = severity as Prisma.EnumAuditSeverityFilter;
     }
 
-    // Get recent audit logs with user and department info
+    // ✅ UPDATED: Select userSnapshot instead of user relation
     const auditLogs = await prisma.auditLog.findMany({
       where: whereClause,
-      include: {
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-          },
-        },
+      select: {
+        id: true,
+        action: true,
+        category: true,
+        severity: true,
+        description: true,
+        createdAt: true,
+        userSnapshot: true,        // ✅ Use snapshot
         department: {
           select: {
             name: true,
@@ -75,8 +76,6 @@ export async function GET(
       },
       take: limit,
     });
-
-    // ❌ NO AUDIT LOG - GET/Read operations are not logged
 
     return NextResponse.json({
       success: true,
