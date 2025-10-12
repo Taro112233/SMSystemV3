@@ -1,4 +1,4 @@
-// app/register/page.tsx
+// app/register/page.tsx - FIXED AUTO REDIRECT
 
 'use client';
 
@@ -22,20 +22,19 @@ import {
   UserPlus,
   Mail,
   Phone,
-  ArrowRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 
 // ✅ Interface ตรงกับ Prisma Schema
 interface RegisterFormData {
-  username: string;      // ✅ Primary credential
+  username: string;
   password: string;
   confirmPassword: string;
   firstName: string;
   lastName: string;
-  email?: string;        // ✅ Optional ตรง schema
-  phone?: string;        // ✅ Optional ตรง schema
+  email?: string;
+  phone?: string;
 }
 
 export default function RegisterPage() {
@@ -53,7 +52,6 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   
   const { register, loading } = useAuth();
@@ -181,19 +179,17 @@ export default function RegisterPage() {
       
       toast.dismiss(loadingToast);
       
-      // ✅ สมัครสมาชิกสำเร็จ - ไม่มี approval process
-      setSuccess(true);
-      
+      // ✅ FIXED: สมัครสำเร็จ - แสดง toast แล้ว redirect ทันที (เหมือน login)
       toast.success('สมัครสมาชิกสำเร็จ!', {
-        description: 'บัญชีของคุณพร้อมใช้งานแล้ว กำลังเข้าสู่ระบบ...',
+        description: 'บัญชีของคุณพร้อมใช้งานแล้ว',
         icon: <UserPlus className="w-4 h-4" />,
-        duration: 3000,
+        duration: 2000,
       });
       
-      // ✅ Redirect ไป dashboard ทันที (ไม่ต้องรออนุมัติ)
+      // ✅ FIXED: ใช้ window.location.href แทน router.push เหมือน login
       setTimeout(() => {
-        router.push('/dashboard');
-      }, 2000);
+        window.location.href = '/dashboard';
+      }, 500);
         
     } catch (error) {
       toast.dismiss(loadingToast);
@@ -259,53 +255,6 @@ export default function RegisterPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
           <p className="text-gray-600 text-sm">กำลังตรวจสอบสิทธิ์...</p>
         </div>
-      </div>
-    );
-  }
-
-  // ✅ Success screen - แบบใหม่ไม่มี approval
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
-        <Card className="w-full max-w-md shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardContent className="pt-6 text-center">
-            <div className="mb-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-green-100">
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
-              </div>
-            </div>
-            
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              สมัครสมาชิกสำเร็จ!
-            </h3>
-            
-            <p className="text-gray-600 mb-4">
-              บัญชีของคุณพร้อมใช้งานแล้ว กำลังเข้าสู่ระบบ...
-            </p>
-            
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-green-700">
-                <CheckCircle2 className="w-4 h-4 inline mr-1" />
-                บัญชีของคุณได้รับการสร้างและเปิดใช้งานเรียบร้อยแล้ว
-              </p>
-              <p className="text-sm mt-1 text-green-600">
-                คุณสามารถเริ่มใช้งานระบบได้ทันที
-              </p>
-            </div>
-            
-            <p className="text-sm text-gray-500 mb-6">
-              กำลังนำคุณเข้าสู่ระบบ...
-            </p>
-            
-            <Button
-              onClick={() => router.push('/dashboard')}
-              className="w-full bg-green-500 hover:bg-green-600"
-            >
-              <ArrowRight className="w-4 h-4 mr-2" />
-              เข้าสู่ระบบ
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -532,7 +481,6 @@ export default function RegisterPage() {
                     </Label>
                   </div>
                   
-                  {/* ✅ เอาข้อความ approval ออก */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <p className="text-xs text-green-700 leading-relaxed">
                       <CheckCircle2 className="w-3 h-3 inline mr-1" />
