@@ -6,7 +6,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Building2, Bell, Settings, LogOut, RefreshCw } from 'lucide-react';
+import { Building2, Bell, Settings, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Organization {
@@ -31,7 +31,6 @@ interface DashboardHeaderProps {
 export const DashboardHeader = ({
   organizations,
   user,
-  onRefresh,
   onLogout
 }: DashboardHeaderProps) => {
   const router = useRouter();
@@ -48,12 +47,6 @@ export const DashboardHeader = ({
       }
     } else {
       window.location.href = '/login';
-    }
-  };
-
-  const handleRefresh = () => {
-    if (onRefresh) {
-      onRefresh();
     }
   };
 

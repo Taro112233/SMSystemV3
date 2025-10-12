@@ -8,7 +8,19 @@ import {
   type LucideIcon 
 } from 'lucide-react';
 
-// ✅ UPDATED: Add userSnapshot field
+// ✅ UPDATED: Define proper UserSnapshot type
+interface UserSnapshot {
+  userId: string;
+  username: string;
+  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: string;
+  [key: string]: string | undefined;
+}
+
+// ✅ UPDATED: Add userSnapshot field with proper type
 export interface AuditLog {
   id: string;
   action: string;
@@ -16,7 +28,7 @@ export interface AuditLog {
   severity: string;
   description: string;
   createdAt: Date | string;
-  userSnapshot?: any;  // ✅ NEW: User snapshot JSON
+  userSnapshot?: UserSnapshot | string | null;  // ✅ Proper type for userSnapshot
   department?: {
     name: string;
   } | null;
@@ -111,13 +123,13 @@ export function getActivityTitle(action: string, category: string): string {
   return titles[action] || `${category}: ${action}`;
 }
 
-// ✅ NEW: Extract user name from snapshot
-function extractUserNameFromSnapshot(snapshot: any): string {
+// ✅ NEW: Extract user name from snapshot with proper typing
+function extractUserNameFromSnapshot(snapshot: UserSnapshot | string | null | undefined): string {
   if (!snapshot) return 'ระบบ';
   
   try {
     // Handle string JSON
-    const data = typeof snapshot === 'string' 
+    const data: UserSnapshot = typeof snapshot === 'string' 
       ? JSON.parse(snapshot) 
       : snapshot;
     

@@ -12,7 +12,7 @@ import { createUserSnapshot } from "@/lib/user-snapshot";
  * GET - Get current user profile
  * NO AUDIT LOG - This is a read-only operation
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const user = await getServerUser();
 
@@ -140,7 +140,7 @@ export async function PATCH(request: NextRequest) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
 
     await createAuditLog({
-      organizationId: null as any, // User profile is not org-specific
+      organizationId: null as unknown as string, // User profile is not org-specific
       userId: user.userId,
       userSnapshot,
       action: "user.profile_updated",

@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       const { ipAddress, userAgent } = getRequestMetadata(request);
 
       await createAuditLog({
-        organizationId: null as any,
+        organizationId: null as unknown as string,
         userId: user.userId,
         userSnapshot,
         action: 'user.password_change_failed',
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
 
     await createAuditLog({
-      organizationId: null as any,
+      organizationId: null as unknown as string,
       userId: user.userId,
       userSnapshot,
       action: 'user.password_changed',

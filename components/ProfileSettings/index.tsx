@@ -27,7 +27,7 @@ interface UserProfile {
 }
 
 export const ProfileSettings = () => {
-  const { user: authUser, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [loading, setLoading] = useState(true);

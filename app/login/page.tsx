@@ -20,7 +20,6 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  CheckCircle2,
   XCircle,
   AlertTriangle,
   Building2,

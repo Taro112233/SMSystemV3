@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
-import { ColorTheme, IconType } from '@prisma/client';
+import { ColorTheme, IconType, Prisma } from '@prisma/client';
 import { createUserSnapshot } from '@/lib/user-snapshot';
 
 export async function GET(
@@ -167,7 +167,7 @@ export async function PATCH(
       );
     }
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description || null;
@@ -230,10 +230,10 @@ export async function PATCH(
       resourceId: access.organizationId,
       resourceType: 'Organization',
       payload: {
-        before: currentOrg,
-        after: updateData,
-        changes: Object.keys(updateData),
-      },
+  before: currentOrg,
+  after: updateData as Prisma.InputJsonValue,
+  changes: Object.keys(updateData),
+} as Prisma.InputJsonValue,
       ipAddress,
       userAgent,
     });

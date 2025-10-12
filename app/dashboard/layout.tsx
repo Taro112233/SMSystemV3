@@ -54,7 +54,8 @@ export default function DashboardLayout({
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // We're intentionally only running this once on mount
 
   const loadDashboardData = async () => {
     try {
@@ -76,7 +77,7 @@ export default function DashboardLayout({
       }
 
       const userData = await userRes.json();
-      
+
       if (userData.success && userData.data.user) {
         const u = userData.data.user;
         setUser({
@@ -149,13 +150,13 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader 
+      <DashboardHeader
         organizations={organizations}
         user={user}
         onRefresh={handleRefresh}
         onLogout={handleLogout}
       />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>

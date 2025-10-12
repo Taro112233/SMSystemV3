@@ -3,7 +3,7 @@
 // ============================================
 
 import { prisma } from '@/lib/prisma';
-import { createUserSnapshot, createUserSnapshotFromJWT, type UserSnapshot } from '@/lib/user-snapshot';
+import { createUserSnapshot, type UserSnapshot } from '@/lib/user-snapshot';
 import type { Prisma } from '@prisma/client';
 
 type AuditCategory = 'PRODUCT' | 'STOCK' | 'TRANSFER' | 'USER' | 'ORGANIZATION' | 'DEPARTMENT' | 'AUTH' | 'SYSTEM';
