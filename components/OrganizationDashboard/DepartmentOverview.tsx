@@ -1,9 +1,10 @@
 // FILE: components/OrganizationDashboard/DepartmentOverview.tsx
 // OrganizationOverview/DepartmentOverview - Department grid with quick overview
+// ✅ UPDATED: Fixed height with scroll functionality
 // ============================================
 
 import React from 'react';
-import { useRouter, useParams } from 'next/navigation'; // ✅ เพิ่ม useRouter, useParams
+import { useRouter, useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Package, AlertTriangle, ChevronRight, CheckCircle2 } from 'lucide-react';
@@ -22,9 +23,6 @@ export const DepartmentOverview = ({
   const params = useParams();
   const orgSlug = params.orgSlug as string;
   
-  // ✅ ใช้ลำดับจาก API โดยตรง (เรียงตาม parentId, name แล้ว)
-  // ✅ แสดงทั้งหมดไม่จำกัด
-  
   // ✅ Handle department click - navigate to department page
   const handleDepartmentClick = (dept: FrontendDepartment) => {
     router.push(`/${orgSlug}/${dept.slug}`);
@@ -42,7 +40,8 @@ export const DepartmentOverview = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        {/* ✅ UPDATED: Fixed height with scroll - matching RecentActivity */}
+        <div className="space-y-3 max-h-96 overflow-y-auto">
           {departments.map((dept) => {
             const IconComponent = getIconComponent(dept.icon || 'BUILDING');
             const hasLowStock = (dept.lowStock || 0) > 0;
@@ -53,7 +52,7 @@ export const DepartmentOverview = ({
                 className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group"
                 onClick={() => handleDepartmentClick(dept)}
               >
-                {/* Department Icon - ✅ ใช้สีจาก database ที่ผ่าน transform แล้ว */}
+                {/* Department Icon - ใช้สีจาก database ที่ผ่าน transform แล้ว */}
                 <div className={`w-12 h-12 ${dept.color || 'bg-blue-500'} rounded-lg flex items-center justify-center flex-shrink-0`}>
                   <IconComponent className="w-6 h-6 text-white" />
                 </div>
