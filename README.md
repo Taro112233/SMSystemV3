@@ -195,10 +195,12 @@ Directory structure:
     │   ├── config.ts
     │   ├── department-helpers.ts
     │   ├── prisma.ts
+    │   ├── product-helpers.ts
     │   ├── reserved-routes.ts
     │   ├── role-helpers.ts
     │   ├── security-logger.ts
     │   ├── slug-validator.ts
+    │   ├── stock-helpers.ts
     │   ├── user-snapshot.ts
     │   └── utils.ts
     ├── prisma/
@@ -208,6 +210,8 @@ Directory structure:
     │   │   ├── audit.prisma
     │   │   ├── base.prisma
     │   │   ├── organization.prisma
+    │   │   ├── product.prisma
+    │   │   ├── stock.prisma
     │   │   └── user.prisma
     │   └── seeds/
     │       ├── demo-data.seed.ts
