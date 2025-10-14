@@ -1,0 +1,105 @@
+// prisma/schemas/stock.prisma
+// ===== STOCK SCHEMA - DEPARTMENT-LEVEL INVENTORY =====
+
+// ===== STOCK (SUMMARY LEVEL - NO QUANTITIES) =====
+model Stock {
+  id             String   @id @default(cuid())
+  organizationId String
+  departmentId   String
+  productId      String
+  
+  // ✅ REMOVED: All quantity fields (moved to StockBatch)
+  // Stock now only holds configuration and relationships
+  
+  // Stock Location (within department)
+  location       String?  // ชั้น A-1, ตู้ยา B, ห้องเย็น
+  
+  // ✅ Department-specific Thresholds
+  minStockLevel  Int?     // แจ้งเตือนเมื่อต่ำกว่า
+  maxStockLevel  Int?     // สูงสุดที่ควรเก็บ
+  reorderPoint   Int?     // จุดสั่งซื้อใหม่
+  
+  // ✅ Default Withdrawal Quantity
+  defaultWithdrawalQty Int?  // จำนวนเบิกคงที่
+  
+  // Status
+  lastStockCheck DateTime?
+  lastMovement   DateTime?
+  
+  // ✅ USER TRACKING
+  createdBy         String
+  createdBySnapshot Json?
+  updatedBy         String?
+  updatedBySnapshot Json?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department     Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockBatches   StockBatch[]
+  
+  @@unique([departmentId, productId])
+  @@index([organizationId, departmentId])
+  @@map("stocks")
+}
+
+// ===== STOCK BATCH (ACTUAL INVENTORY WITH QUANTITIES) =====
+model StockBatch {
+  id             String   @id @default(cuid())
+  stockId        String
+  
+  // ✅ Batch Info
+  lotNumber      String
+  expiryDate     DateTime?
+  manufactureDate DateTime?
+  supplier       String?
+  
+  // ✅ Pricing
+  costPrice      Decimal? @db.Decimal(10, 2)
+  sellingPrice   Decimal? @db.Decimal(10, 2)
+  
+  // ✅ NEW: Quantity Tracking (moved from Stock)
+  totalQuantity      Int @default(0)  // รวมจำนวนทั้งหมด
+  availableQuantity  Int @default(0)  // ว่าง = total - reserved - incoming
+  reservedQuantity   Int @default(0)  // จองสำหรับ approved transfers
+  incomingQuantity   Int @default(0)  // รอรับเข้า (pending incoming)
+  
+  // Location
+  location       String?  // ชั้น A-1-05, ตู้ยาช่องที่ 3
+  
+  // ✅ Status
+  status         BatchStatus @default(AVAILABLE)
+  isActive       Boolean     @default(true)
+  
+  // User Tracking
+  createdBy         String
+  createdBySnapshot Json?
+  updatedBy         String?
+  updatedBySnapshot Json?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  receivedAt     DateTime @default(now())
+  
+  stock          Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  
+  @@unique([stockId, lotNumber])
+  @@index([expiryDate])
+  @@index([status, isActive])
+  @@index([availableQuantity]) // For stock availability checks
+  @@map("stock_batches")
+}
+
+// ✅ Batch Status Enum
+enum BatchStatus {
+  AVAILABLE    // พร้อมใช้
+  RESERVED     // จองไว้สำหรับ transfer
+  QUARANTINE   // กักกัน
+  DAMAGED      // เสียหาย
+  EXPIRED      // หมดอายุ
+}

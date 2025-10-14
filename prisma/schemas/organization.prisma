@@ -32,6 +32,11 @@ model Organization {
   departments Department[]
   auditLogs   AuditLog[]
   
+  // ✅ Product-related relations
+  products              Product[]
+  productAttributeCategories ProductAttributeCategory[]  // ✅ เพิ่มบรรทัดนี้
+  stocks                Stock[]
+  
   @@index([slug])
   @@index([status])
   @@index([inviteCode])
@@ -63,7 +68,7 @@ model OrganizationUser {
   @@map("organization_users")
 }
 
-// ✅ UPDATED: Department with User Snapshots
+// ✅ UPDATED: Department with User Snapshots + Stock relation
 model Department {
   id             String       @id @default(cuid())
   organizationId String
@@ -79,14 +84,11 @@ model Department {
   // Status
   isActive       Boolean      @default(true)
   
-  // ✅ NEW: Created By - Snapshot + Relation
-  createdBy      String       // User ID
-  createdBySnapshot Json?     // ✅ NEW: Creator info ณ ขณะนั้น
-  // Example: { userId, username, fullName, email, role }
-  
-  // ✅ NEW: Updated By - Snapshot + Relation
-  updatedBy      String?      // Last updater ID
-  updatedBySnapshot Json?     // ✅ NEW: Last updater info ณ ขณะนั้น
+  // ✅ USER TRACKING
+  createdBy         String
+  createdBySnapshot Json?
+  updatedBy         String?
+  updatedBySnapshot Json?
   
   // Timestamps
   createdAt      DateTime     @default(now())
@@ -97,6 +99,7 @@ model Department {
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
   auditLogs      AuditLog[]
+  stocks         Stock[]
   
   @@unique([organizationId, slug])
   @@index([parentId])

@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-10-13T18:27:35.776Z
+// Last generated: 2025-10-14T18:05:16.081Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -183,6 +183,11 @@ model Organization {
   departments Department[]
   auditLogs   AuditLog[]
   
+  // ✅ Product-related relations
+  products              Product[]
+  productAttributeCategories ProductAttributeCategory[]  // ✅ เพิ่มบรรทัดนี้
+  stocks                Stock[]
+  
   @@index([slug])
   @@index([status])
   @@index([inviteCode])
@@ -214,7 +219,7 @@ model OrganizationUser {
   @@map("organization_users")
 }
 
-// ✅ UPDATED: Department with User Snapshots
+// ✅ UPDATED: Department with User Snapshots + Stock relation
 model Department {
   id             String       @id @default(cuid())
   organizationId String
@@ -230,14 +235,11 @@ model Department {
   // Status
   isActive       Boolean      @default(true)
   
-  // ✅ NEW: Created By - Snapshot + Relation
-  createdBy      String       // User ID
-  createdBySnapshot Json?     // ✅ NEW: Creator info ณ ขณะนั้น
-  // Example: { userId, username, fullName, email, role }
-  
-  // ✅ NEW: Updated By - Snapshot + Relation
-  updatedBy      String?      // Last updater ID
-  updatedBySnapshot Json?     // ✅ NEW: Last updater info ณ ขณะนั้น
+  // ✅ USER TRACKING
+  createdBy         String
+  createdBySnapshot Json?
+  updatedBy         String?
+  updatedBySnapshot Json?
   
   // Timestamps
   createdAt      DateTime     @default(now())
@@ -248,11 +250,208 @@ model Department {
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
   auditLogs      AuditLog[]
+  stocks         Stock[]
   
   @@unique([organizationId, slug])
   @@index([parentId])
   @@index([isActive])
   @@map("departments")
+}
+
+// ==========================================
+// PRODUCT SCHEMA - V1.0
+// ==========================================
+
+// prisma/schemas/product.prisma
+// ===== PRODUCT SCHEMA - SIMPLIFIED & PRACTICAL =====
+
+// ===== CORE PRODUCT MODEL =====
+model Product {
+  id             String   @id @default(cuid())
+  organizationId String
+  
+  // Basic Info (Fixed Schema)
+  code           String   // รหัสสินค้า (organization-wide unique)
+  name           String
+  genericName    String?
+  description    String?
+  
+  // ✅ FLEXIBLE ATTRIBUTES (JSON)
+  // Example: { 
+  //   "รูปแบบยา": "ยาเม็ด",
+  //   "ประเภทยา": "ยาแก้ปวด", 
+  //   "ความแรง": "500mg",
+  //   "ผู้ผลิต": "GPO"
+  // }
+  attributes     Json?
+  
+  // Package/Unit Info
+  baseUnit       String   // หน่วยพื้นฐาน (เม็ด, กล่อง, ขวด)
+  
+  // Status
+  isActive       Boolean  @default(true)
+  
+  // ✅ USER TRACKING
+  createdBy         String   // User ID for query/relation
+  createdBySnapshot Json?    // Immutable user info snapshot
+  updatedBy         String?
+  updatedBySnapshot Json?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stocks         Stock[]
+  
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@map("products")
+}
+
+// ✅ NEW: Product Attribute Categories (สร้างโดย ADMIN/OWNER)
+model ProductAttributeCategory {
+  id             String   @id @default(cuid())
+  organizationId String
+  
+  // Category Info
+  key            String   // "dosage_form", "drug_type", "strength"
+  label          String   // "รูปแบบยา", "ประเภทยา", "ความแรง"
+  description    String?
+  
+  // Options (JSON array of strings)
+  options        Json     // ["ยาเม็ด", "ยาน้ำ", "ยาทา"]
+  
+  // Display & Validation
+  displayOrder   Int      @default(0)
+  isRequired     Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  
+  // User Tracking
+  createdBy         String
+  createdBySnapshot Json?
+  updatedBy         String?
+  updatedBySnapshot Json?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, key])
+  @@index([organizationId, isActive])
+  @@map("product_attribute_categories")
+}
+
+// ==========================================
+// STOCK SCHEMA - V1.0
+// ==========================================
+
+// prisma/schemas/stock.prisma
+// ===== STOCK SCHEMA - DEPARTMENT-LEVEL INVENTORY =====
+
+// ===== STOCK (SUMMARY LEVEL - NO QUANTITIES) =====
+model Stock {
+  id             String   @id @default(cuid())
+  organizationId String
+  departmentId   String
+  productId      String
+  
+  // ✅ REMOVED: All quantity fields (moved to StockBatch)
+  // Stock now only holds configuration and relationships
+  
+  // Stock Location (within department)
+  location       String?  // ชั้น A-1, ตู้ยา B, ห้องเย็น
+  
+  // ✅ Department-specific Thresholds
+  minStockLevel  Int?     // แจ้งเตือนเมื่อต่ำกว่า
+  maxStockLevel  Int?     // สูงสุดที่ควรเก็บ
+  reorderPoint   Int?     // จุดสั่งซื้อใหม่
+  
+  // ✅ Default Withdrawal Quantity
+  defaultWithdrawalQty Int?  // จำนวนเบิกคงที่
+  
+  // Status
+  lastStockCheck DateTime?
+  lastMovement   DateTime?
+  
+  // ✅ USER TRACKING
+  createdBy         String
+  createdBySnapshot Json?
+  updatedBy         String?
+  updatedBySnapshot Json?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department     Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockBatches   StockBatch[]
+  
+  @@unique([departmentId, productId])
+  @@index([organizationId, departmentId])
+  @@map("stocks")
+}
+
+// ===== STOCK BATCH (ACTUAL INVENTORY WITH QUANTITIES) =====
+model StockBatch {
+  id             String   @id @default(cuid())
+  stockId        String
+  
+  // ✅ Batch Info
+  lotNumber      String
+  expiryDate     DateTime?
+  manufactureDate DateTime?
+  supplier       String?
+  
+  // ✅ Pricing
+  costPrice      Decimal? @db.Decimal(10, 2)
+  sellingPrice   Decimal? @db.Decimal(10, 2)
+  
+  // ✅ NEW: Quantity Tracking (moved from Stock)
+  totalQuantity      Int @default(0)  // รวมจำนวนทั้งหมด
+  availableQuantity  Int @default(0)  // ว่าง = total - reserved - incoming
+  reservedQuantity   Int @default(0)  // จองสำหรับ approved transfers
+  incomingQuantity   Int @default(0)  // รอรับเข้า (pending incoming)
+  
+  // Location
+  location       String?  // ชั้น A-1-05, ตู้ยาช่องที่ 3
+  
+  // ✅ Status
+  status         BatchStatus @default(AVAILABLE)
+  isActive       Boolean     @default(true)
+  
+  // User Tracking
+  createdBy         String
+  createdBySnapshot Json?
+  updatedBy         String?
+  updatedBySnapshot Json?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  receivedAt     DateTime @default(now())
+  
+  stock          Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  
+  @@unique([stockId, lotNumber])
+  @@index([expiryDate])
+  @@index([status, isActive])
+  @@index([availableQuantity]) // For stock availability checks
+  @@map("stock_batches")
+}
+
+// ✅ Batch Status Enum
+enum BatchStatus {
+  AVAILABLE    // พร้อมใช้
+  RESERVED     // จองไว้สำหรับ transfer
+  QUARANTINE   // กักกัน
+  DAMAGED      // เสียหาย
+  EXPIRED      // หมดอายุ
 }
 
 // ==========================================

@@ -1,0 +1,81 @@
+// prisma/schemas/product.prisma
+// ===== PRODUCT SCHEMA - SIMPLIFIED & PRACTICAL =====
+
+// ===== CORE PRODUCT MODEL =====
+model Product {
+  id             String   @id @default(cuid())
+  organizationId String
+  
+  // Basic Info (Fixed Schema)
+  code           String   // รหัสสินค้า (organization-wide unique)
+  name           String
+  genericName    String?
+  description    String?
+  
+  // ✅ FLEXIBLE ATTRIBUTES (JSON)
+  // Example: { 
+  //   "รูปแบบยา": "ยาเม็ด",
+  //   "ประเภทยา": "ยาแก้ปวด", 
+  //   "ความแรง": "500mg",
+  //   "ผู้ผลิต": "GPO"
+  // }
+  attributes     Json?
+  
+  // Package/Unit Info
+  baseUnit       String   // หน่วยพื้นฐาน (เม็ด, กล่อง, ขวด)
+  
+  // Status
+  isActive       Boolean  @default(true)
+  
+  // ✅ USER TRACKING
+  createdBy         String   // User ID for query/relation
+  createdBySnapshot Json?    // Immutable user info snapshot
+  updatedBy         String?
+  updatedBySnapshot Json?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stocks         Stock[]
+  
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@map("products")
+}
+
+// ✅ NEW: Product Attribute Categories (สร้างโดย ADMIN/OWNER)
+model ProductAttributeCategory {
+  id             String   @id @default(cuid())
+  organizationId String
+  
+  // Category Info
+  key            String   // "dosage_form", "drug_type", "strength"
+  label          String   // "รูปแบบยา", "ประเภทยา", "ความแรง"
+  description    String?
+  
+  // Options (JSON array of strings)
+  options        Json     // ["ยาเม็ด", "ยาน้ำ", "ยาทา"]
+  
+  // Display & Validation
+  displayOrder   Int      @default(0)
+  isRequired     Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  
+  // User Tracking
+  createdBy         String
+  createdBySnapshot Json?
+  updatedBy         String?
+  updatedBySnapshot Json?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, key])
+  @@index([organizationId, isActive])
+  @@map("product_attribute_categories")
+}

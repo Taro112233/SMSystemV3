@@ -28,11 +28,8 @@ const SCHEMA_ORDER = [
   'base.prisma',       // Enums first
   'user.prisma',       // Users
   'organization.prisma', // Organizations
-  'permission.prisma', // Permission system
-  'product.prisma',    // Products
-  'stock.prisma',      // Stock management
-  'transfer.prisma',   // Transfer system
-  'notification.prisma', // Notifications
+  'product.prisma',    // ✅ Products & Categories
+  'stock.prisma',      // ✅ NEW: Stock management
   'audit.prisma'       // Audit logs
 ];
 

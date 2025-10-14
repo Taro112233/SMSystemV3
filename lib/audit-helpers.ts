@@ -5,6 +5,7 @@ import {
   Package, UserPlus, Edit, Trash2, CheckCircle, 
   AlertTriangle, TrendingUp, Building2, Users,
   FileText, Settings, Shield, ArrowRightLeft, User, Lock,
+  PackageOpen, PackageCheck, // ✅ FIXED: Add these icons
   type LucideIcon 
 } from 'lucide-react';
 
@@ -58,6 +59,7 @@ export function getActivityIcon(category: string, action: string): LucideIcon {
     SYSTEM: Settings,
   };
 
+  // Action-specific icons (checked before category icons)
   if (action.includes('create')) return UserPlus;
   if (action.includes('update')) return Edit;
   if (action.includes('delete')) return Trash2;
@@ -65,6 +67,13 @@ export function getActivityIcon(category: string, action: string): LucideIcon {
   if (action.includes('reject')) return AlertTriangle;
   if (action.includes('profile')) return User;
   if (action.includes('password')) return Lock;
+  
+  // ✅ FIXED: Stock-specific actions with correct icon names
+  if (action.includes('stock.adjust')) return TrendingUp;
+  if (action.includes('stock.receive')) return PackageOpen;     // ✅ Changed from PackagePlus
+  if (action.includes('stock.transfer')) return ArrowRightLeft;
+  if (action.includes('batch.create')) return PackageCheck;     // ✅ Already correct
+  if (action.includes('batch.expire')) return AlertTriangle;
   
   return categoryIcons[category] || FileText;
 }
@@ -98,26 +107,48 @@ export function formatActivityTime(date: Date | string): string {
 
 export function getActivityTitle(action: string, category: string): string {
   const titles: Record<string, string> = {
+    // Product actions
     'products.create': 'สร้างสินค้าใหม่',
     'products.update': 'แก้ไขข้อมูลสินค้า',
     'products.delete': 'ลบสินค้า',
+    
+    // Department actions
     'departments.create': 'สร้างหน่วยงานใหม่',
     'departments.update': 'แก้ไขหน่วยงาน',
     'departments.delete': 'ลบหน่วยงาน',
+    
+    // Member actions
     'members.role_updated': 'เปลี่ยนบทบาทสมาชิก',
     'members.removed': 'ลบสมาชิก',
     'members.joined_by_code': 'สมาชิกใหม่เข้าร่วม',
+    
+    // Organization actions
     'organization.create': 'สร้างองค์กร',
     'organization.settings_updated': 'แก้ไขการตั้งค่าองค์กร',
-    'stocks.adjust': 'ปรับปรุงสต็อก',
+    
+    // Transfer actions
     'transfers.create': 'สร้างคำขอโอนสินค้า',
     'transfers.approve': 'อนุมัติการโอนสินค้า',
+    
+    // User actions
     'user.profile_updated': 'อัพเดทข้อมูลโปรไฟล์',
     'user.password_changed': 'เปลี่ยนรหัสผ่าน',
     'user.password_change_failed': 'พยายามเปลี่ยนรหัสผ่านล้มเหลว',
     'user.login': 'เข้าสู่ระบบ',
     'user.logout': 'ออกจากระบบ',
     'user.login_failed': 'พยายามเข้าสู่ระบบล้มเหลว',
+    
+    // ✅ FIXED: Stock actions (removed duplicate 'stocks.adjust')
+    'stocks.adjust': 'ปรับปรุงสต็อก',
+    'stocks.receive': 'รับสินค้าเข้า',
+    'stocks.transfer_out': 'โอนสินค้าออก',
+    'stocks.transfer_in': 'รับสินค้าโอน',
+    
+    // Batch actions
+    'batches.create': 'เพิ่ม Lot ใหม่',
+    'batches.update': 'แก้ไข Lot',
+    'batches.expire': 'Lot หมดอายุ',
+    'batches.quarantine': 'กักสินค้า',
   };
 
   return titles[action] || `${category}: ${action}`;
