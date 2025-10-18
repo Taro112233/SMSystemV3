@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-10-17T15:03:06.642Z
+// Last generated: 2025-10-18T06:21:52.367Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -263,65 +263,16 @@ model Department {
 // ==========================================
 
 // prisma/schemas/product.prisma
-// ===== PRODUCT SCHEMA - SIMPLIFIED & PRACTICAL =====
 
-// ===== CORE PRODUCT MODEL =====
-model Product {
-  id             String   @id @default(cuid())
-  organizationId String
-  
-  // Basic Info (Fixed Schema)
-  code           String   // รหัสสินค้า (organization-wide unique)
-  name           String
-  genericName    String?
-  description    String?
-  
-  // ✅ FLEXIBLE ATTRIBUTES (JSON)
-  // Example: { 
-  //   "รูปแบบยา": "ยาเม็ด",
-  //   "ประเภทยา": "ยาแก้ปวด", 
-  //   "ความแรง": "500mg",
-  //   "ผู้ผลิต": "GPO"
-  // }
-  attributes     Json?
-  
-  // Package/Unit Info
-  baseUnit       String   // หน่วยพื้นฐาน (เม็ด, กล่อง, ขวด)
-  
-  // Status
-  isActive       Boolean  @default(true)
-  
-  // ✅ USER TRACKING
-  createdBy         String   // User ID for query/relation
-  createdBySnapshot Json?    // Immutable user info snapshot
-  updatedBy         String?
-  updatedBySnapshot Json?
-  
-  // Timestamps
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  // Relations
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  stocks         Stock[]
-  
-  @@unique([organizationId, code])
-  @@index([organizationId, isActive])
-  @@map("products")
-}
-
-// ✅ NEW: Product Attribute Categories (สร้างโดย ADMIN/OWNER)
+// ===== PRODUCT ATTRIBUTE CATEGORY (Definition) =====
 model ProductAttributeCategory {
   id             String   @id @default(cuid())
   organizationId String
   
   // Category Info
-  key            String   // "dosage_form", "drug_type", "strength"
-  label          String   // "รูปแบบยา", "ประเภทยา", "ความแรง"
+  key            String   // "dosage_form", "drug_type", "manufacturer"
+  label          String   // "รูปแบบยา", "ประเทศผู้ผลิต"
   description    String?
-  
-  // Options (JSON array of strings)
-  options        Json     // ["ยาเม็ด", "ยาน้ำ", "ยาทา"]
   
   // Display & Validation
   displayOrder   Int      @default(0)
@@ -337,11 +288,93 @@ model ProductAttributeCategory {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   
+  // ✅ Relations
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  options        ProductAttributeOption[]  // ✅ แยกเป็น table ต่างหาก
+  productAttributes ProductAttribute[]     // ✅ เชื่อมกับ Product
   
   @@unique([organizationId, key])
   @@index([organizationId, isActive])
   @@map("product_attribute_categories")
+}
+
+// ===== PRODUCT ATTRIBUTE OPTION (Values for each category) =====
+model ProductAttributeOption {
+  id         String   @id @default(cuid())
+  categoryId String
+  
+  value      String   // "ยาเม็ด", "ยาน้ำ", "ไทย", "ญี่ปุ่น"
+  label      String?  // Optional display label
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // ✅ Relations
+  category   ProductAttributeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  productAttributes ProductAttribute[]
+  
+  @@unique([categoryId, value])
+  @@index([categoryId, isActive])
+  @@map("product_attribute_options")
+}
+
+// ===== PRODUCT ATTRIBUTE (Junction table connecting Product + Category + Option) =====
+model ProductAttribute {
+  id         String   @id @default(cuid())
+  productId  String
+  categoryId String
+  optionId   String
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // ✅ Relations
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   ProductAttributeCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  option     ProductAttributeOption @relation(fields: [optionId], references: [id], onDelete: Restrict)
+  
+  @@unique([productId, categoryId])  // Each product can have only one value per category
+  @@index([productId])
+  @@index([categoryId])
+  @@index([optionId])
+  @@map("product_attributes")
+}
+
+// ===== UPDATED PRODUCT MODEL =====
+model Product {
+  id             String   @id @default(cuid())
+  organizationId String
+  
+  // Basic Info
+  code           String
+  name           String
+  genericName    String?
+  description    String?
+  
+  // ❌ REMOVED: attributes Json?
+  // ✅ REPLACED WITH: Normalized relations
+  
+  baseUnit       String
+  isActive       Boolean  @default(true)
+  
+  createdBy         String
+  createdBySnapshot Json?
+  updatedBy         String?
+  updatedBySnapshot Json?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // ✅ Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  attributes     ProductAttribute[]  // ✅ NEW: Junction table relation
+  stocks         Stock[]
+  
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@map("products")
 }
 
 // ==========================================
