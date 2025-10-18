@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, UserCog } from 'lucide-react';
+import { Building2, Users, UserCog, Building } from 'lucide-react';
 
 import { OrganizationSettings } from './OrganizationSettings';
 import { DepartmentSettings } from './DepartmentSettings';
@@ -87,11 +87,11 @@ export const SettingsManagement = ({
           <span>ข้อมูลองค์กร</span>
         </TabsTrigger>
         <TabsTrigger value="departments" className="flex items-center gap-2">
-          <Users className="w-4 h-4" />
+          <Building className="w-4 h-4" />
           <span>จัดการหน่วยงาน</span>
         </TabsTrigger>
         <TabsTrigger value="members" className="flex items-center gap-2">
-          <UserCog className="w-4 h-4" />
+          <Users className="w-4 h-4" />
           <span>จัดการสมาชิก</span>
         </TabsTrigger>
       </TabsList>

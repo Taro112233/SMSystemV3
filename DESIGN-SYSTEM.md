@@ -20,7 +20,7 @@ TextMuted:   gray-500/600   // Secondary text
 ```typescript
 PageTitle:      text-2xl font-semibold
 SectionHeader:  text-lg font-semibold
-CardTitle:      text-lg font-semibold
+CardTitle:      font-semibold text-gray-900      // No fixed size
 CardSubtitle:   text-sm text-gray-500
 Body:           text-sm
 Caption:        text-xs text-gray-500/600
@@ -29,11 +29,15 @@ Caption:        text-xs text-gray-500/600
 ### Spacing System
 ```typescript
 Section:     space-y-6      // Between major sections
-Card:        space-y-4      // Inside cards
+List:        space-y-4      // Between section header and content
+Card:        space-y-4      // Inside cards (legacy - still valid)
+CardCompact: space-y-3      // Inside cards (preferred for new components)
 FormField:   space-y-2      // Form field groups
 Grid:        gap-4          // Grid spacing
+RowStack:    space-y-2      // Vertical row stacking (alternative to grid)
 Button:      px-4 py-2      // Button padding
 Icon+Text:   mr-2           // Icon before text
+IconBadge:   mr-1           // Icon before text in badges
 ```
 
 ---
@@ -41,12 +45,12 @@ Icon+Text:   mr-2           // Icon before text
 ## 🏗️ Component Architecture Patterns
 
 ### Pattern 1: Settings Page Structure
-**Reference:** `components/SettingsManagement/DepartmentSettings/`
+**Reference:** `components/SettingsManagement/`
 
 ```
 SettingsModule/
 ├── index.tsx              # Container + state orchestrator
-├── ModuleList.tsx         # Grid/List renderer + search
+├── ModuleList.tsx         # Grid/Row renderer + search
 ├── ModuleCard.tsx         # Individual item display
 ├── ModuleFormModal.tsx    # Create/Edit dialog
 └── ModuleFormFields.tsx   # Reusable form inputs
@@ -75,7 +79,7 @@ export function ModuleSettings({ data, onCRUD }) {
 ---
 
 ### Pattern 2: List Component with Header
-**Reference:** `DepartmentList.tsx`
+**Reference:** `DepartmentList.tsx`, `CategoryList.tsx`
 
 ```typescript
 export function ModuleList({ items, canManage, onCRUD }) {
@@ -111,9 +115,19 @@ export function ModuleList({ items, canManage, onCRUD }) {
         </div>
       </SettingsCard>
       
-      {/* Grid */}
+      {/* ✅ FLEXIBLE: Choose Grid OR Row layout based on content */}
+      
+      {/* Option A: Grid Layout (for card-based content) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {items.map(item => <ModuleCard key={item.id} {...} />)}
+      </div>
+      
+      {/* Option B: Row Layout (for list-based content with more details) */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Section Title</h3>
+        <div className="space-y-2">
+          {items.map(item => <ModuleCard key={item.id} {...} />)}
+        </div>
       </div>
       
       {/* Modals */}
@@ -123,10 +137,23 @@ export function ModuleList({ items, canManage, onCRUD }) {
 }
 ```
 
+**Layout Decision Guide:**
+- **Use Grid** (`grid gap-4 md:grid-cols-2 lg:grid-cols-3`):
+  - When cards are compact and equal-height
+  - Visual icon/color is important
+  - Items are independent
+  - Examples: Departments (icon-focused), simple categories
+  
+- **Use Row Stack** (`space-y-2` or `space-y-3`):
+  - When content varies in length
+  - Need to show multiple attributes inline
+  - Space efficiency is important
+  - Examples: Categories with many options, members with roles
+
 ---
 
-### Pattern 3: Card Component
-**Reference:** `DepartmentCard.tsx`, `CategoryCard.tsx`
+### Pattern 3: Card Component - Grid Style
+**Reference:** `DepartmentCard.tsx`
 
 ```typescript
 export function ModuleCard({ item, canManage, onEdit, onDelete }) {
@@ -139,7 +166,7 @@ export function ModuleCard({ item, canManage, onEdit, onDelete }) {
           {/* Header: Icon + Title + Badge */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Icon className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
@@ -150,12 +177,12 @@ export function ModuleCard({ item, canManage, onEdit, onDelete }) {
             
             {/* Status Badge */}
             {item.isActive ? (
-              <Badge variant="default" className="bg-green-500">
+              <Badge variant="default" className="bg-green-500 flex-shrink-0">
                 <CheckCircle className="w-3 h-3 mr-1" />
                 ใช้งาน
               </Badge>
             ) : (
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="flex-shrink-0">
                 <XCircle className="w-3 h-3 mr-1" />
                 ปิด
               </Badge>
@@ -192,14 +219,83 @@ export function ModuleCard({ item, canManage, onEdit, onDelete }) {
         </div>
       </CardContent>
       
-      <ConfirmDialog 
-        open={showDelete}
-        onOpenChange={setShowDelete}
-        title="ยืนยันการลบ"
-        description={`ลบ "${item.name}" หรือไม่?`}
-        onConfirm={() => onDelete(item.id)}
-        variant="destructive"
-      />
+      <ConfirmDialog {...} />
+    </Card>
+  );
+}
+```
+
+---
+
+### Pattern 3B: Card Component - Row Style
+**Reference:** `CategoryCard.tsx`
+
+```typescript
+export function ModuleCard({ item, canManage, onEdit, onDelete }) {
+  const [showDelete, setShowDelete] = useState(false);
+  
+  // For row layout: horizontal arrangement with inline content
+  return (
+    <Card className={`${!item.isActive ? 'opacity-60' : ''} hover:shadow-md transition-shadow`}>
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Header: Horizontal layout with icon (optional) + content */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              {/* Title + Metadata on same line or stacked */}
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-gray-900">{item.label}</h3>
+                <span className="text-sm text-gray-500 font-mono">{item.key}</span>
+              </div>
+              
+              {/* Description (optional, can be inline) */}
+              {item.description && (
+                <p className="text-sm text-gray-600">{item.description}</p>
+              )}
+            </div>
+            
+            {/* Status Badge + Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {item.isActive ? (
+                <Badge variant="default" className="bg-green-500">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  ใช้งาน
+                </Badge>
+              ) : (
+                <Badge variant="secondary">
+                  <XCircle className="w-3 h-3 mr-1" />
+                  ปิด
+                </Badge>
+              )}
+              
+              {canManage && (
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(item)}>
+                    <Edit className="w-3 h-3" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="text-red-600 hover:bg-red-50"
+                    onClick={() => setShowDelete(true)}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Additional inline content (badges, tags, etc.) */}
+          <div className="flex flex-wrap gap-2">
+            {item.tags?.map(tag => (
+              <Badge key={tag} variant="outline">{tag}</Badge>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+      
+      <ConfirmDialog {...} />
     </Card>
   );
 }
@@ -208,7 +304,7 @@ export function ModuleCard({ item, canManage, onEdit, onDelete }) {
 ---
 
 ### Pattern 4: Form Modal
-**Reference:** `DepartmentFormModal.tsx`
+**Reference:** `DepartmentFormModal.tsx`, `CategoryFormModal.tsx`
 
 ```typescript
 export function ModuleFormModal({ open, onOpenChange, item, onSubmit }) {
@@ -267,10 +363,10 @@ export function ModuleFormModal({ open, onOpenChange, item, onSubmit }) {
 ---
 
 ### Pattern 5: Form Fields Component
-**Reference:** `DepartmentFormFields.tsx`
+**Reference:** `DepartmentFormFields.tsx`, `CategoryFormFields.tsx`
 
 ```typescript
-export function ModuleFormFields({ formData, setFormData }) {
+export function ModuleFormFields({ formData, setFormData, isEditing }) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -305,7 +401,7 @@ export function ModuleFormFields({ formData, setFormData }) {
         />
       </div>
       
-      {/* Switch */}
+      {/* Switch - PREFERRED for boolean fields */}
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div className="space-y-1">
           <div className="font-medium">Active Status</div>
@@ -317,6 +413,38 @@ export function ModuleFormFields({ formData, setFormData }) {
             setFormData(prev => ({ ...prev, isActive: checked }))
           }
         />
+      </div>
+      
+      {/* Editable List (for arrays like options/tags) */}
+      <div className="space-y-2">
+        <Label>Options</Label>
+        <div className="space-y-2">
+          {formData.options.map((option, idx) => (
+            <div key={idx} className="flex gap-2">
+              <Input
+                value={option}
+                onChange={(e) => updateOption(idx, e.target.value)}
+                placeholder={`Option ${idx + 1}`}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeOption(idx)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addOption}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Option
+          </Button>
+        </div>
       </div>
     </>
   );
@@ -339,6 +467,11 @@ export function ModuleFormFields({ formData, setFormData }) {
 <Button variant="destructive">Delete</Button>
 <Button variant="outline" className="text-red-600 hover:bg-red-50">Delete</Button>
 
+// Ghost (for inline actions)
+<Button variant="ghost" size="sm">
+  <Edit className="w-4 h-4" />
+</Button>
+
 // Icon only
 <Button variant="ghost" size="sm">
   <MoreVertical className="w-4 h-4" />
@@ -351,23 +484,34 @@ export function ModuleFormFields({ formData, setFormData }) {
 <Badge variant="default" className="bg-green-500">Active</Badge>
 <Badge variant="secondary">Inactive</Badge>
 
-// With icon
+// With icon (w-3 h-3 with mr-1)
 <Badge variant="outline" className="border-orange-500 text-orange-600">
   <AlertCircle className="w-3 h-3 mr-1" />
   Required
 </Badge>
+
+// Inline content badges (for tags/options)
+<Badge variant="outline">Tag Name</Badge>
 ```
 
 ### Icon Standards
 ```typescript
-// Size: Always h-4 w-4 (h-3 w-3 in badges)
-// Placement: Left of text with mr-2 (mr-1 in badges)
+// Regular icons: w-4 h-4 (16px)
+// Badge icons: w-3 h-3 (12px)
+// Card header icons: w-5 h-5 (20px) in colored circle
+// Spacing: mr-2 for regular, mr-1 for badges
+
 import { Plus, Edit, Trash2, Search, CheckCircle } from 'lucide-react';
 
 <Button>
   <Plus className="w-4 h-4 mr-2" />
   Create
 </Button>
+
+<Badge>
+  <CheckCircle className="w-3 h-3 mr-1" />
+  Active
+</Badge>
 ```
 
 ---
@@ -376,14 +520,30 @@ import { Plus, Edit, Trash2, Search, CheckCircle } from 'lucide-react';
 
 ### Responsive Grid
 ```typescript
-// Settings cards
+// Settings cards (2-3 columns)
 className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
 
-// Stats cards  
+// Stats cards (2-4 columns)
 className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
 
 // Full-width with sidebar
 className="grid gap-6 lg:grid-cols-[300px_1fr]"
+```
+
+### Row Stack (Alternative to Grid)
+```typescript
+// Vertical stacking for list-style content
+className="space-y-2"    // Tight spacing for rows
+className="space-y-3"    // Medium spacing
+className="space-y-4"    // Loose spacing with section headers
+
+// Example usage
+<div className="space-y-4">
+  <h3 className="text-lg font-semibold">Active Items</h3>
+  <div className="space-y-2">
+    {items.map(item => <ItemCard key={item.id} />)}
+  </div>
+</div>
 ```
 
 ### Section Spacing
@@ -391,8 +551,14 @@ className="grid gap-6 lg:grid-cols-[300px_1fr]"
 // Page sections
 <div className="space-y-6">...</div>
 
-// Card content
+// Between section header and content
 <div className="space-y-4">...</div>
+
+// Card content (legacy - still valid)
+<div className="space-y-4">...</div>
+
+// Card content (preferred for new components)
+<div className="space-y-3">...</div>
 
 // Form fields
 <div className="space-y-2">...</div>
@@ -443,6 +609,9 @@ className="text-sm md:text-base lg:text-lg"
 
 // Responsive padding
 className="p-4 md:p-6 lg:p-8"
+
+// Responsive flex direction
+className="flex flex-col md:flex-row"
 ```
 
 ---
@@ -477,8 +646,8 @@ Every component must have:
 - [ ] Empty state (No data message)
 - [ ] Error handling (try-catch + toast)
 - [ ] Responsive design (mobile-compatible)
-- [ ] Consistent spacing (space-y-4/6)
-- [ ] Standard icon size (h-4 w-4)
+- [ ] Consistent spacing (space-y-*)
+- [ ] Standard icon size (h-4 w-4 or h-3 w-3)
 - [ ] Accessibility (keyboard nav, aria-labels)
 
 ---
@@ -488,19 +657,64 @@ Every component must have:
 ```typescript
 // ALWAYS use these patterns
 ✅ Card hover:        hover:shadow-md transition-shadow
-✅ Icon size:         h-4 w-4 (h-3 w-3 in badges)
+✅ Icon size:         h-4 w-4 (h-3 w-3 in badges, h-5 w-5 in headers)
 ✅ Icon spacing:      mr-2 (mr-1 in badges)
 ✅ Grid gap:          gap-4
-✅ Section spacing:   space-y-6
-✅ Card spacing:      space-y-4
+✅ Row stack:         space-y-2 (alternative to grid)
+✅ Section spacing:   space-y-6 (pages), space-y-4 (lists)
+✅ Card spacing:      space-y-3 (preferred), space-y-4 (legacy)
 ✅ Form spacing:      space-y-2
 ✅ Button padding:    px-4 py-2
-✅ Border top:        border-t pt-4
+✅ Border top:        border-t pt-2 (for actions)
+✅ Flex shrink:       flex-shrink-0 (for badges/icons)
+✅ Min width:         min-w-0 (for truncate to work)
+
+// FLEXIBLE patterns (choose based on content)
+⚖️ Layout:           Grid (card-based) OR Row Stack (list-based)
+⚖️ Card header:      With icon (visual) OR Without icon (simple)
+⚖️ Actions:          Inline buttons OR Bottom border section
 
 // NEVER do these
 ❌ Hard-coded colors (use Tailwind classes)
 ❌ Inline styles
-❌ Mixed icon sizes
+❌ Mixed icon sizes in same context
 ❌ Missing loading/error states
 ❌ Non-responsive layouts
+❌ Fixed width without min-w-0 + truncate
 ```
+
+---
+
+## 📝 Pattern Selection Guide
+
+### When to use Grid Layout:
+- ✅ Content is card-based with visual icons
+- ✅ Items are similar in height
+- ✅ Visual separation is important
+- ✅ Works well on mobile (stacks vertically)
+- **Examples:** Departments, simple categories, user cards
+
+### When to use Row Stack:
+- ✅ Content varies in length/complexity
+- ✅ Need to show multiple inline attributes
+- ✅ Space efficiency is priority
+- ✅ Better for dense information
+- **Examples:** Categories with options, detailed lists, activity logs
+
+### Card Header Styles:
+
+**With Icon (Grid Style):**
+```typescript
+<div className="w-10 h-10 bg-blue-500 rounded-lg">
+  <Icon className="w-5 h-5 text-white" />
+</div>
+```
+- Use when: Visual identity is important
+- Examples: Departments, categories with distinct icons
+
+**Without Icon (Row Style):**
+```typescript
+<h3 className="font-semibold text-gray-900">{title}</h3>
+```
+- Use when: Content speaks for itself
+- Examples: Text-heavy lists, simple records

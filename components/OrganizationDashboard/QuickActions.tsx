@@ -2,15 +2,21 @@
 // OrganizationOverview/QuickActions - Quick action buttons grouped by function
 
 import React from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   Package, FolderTree, Calculator,
   BarChart3, TrendingUp, Activity, FileText,
-  Users, Building2, Settings
+  Users, Building2, Settings,
+  Building
 } from 'lucide-react';
 
 export const QuickActions = () => {
+  const params = useParams();
+  const router = useRouter();
+  const orgSlug = params.orgSlug as string;
+
   const actionGroups = [
     {
       title: 'จัดการสินค้า',
@@ -18,7 +24,7 @@ export const QuickActions = () => {
       iconColor: 'text-blue-500',
       actions: [
         { icon: Package, label: 'รายการสินค้าทั้งหมด', onClick: () => console.log('All products') },
-        { icon: FolderTree, label: 'หมวดหมู่สินค้า', onClick: () => console.log('Product categories') },
+        { icon: FolderTree, label: 'หมวดหมู่สินค้า', onClick: () => router.push(`/${orgSlug}/products/categories`) },
         { icon: Calculator, label: 'ตั้งค่าหน่วยนับ', onClick: () => console.log('Unit settings') }
       ]
     },
@@ -27,8 +33,21 @@ export const QuickActions = () => {
       icon: Settings,
       iconColor: 'text-purple-500',
       actions: [
-        { icon: Building2, label: 'ตั้งค่าองค์กร', onClick: () => console.log('Organization settings') },
-        { icon: Users, label: 'จัดการสมาชิก', onClick: () => console.log('Manage members') }
+        {
+          icon: Building2,
+          label: 'ตั้งค่าองค์กร',
+          onClick: () => router.push(`/${orgSlug}/settings`)
+        },
+        {
+          icon: Building,
+          label: 'ตั้งค่าหน่วยงาน',
+          onClick: () => router.push(`/${orgSlug}/settings`)
+        },
+        {
+          icon: Users,
+          label: 'จัดการสมาชิก',
+          onClick: () => router.push(`/${orgSlug}/settings`)
+        }
       ]
     },
     {
