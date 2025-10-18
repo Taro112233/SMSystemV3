@@ -1,5 +1,5 @@
 // app/[orgSlug]/products/categories/page.tsx
-// Product Categories Management Page
+// Page component - FIXED imports
 // ============================================
 
 "use client";
@@ -10,39 +10,11 @@ import { ProductCategorySettings } from '@/components/SettingsManagement/Product
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-
-interface ProductAttributeCategory {
-  id: string;
-  key: string;
-  label: string;
-  description?: string;
-  options: string[];
-  displayOrder: number;
-  isRequired: boolean;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface CreateCategoryData {
-  key: string;
-  label: string;
-  description?: string;
-  options: string[];
-  displayOrder?: number;
-  isRequired?: boolean;
-  isActive?: boolean;
-}
-
-interface UpdateCategoryData {
-  key?: string;
-  label?: string;
-  description?: string;
-  options?: string[];
-  displayOrder?: number;
-  isRequired?: boolean;
-  isActive?: boolean;
-}
+import type { 
+  ProductAttributeCategory,
+  CreateCategoryData,
+  UpdateCategoryData 
+} from '@/types/product-category';  // ✅ Import from shared types
 
 export default function ProductCategoriesPage() {
   const params = useParams();
@@ -56,7 +28,6 @@ export default function ProductCategoriesPage() {
   const [organizationId, setOrganizationId] = useState<string>('');
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
-  // Load categories
   const loadCategories = useCallback(async () => {
     try {
       setIsLoadingCategories(true);
@@ -95,7 +66,6 @@ export default function ProductCategoriesPage() {
 
         console.log('🔍 Loading categories page for:', orgSlug);
 
-        // Get user and organization context
         const userResponse = await fetch(`/api/auth/me?orgSlug=${orgSlug}`, {
           credentials: 'include',
         });
@@ -114,7 +84,6 @@ export default function ProductCategoriesPage() {
           throw new Error(userData.error || 'Failed to load user data');
         }
 
-        // Check organization access
         if (!userData.data.currentOrganization || userData.data.currentOrganization.slug !== orgSlug) {
           setError('No access to this organization');
           setLoading(false);
@@ -124,7 +93,6 @@ export default function ProductCategoriesPage() {
         setUserRole(userData.data.permissions.currentRole);
         setOrganizationId(userData.data.currentOrganization.id);
 
-        // Load categories
         await loadCategories();
 
         console.log('✅ Categories page data loaded');
@@ -212,7 +180,6 @@ export default function ProductCategoriesPage() {
     }
   };
 
-  // Show loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -224,7 +191,6 @@ export default function ProductCategoriesPage() {
     );
   }
 
-  // Show error state
   if (error || !userRole || !organizationId) {
     return (
       <div className="text-center py-12">

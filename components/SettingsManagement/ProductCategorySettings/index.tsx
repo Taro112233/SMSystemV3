@@ -1,43 +1,23 @@
 // components/SettingsManagement/ProductCategorySettings/index.tsx
-// ProductCategorySettings - Container + state management
+// ProductCategorySettings - FIXED imports
 // ============================================
 
 import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { CategoryList } from './CategoryList';
-
-interface ProductAttributeCategory {
-  id: string;
-  key: string;
-  label: string;
-  description?: string;
-  options: string[];
-  displayOrder: number;
-  isRequired: boolean;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface CategoryFormData {
-  key: string;
-  label: string;
-  description?: string;
-  options: string[];
-  displayOrder?: number;
-  isRequired?: boolean;
-  isActive?: boolean;
-  organizationId: string;
-}
+import type { 
+  ProductAttributeCategory, 
+  CategoryFormData 
+} from '@/types/product-category';  // ✅ Import from shared types
 
 interface ProductCategorySettingsProps {
-  categories: ProductAttributeCategory[];
+  categories: ProductAttributeCategory[];  // ✅ Use shared type
   organizationId: string;
   organizationSlug: string;
   userRole: 'MEMBER' | 'ADMIN' | 'OWNER';
   isLoading?: boolean;
-  onCreate: (data: CategoryFormData) => Promise<void>;
+  onCreate: (data: CategoryFormData & { organizationId: string }) => Promise<void>;
   onUpdate: (categoryId: string, data: Partial<CategoryFormData>) => Promise<void>;
   onDelete: (categoryId: string) => Promise<void>;
 }
@@ -56,7 +36,6 @@ export const ProductCategorySettings = ({
 
   return (
     <div className="space-y-6">
-      {/* Permission Alert */}
       {!canManage && (
         <Alert>
           <AlertTriangle className="h-4 w-4" />
@@ -66,7 +45,6 @@ export const ProductCategorySettings = ({
         </Alert>
       )}
 
-      {/* Category List with Modal */}
       <CategoryList
         categories={categories}
         organizationId={organizationId}

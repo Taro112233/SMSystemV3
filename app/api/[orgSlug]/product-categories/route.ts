@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/product-categories/route.ts
-// Product Attribute Categories API - List & Create (FIXED)
+// Product Attribute Categories API - UPDATED for relational options
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
 
-// GET - List all categories
+// GET - List all categories with options
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -32,9 +32,16 @@ export async function GET(
       );
     }
 
+    // ✅ Include options relation
     const categories = await prisma.productAttributeCategory.findMany({
       where: {
         organizationId: access.organizationId,
+      },
+      include: {
+        options: {
+          where: { isActive: true },
+          orderBy: { sortOrder: 'asc' }
+        }
       },
       orderBy: [
         { displayOrder: 'asc' },
@@ -60,7 +67,7 @@ export async function GET(
   }
 }
 
-// POST - Create new category
+// POST - Create new category with options
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -84,7 +91,6 @@ export async function POST(
       );
     }
 
-    // ✅ Only ADMIN/OWNER can create categories
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { error: 'Insufficient permissions. ADMIN or OWNER required.' },
@@ -132,31 +138,46 @@ export async function POST(
       );
     }
 
-    // ✅ Create user snapshot
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
-
-    // ✅ FIXED: Convert displayOrder to Int
     const displayOrderInt = displayOrder !== undefined 
       ? (typeof displayOrder === 'string' ? parseInt(displayOrder, 10) : displayOrder)
       : 0;
 
-    // Create category
-    const category = await prisma.productAttributeCategory.create({
-      data: {
-        organizationId: access.organizationId,
-        key,
-        label,
-        description: description || null,
-        options: options,
-        displayOrder: displayOrderInt, // ✅ Use Int value
-        isRequired: isRequired ?? false,
-        isActive: isActive ?? true,
-        createdBy: user.userId,
-        createdBySnapshot: userSnapshot,
-      },
+    // ✅ Create category with options using transaction
+    const category = await prisma.$transaction(async (tx) => {
+      // Create category
+      const newCategory = await tx.productAttributeCategory.create({
+        data: {
+          organizationId: access.organizationId,
+          key,
+          label,
+          description: description || null,
+          displayOrder: displayOrderInt,
+          isRequired: isRequired ?? false,
+          isActive: isActive ?? true,
+          createdBy: user.userId,
+          createdBySnapshot: userSnapshot,
+        },
+      });
+
+      // ✅ Create options
+      await tx.productAttributeOption.createMany({
+        data: options.map((value: string, index: number) => ({
+          categoryId: newCategory.id,
+          value: value.trim(),
+          sortOrder: index,
+          isActive: true,
+        })),
+      });
+
+      // Return with options
+      return await tx.productAttributeCategory.findUnique({
+        where: { id: newCategory.id },
+        include: { options: { orderBy: { sortOrder: 'asc' } } }
+      });
     });
 
-    // ✅ Audit log
+    // Audit log
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
     await createAuditLog({
@@ -166,8 +187,8 @@ export async function POST(
       action: 'product_categories.create',
       category: 'PRODUCT',
       severity: 'INFO',
-      description: `สร้างหมวดหมู่สินค้า ${category.label}`,
-      resourceId: category.id,
+      description: `สร้างหมวดหมู่สินค้า ${category!.label}`,
+      resourceId: category!.id,
       resourceType: 'ProductAttributeCategory',
       payload: {
         categoryKey: key,

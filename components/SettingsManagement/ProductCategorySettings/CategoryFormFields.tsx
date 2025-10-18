@@ -1,5 +1,5 @@
 // components/SettingsManagement/ProductCategorySettings/CategoryFormFields.tsx
-// CategoryFormFields - Options as editable inputs (not badges)
+// CategoryFormFields - FIXED imports
 // ============================================
 
 import React from 'react';
@@ -10,16 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, Info, AlertTriangle } from 'lucide-react';
-
-interface CategoryFormData {
-  key: string;
-  label: string;
-  description: string;
-  options: string[];
-  displayOrder: number;
-  isRequired: boolean;
-  isActive: boolean;
-}
+import type { CategoryFormData } from '@/types/product-category';  // ✅ Import from shared types
 
 interface CategoryFormFieldsProps {
   formData: CategoryFormData;
@@ -43,7 +34,6 @@ export const CategoryFormFields = ({
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
-  // ✅ Update existing option
   const updateOption = (index: number, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -53,7 +43,6 @@ export const CategoryFormFields = ({
     }));
   };
 
-  // ✅ Delete option
   const deleteOption = (index: number) => {
     setFormData(prev => ({
       ...prev,
@@ -61,7 +50,6 @@ export const CategoryFormFields = ({
     }));
   };
 
-  // ✅ Add new option
   const addNewOption = () => {
     const trimmed = newOptionInput.trim();
     if (trimmed && !formData.options.includes(trimmed)) {
@@ -120,7 +108,7 @@ export const CategoryFormFields = ({
           placeholder="เช่น: dosage_form, drug_type, strength"
           pattern="[a-z0-9_]+"
           required
-          disabled={isEditing} // ❌ ไม่ให้แก้ไข key หลังสร้างแล้ว
+          disabled={isEditing}
         />
         <div className="flex items-start gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
           <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -143,7 +131,7 @@ export const CategoryFormFields = ({
         />
       </div>
 
-      {/* ✅ NEW: Options as Editable Inputs */}
+      {/* Options */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>ตัวเลือก * (อย่างน้อย 1 ตัวเลือก)</Label>
@@ -155,7 +143,6 @@ export const CategoryFormFields = ({
           )}
         </div>
 
-        {/* Existing Options - Editable Inputs */}
         {formData.options.length > 0 && (
           <div className="space-y-2 p-3 bg-gray-50 rounded-lg border">
             <div className="text-xs text-gray-600 mb-2">ตัวเลือกปัจจุบัน:</div>
@@ -184,7 +171,6 @@ export const CategoryFormFields = ({
           </div>
         )}
 
-        {/* Add New Option */}
         <div className="space-y-2">
           <div className="text-xs text-gray-600">เพิ่มตัวเลือกใหม่:</div>
           <div className="flex gap-2">
@@ -212,7 +198,6 @@ export const CategoryFormFields = ({
           </div>
         </div>
 
-        {/* Validation Error */}
         {formData.options.length === 0 && (
           <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded-lg">
             <AlertTriangle className="w-4 h-4 text-red-600" />
@@ -222,7 +207,6 @@ export const CategoryFormFields = ({
           </div>
         )}
 
-        {/* Duplicate Warning */}
         {newOptionInput.trim() && formData.options.includes(newOptionInput.trim()) && (
           <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
             <AlertTriangle className="w-4 h-4 text-amber-600" />
@@ -251,7 +235,6 @@ export const CategoryFormFields = ({
 
       {/* Switches */}
       <div className="space-y-4">
-        {/* Required */}
         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
           <div className="space-y-1">
             <div className="font-medium">บังคับกรอก</div>
@@ -265,7 +248,6 @@ export const CategoryFormFields = ({
           />
         </div>
 
-        {/* Active */}
         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
           <div className="space-y-1">
             <div className="font-medium">เปิดใช้งานหมวดหมู่</div>

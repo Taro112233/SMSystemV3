@@ -1,5 +1,5 @@
 // components/SettingsManagement/ProductCategorySettings/CategoryList.tsx
-// CategoryList - Updated for horizontal row layout
+// CategoryList - FIXED imports
 // ============================================
 
 import React, { useState } from 'react';
@@ -9,30 +9,10 @@ import { Plus, Search, Loader2 } from 'lucide-react';
 import { SettingsCard } from '../shared/SettingsCard';
 import { CategoryCard } from './CategoryCard';
 import { CategoryFormModal } from './CategoryFormModal';
-
-interface ProductAttributeCategory {
-  id: string;
-  key: string;
-  label: string;
-  description?: string;
-  options: string[];
-  displayOrder: number;
-  isRequired: boolean;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface CategoryFormData {
-  key: string;
-  label: string;
-  description: string;
-  options: string[];
-  displayOrder: number;
-  isRequired: boolean;
-  isActive: boolean;
-  organizationId?: string;
-}
+import type { 
+  ProductAttributeCategory, 
+  CategoryFormData 
+} from '@/types/product-category';  // ✅ Import from shared types
 
 interface CategoryListProps {
   categories: ProductAttributeCategory[];
@@ -59,15 +39,13 @@ export const CategoryList = ({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ProductAttributeCategory | null>(null);
 
-  // Filter categories by search term
   const filteredCategories = categories.filter(cat =>
     cat.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cat.key.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cat.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cat.options.some(opt => opt.toLowerCase().includes(searchTerm.toLowerCase()))
+    cat.options.some(opt => opt.value.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Separate active and inactive categories
   const activeCategories = filteredCategories.filter(c => c.isActive);
   const inactiveCategories = filteredCategories.filter(c => !c.isActive);
 
@@ -86,7 +64,6 @@ export const CategoryList = ({
     setEditingCategory(cat);
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <SettingsCard>
@@ -99,7 +76,6 @@ export const CategoryList = ({
 
   return (
     <div className="space-y-6">
-      {/* Header Actions */}
       <SettingsCard>
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -116,7 +92,6 @@ export const CategoryList = ({
           )}
         </div>
 
-        {/* Search Bar */}
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <Input
@@ -128,7 +103,6 @@ export const CategoryList = ({
         </div>
       </SettingsCard>
 
-      {/* Active Categories - Horizontal rows */}
       {activeCategories.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-gray-900">หมวดหมู่ที่ใช้งาน</h3>
@@ -146,7 +120,6 @@ export const CategoryList = ({
         </div>
       )}
 
-      {/* Inactive Categories - Horizontal rows */}
       {inactiveCategories.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-gray-500">หมวดหมู่ที่ปิดใช้งาน</h3>
@@ -164,7 +137,6 @@ export const CategoryList = ({
         </div>
       )}
 
-      {/* Empty State */}
       {filteredCategories.length === 0 && (
         <SettingsCard>
           <div className="py-12 text-center text-gray-600">
@@ -173,7 +145,6 @@ export const CategoryList = ({
         </SettingsCard>
       )}
 
-      {/* Create Modal */}
       <CategoryFormModal
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
@@ -181,7 +152,6 @@ export const CategoryList = ({
         onSubmit={handleCreate}
       />
 
-      {/* Edit Modal */}
       <CategoryFormModal
         open={!!editingCategory}
         onOpenChange={(open) => !open && setEditingCategory(null)}

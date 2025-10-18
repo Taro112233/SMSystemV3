@@ -1,5 +1,5 @@
 // components/SettingsManagement/ProductCategorySettings/CategoryFormModal.tsx
-// CategoryFormModal - Modal for creating/editing categories
+// CategoryFormModal - FIXED imports
 // ============================================
 
 import React, { useState } from 'react';
@@ -14,28 +14,10 @@ import { CategoryFormFields } from './CategoryFormFields';
 import { Button } from '@/components/ui/button';
 import { Save, X } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface ProductAttributeCategory {
-  id: string;
-  key: string;
-  label: string;
-  description?: string;
-  options: string[];
-  displayOrder: number;
-  isRequired: boolean;
-  isActive: boolean;
-}
-
-interface CategoryFormData {
-  key: string;
-  label: string;
-  description: string;
-  options: string[];
-  displayOrder: number;
-  isRequired: boolean;
-  isActive: boolean;
-  organizationId?: string;
-}
+import type { 
+  ProductAttributeCategory, 
+  CategoryFormData 
+} from '@/types/product-category';  // ✅ Import from shared types
 
 interface CategoryFormModalProps {
   open: boolean;
@@ -53,11 +35,12 @@ export const CategoryFormModal = ({
   onSubmit,
 }: CategoryFormModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [formData, setFormData] = useState<CategoryFormData>({
     key: category?.key || '',
     label: category?.label || '',
     description: category?.description || '',
-    options: category?.options || [],
+    options: category?.options.map(opt => opt.value) || [],
     displayOrder: category?.displayOrder || 0,
     isRequired: category?.isRequired ?? false,
     isActive: category?.isActive ?? true,
@@ -69,7 +52,7 @@ export const CategoryFormModal = ({
         key: category?.key || '',
         label: category?.label || '',
         description: category?.description || '',
-        options: category?.options || [],
+        options: category?.options.map(opt => opt.value) || [],
         displayOrder: category?.displayOrder || 0,
         isRequired: category?.isRequired ?? false,
         isActive: category?.isActive ?? true,

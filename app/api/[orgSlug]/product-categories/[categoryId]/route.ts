@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/product-categories/[categoryId]/route.ts
-// Product Attribute Categories API - Get, Update, Delete (FIXED)
+// Product Attribute Categories API - UPDATED for relational options
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
 
-// GET - Get specific category
+// GET - Get specific category with options
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string; categoryId: string }> }
@@ -37,6 +37,11 @@ export async function GET(
         id: categoryId,
         organizationId: access.organizationId,
       },
+      include: {
+        options: {
+          orderBy: { sortOrder: 'asc' }
+        }
+      }
     });
 
     if (!category) {
@@ -59,7 +64,7 @@ export async function GET(
   }
 }
 
-// PATCH - Update category
+// PATCH - Update category and options
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string; categoryId: string }> }
@@ -95,6 +100,9 @@ export async function PATCH(
         id: categoryId,
         organizationId: access.organizationId,
       },
+      include: {
+        options: true
+      }
     });
 
     if (!existingCategory) {
@@ -121,7 +129,7 @@ export async function PATCH(
       );
     }
 
-    // Check key conflict if changed
+    // Check key conflict
     if (key && key !== existingCategory.key) {
       if (!/^[a-z0-9_]+$/.test(key)) {
         return NextResponse.json(
@@ -146,33 +154,54 @@ export async function PATCH(
       }
     }
 
-    // ✅ Create updater snapshot
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
-
-    // ✅ FIXED: Convert displayOrder to Int
     const displayOrderInt = displayOrder !== undefined 
       ? (typeof displayOrder === 'string' ? parseInt(displayOrder, 10) : displayOrder)
       : existingCategory.displayOrder;
 
-    // Update category
-    const updatedCategory = await prisma.productAttributeCategory.update({
-      where: {
-        id: categoryId,
-      },
-      data: {
-        key: key || existingCategory.key,
-        label,
-        description: description ?? existingCategory.description,
-        options: options || existingCategory.options,
-        displayOrder: displayOrderInt, // ✅ Use Int value
-        isRequired: isRequired ?? existingCategory.isRequired,
-        isActive: isActive ?? existingCategory.isActive,
-        updatedBy: user.userId,
-        updatedBySnapshot: userSnapshot,
-      },
+    // ✅ Update category and options using transaction
+    const updatedCategory = await prisma.$transaction(async (tx) => {
+      // Update category
+      const updated = await tx.productAttributeCategory.update({
+        where: { id: categoryId },
+        data: {
+          key: key || existingCategory.key,
+          label,
+          description: description ?? existingCategory.description,
+          displayOrder: displayOrderInt,
+          isRequired: isRequired ?? existingCategory.isRequired,
+          isActive: isActive ?? existingCategory.isActive,
+          updatedBy: user.userId,
+          updatedBySnapshot: userSnapshot,
+        },
+      });
+
+      // ✅ Update options if provided
+      if (options) {
+        // Delete all existing options
+        await tx.productAttributeOption.deleteMany({
+          where: { categoryId }
+        });
+
+        // Create new options
+        await tx.productAttributeOption.createMany({
+          data: options.map((value: string, index: number) => ({
+            categoryId,
+            value: value.trim(),
+            sortOrder: index,
+            isActive: true,
+          })),
+        });
+      }
+
+      // Return with options
+      return await tx.productAttributeCategory.findUnique({
+        where: { id: categoryId },
+        include: { options: { orderBy: { sortOrder: 'asc' } } }
+      });
     });
 
-    // ✅ Audit log
+    // Audit log
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
     await createAuditLog({
@@ -182,21 +211,21 @@ export async function PATCH(
       action: 'product_categories.update',
       category: 'PRODUCT',
       severity: 'INFO',
-      description: `แก้ไขหมวดหมู่สินค้า ${updatedCategory.label}`,
+      description: `แก้ไขหมวดหมู่สินค้า ${updatedCategory!.label}`,
       resourceId: categoryId,
       resourceType: 'ProductAttributeCategory',
       payload: {
         before: {
           label: existingCategory.label,
           key: existingCategory.key,
-          optionsCount: (existingCategory.options as string[]).length,
+          optionsCount: existingCategory.options.length,
           isActive: existingCategory.isActive,
         },
         after: {
-          label: updatedCategory.label,
-          key: updatedCategory.key,
-          optionsCount: (updatedCategory.options as string[]).length,
-          isActive: updatedCategory.isActive,
+          label: updatedCategory!.label,
+          key: updatedCategory!.key,
+          optionsCount: updatedCategory!.options.length,
+          isActive: updatedCategory!.isActive,
         },
       },
       ipAddress,
@@ -217,7 +246,7 @@ export async function PATCH(
   }
 }
 
-// DELETE - Delete category
+// DELETE - Delete category (options cascade automatically)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string; categoryId: string }> }
@@ -253,6 +282,9 @@ export async function DELETE(
         id: categoryId,
         organizationId: access.organizationId,
       },
+      include: {
+        options: true
+      }
     });
 
     if (!category) {
@@ -262,16 +294,14 @@ export async function DELETE(
       );
     }
 
-    // ✅ Create deleter snapshot
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
 
+    // ✅ Delete category (options will cascade automatically via onDelete: Cascade)
     await prisma.productAttributeCategory.delete({
-      where: {
-        id: categoryId,
-      },
+      where: { id: categoryId },
     });
 
-    // ✅ Audit log
+    // Audit log
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
     await createAuditLog({
@@ -287,6 +317,7 @@ export async function DELETE(
       payload: {
         categoryKey: category.key,
         categoryLabel: category.label,
+        optionsCount: category.options.length,
       },
       ipAddress,
       userAgent,

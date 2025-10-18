@@ -1,5 +1,5 @@
 // components/SettingsManagement/ProductCategorySettings/CategoryCard.tsx
-// CategoryCard - Fixed badges on single line with "...รายการ"
+// CategoryCard - FIXED imports
 // ============================================
 
 import React, { useState } from 'react';
@@ -9,19 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Tag, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
-
-interface ProductAttributeCategory {
-  id: string;
-  key: string;
-  label: string;
-  description?: string;
-  options: string[];
-  displayOrder: number;
-  isRequired: boolean;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import type { ProductAttributeCategory } from '@/types/product-category';  // ✅ Import from shared types
 
 interface CategoryCardProps {
   category: ProductAttributeCategory;
@@ -54,22 +42,20 @@ export const CategoryCard = ({
     }
   };
 
-  // ✅ Show max 6 options, then "...N รายการ"
   const maxVisible = 6;
-  const displayedOptions = category.options.slice(0, maxVisible);
-  const remainingCount = category.options.length - maxVisible;
+  const activeOptions = category.options.filter(opt => opt.isActive);
+  const displayedOptions = activeOptions.slice(0, maxVisible);
+  const remainingCount = activeOptions.length - maxVisible;
 
   return (
     <>
       <Card className={`${!category.isActive ? 'opacity-60' : ''} hover:shadow-md transition-shadow`}>
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
-            {/* Icon */}
             <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <Tag className="w-5 h-5 text-white" />
             </div>
 
-            {/* Main Info - Take most space */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold text-gray-900 truncate">
@@ -80,22 +66,20 @@ export const CategoryCard = ({
                 </span>
               </div>
               
-              {/* Description */}
               {category.description && (
                 <p className="text-sm text-gray-600 truncate mb-2">
                   {category.description}
                 </p>
               )}
 
-              {/* ✅ Options Preview - Single line only */}
               <div className="flex items-center gap-1 flex-wrap-none overflow-hidden">
-                {displayedOptions.map((option, idx) => (
+                {displayedOptions.map((option) => (
                   <Badge 
-                    key={idx} 
+                    key={option.id} 
                     variant="secondary" 
-                    className="text-xs flex-shrink-0 font-medium"
+                    className="text-xs flex-shrink-0"
                   >
-                    {option}
+                    {option.value}
                   </Badge>
                 ))}
                 {remainingCount > 0 && (
@@ -106,7 +90,6 @@ export const CategoryCard = ({
               </div>
             </div>
 
-            {/* Status & Badges */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {category.isRequired && (
                 <Badge variant="outline" className="border-orange-500 text-orange-600">
@@ -126,7 +109,6 @@ export const CategoryCard = ({
               )}
             </div>
 
-            {/* Actions */}
             {canManage && (
               <div className="flex gap-2 flex-shrink-0">
                 <Button
