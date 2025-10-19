@@ -1,15 +1,14 @@
 // components/SettingsManagement/ProductCategorySettings/CategoryCard.tsx
-// CategoryCard - FIXED imports
-// ============================================
+// CategoryCard - Smart badge display with character limit and remaining count
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Tag, AlertCircle } from 'lucide-react';
+import { Edit, Trash2, Tag, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
-import type { ProductAttributeCategory } from '@/types/product-category';  // ✅ Import from shared types
+import type { ProductAttributeCategory } from '@/types/product-category';
 
 interface CategoryCardProps {
   category: ProductAttributeCategory;
@@ -42,10 +41,31 @@ export const CategoryCard = ({
     }
   };
 
-  const maxVisible = 6;
   const activeOptions = category.options.filter(opt => opt.isActive);
-  const displayedOptions = activeOptions.slice(0, maxVisible);
-  const remainingCount = activeOptions.length - maxVisible;
+
+  // ✅ Smart badge display logic - คำนวณว่าควรแสดง badge กี่ตัว
+  const { displayedOptions, remainingCount } = useMemo(() => {
+    const MAX_CHARS = 30; // จำนวนตัวอักษรสูงสุดที่อนุญาต
+    let totalChars = 0;
+    const displayed = [];
+    
+    for (const option of activeOptions) {
+      const optionLength = option.value.length;
+      
+      // ถ้าเพิ่ม badge นี้แล้วเกิน MAX_CHARS ให้หยุด
+      if (totalChars + optionLength > MAX_CHARS && displayed.length > 0) {
+        break;
+      }
+      
+      displayed.push(option);
+      totalChars += optionLength;
+    }
+    
+    return {
+      displayedOptions: displayed,
+      remainingCount: activeOptions.length - displayed.length
+    };
+  }, [activeOptions]);
 
   return (
     <>
@@ -72,20 +92,24 @@ export const CategoryCard = ({
                 </p>
               )}
 
-              <div className="flex items-center gap-1 flex-wrap-none overflow-hidden">
+              {/* ✅ Smart badge display - แสดงตามจำนวนตัวอักษร */}
+              <div className="flex items-center gap-1 overflow-hidden">
                 {displayedOptions.map((option) => (
                   <Badge 
                     key={option.id} 
                     variant="secondary" 
-                    className="text-xs flex-shrink-0"
+                    className="text-xs flex-shrink-0 whitespace-nowrap"
                   >
                     {option.value}
                   </Badge>
                 ))}
                 {remainingCount > 0 && (
-                  <span className="text-xs text-gray-500 flex-shrink-0">
-                    ...อีก {remainingCount} รายการ
-                  </span>
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs flex-shrink-0 whitespace-nowrap border-dashed"
+                  >
+                    +{remainingCount}
+                  </Badge>
                 )}
               </div>
             </div>
@@ -100,10 +124,12 @@ export const CategoryCard = ({
               
               {category.isActive ? (
                 <Badge variant="default" className="bg-green-500">
+                  <CheckCircle className="w-3 h-3 mr-1" />
                   ใช้งาน
                 </Badge>
               ) : (
                 <Badge variant="secondary">
+                  <XCircle className="w-3 h-3 mr-1" />
                   ปิด
                 </Badge>
               )}
