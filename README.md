@@ -2,6 +2,7 @@ Directory structure:
 └── taro112233-smsystemv3/
     ├── README.md
     ├── components.json
+    ├── DESIGN-SYSTEM.md
     ├── eslint.config.mjs
     ├── INSTRUCTIONS.md
     ├── middleware.ts
@@ -22,6 +23,9 @@ Directory structure:
     │   │   ├── page.tsx
     │   │   ├── [deptSlug]/
     │   │   │   └── page.tsx
+    │   │   ├── products/
+    │   │   │   └── categories/
+    │   │   │       └── page.tsx
     │   │   └── settings/
     │   │       └── page.tsx
     │   ├── api/
@@ -39,6 +43,10 @@ Directory structure:
     │   │   │   │       ├── route.ts
     │   │   │   │       └── role/
     │   │   │   │           └── route.ts
+    │   │   │   ├── product-categories/
+    │   │   │   │   ├── route.ts
+    │   │   │   │   └── [categoryId]/
+    │   │   │   │       └── route.ts
     │   │   │   └── settings/
     │   │   │       └── route.ts
     │   │   ├── arcjet/
@@ -130,6 +138,12 @@ Directory structure:
     │   │   │   ├── index.tsx
     │   │   │   ├── OrganizationForm.tsx
     │   │   │   └── OrganizationInfo.tsx
+    │   │   ├── ProductCategorySettings/
+    │   │   │   ├── CategoryCard.tsx
+    │   │   │   ├── CategoryFormFields.tsx
+    │   │   │   ├── CategoryFormModal.tsx
+    │   │   │   ├── CategoryList.tsx
+    │   │   │   └── index.tsx
     │   │   └── shared/
     │   │       ├── ConfirmDialog.tsx
     │   │       ├── SettingsCard.tsx
@@ -222,4 +236,5 @@ Directory structure:
     │   └── merge-seeds.js
     └── types/
         ├── auth.d.ts
-        └── cookie.d.ts
+        ├── cookie.d.ts
+        └── product-category.ts
