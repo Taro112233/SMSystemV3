@@ -33,6 +33,7 @@ interface CompleteUserData {
     timezone: string;
     color: string | null;        // ✅ CRITICAL: Add color
     icon: string | null;         // ✅ CRITICAL: Add icon
+    userRole: string;            // ✅ CRITICAL: Add userRole
     memberCount: number;
     departmentCount: number;
     inviteCode?: string | null;
@@ -158,6 +159,7 @@ export async function GET(request: NextRequest) {
           timezone: orgData.timezone,
           color: orgData.color,              // ✅ CRITICAL: Return color
           icon: orgData.icon,                // ✅ CRITICAL: Return icon
+          userRole: currentRole,             // ✅ CRITICAL: Return userRole
           memberCount: orgData._count.users,
           departmentCount: orgData._count.departments,
           ...((['ADMIN', 'OWNER'].includes(currentRole)) && {
@@ -222,11 +224,12 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    // ✅ DEBUG: Log to verify color and icon are included
-    console.log('✅ /api/auth/me - Response includes color & icon:', {
+    // ✅ DEBUG: Log to verify color, icon, and userRole are included
+    console.log('✅ /api/auth/me - Response includes color, icon & userRole:', {
       orgName: currentOrganization?.name,
       color: currentOrganization?.color,
-      icon: currentOrganization?.icon
+      icon: currentOrganization?.icon,
+      userRole: currentOrganization?.userRole
     });
 
     return NextResponse.json({
