@@ -1,5 +1,5 @@
 // components/ProductsManagement/ProductDetailDialog.tsx
-// ProductDetailDialog - View product details in tabs
+// ProductDetailDialog - View product details in tabs with edit button
 
 'use client';
 
@@ -12,20 +12,27 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Package, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Package, Info, Pencil } from 'lucide-react';
 
 interface ProductDetailDialogProps {
   product: any | null;
   categories: CategoryWithOptions[];
+  orgSlug: string;
+  canManage: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEditClick: (product: any) => void;
 }
 
 export default function ProductDetailDialog({
   product,
   categories,
+  orgSlug,
+  canManage,
   open,
   onOpenChange,
+  onEditClick,
 }: ProductDetailDialogProps) {
   if (!product) return null;
 
@@ -52,14 +59,33 @@ export default function ProductDetailDialog({
     },
   ];
 
+  const handleEdit = () => {
+    onOpenChange(false); // ปิด dialog รายละเอียด
+    onEditClick(product); // เปิด dialog แก้ไข
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            รายละเอียดสินค้า: {product.name}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              รายละเอียดสินค้า: {product.name}
+            </DialogTitle>
+            
+            {/* ✅ เพิ่มปุ่มแก้ไข */}
+            {canManage && (
+              <Button
+                onClick={handleEdit}
+                size="sm"
+                className="gap-2"
+              >
+                <Pencil className="h-4 w-4" />
+                แก้ไขข้อมูล
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <Tabs defaultValue="stock" className="mt-4">

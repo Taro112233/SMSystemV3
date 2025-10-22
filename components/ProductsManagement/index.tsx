@@ -31,7 +31,7 @@ export default function ProductsManagement({
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({
     search: '',
-    isActive: true, // ✅ เปลี่ยนจาก null เป็น true (default แสดงเฉพาะที่ใช้งาน)
+    isActive: true,
     sortBy: 'createdAt',
     sortOrder: 'desc',
   });
@@ -49,8 +49,21 @@ export default function ProductsManagement({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  // Check permissions
-  const canManage = ['ADMIN', 'OWNER'].includes(userRole);
+  // ✅ แก้ไข: Convert to boolean explicitly และใช้ enum values ที่ถูกต้อง
+  const canManage: boolean = Boolean(
+    userRole && ['ADMIN', 'OWNER'].includes(userRole)
+  );
+
+  // ✅ เพิ่ม: Debug log เพื่อตรวจสอบ
+  useEffect(() => {
+    console.log('🔍 ProductsManagement - Role Check:', { 
+      userRole, 
+      canManage,
+      roleType: typeof userRole,
+      isAdmin: userRole === 'ADMIN',
+      isOwner: userRole === 'OWNER',
+    });
+  }, [userRole, canManage]);
 
   // Fetch categories
   const fetchCategories = useCallback(async () => {
@@ -111,11 +124,24 @@ export default function ProductsManagement({
 
   // Handlers
   const handleCreateClick = () => {
+    console.log('🔍 Create button clicked:', { canManage, userRole });
+    if (!canManage) {
+      toast.error('ไม่มีสิทธิ์', {
+        description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่สร้างสินค้าได้',
+      });
+      return;
+    }
     setSelectedProduct(null);
     setIsFormOpen(true);
   };
 
   const handleEditClick = (product: any) => {
+    if (!canManage) {
+      toast.error('ไม่มีสิทธิ์', {
+        description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่แก้ไขได้',
+      });
+      return;
+    }
     setSelectedProduct(product);
     setIsFormOpen(true);
   };
@@ -126,11 +152,26 @@ export default function ProductsManagement({
   };
 
   const handleDeleteClick = (product: any) => {
+    if (!canManage) {
+      toast.error('ไม่มีสิทธิ์', {
+        description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่ลบได้',
+      });
+      return;
+    }
     setSelectedProduct(product);
     setIsDeleteOpen(true);
   };
 
   const handleToggleStatus = async (product: any, newStatus: boolean) => {
+    console.log('🔍 Toggle status clicked:', { canManage, userRole, newStatus });
+    
+    if (!canManage) {
+      toast.error('ไม่มีสิทธิ์', {
+        description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่เปลี่ยนสถานะได้',
+      });
+      return;
+    }
+
     try {
       const response = await fetch(`/api/${orgSlug}/products/${product.id}`, {
         method: 'PUT',
@@ -139,7 +180,8 @@ export default function ProductsManagement({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to toggle status');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to toggle status');
       }
 
       fetchProducts();
@@ -149,7 +191,7 @@ export default function ProductsManagement({
     } catch (error: any) {
       console.error('Error toggling status:', error);
       toast.error('เกิดข้อผิดพลาด', {
-        description: 'ไม่สามารถเปลี่ยนสถานะได้',
+        description: error.message || 'ไม่สามารถเปลี่ยนสถานะได้',
       });
     }
   };
@@ -224,8 +266,11 @@ export default function ProductsManagement({
       <ProductDetailDialog
         product={selectedProduct}
         categories={categories}
+        orgSlug={orgSlug}
+        canManage={canManage}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
+        onEditClick={handleEditClick}
       />
 
       {/* Delete Confirmation Dialog */}

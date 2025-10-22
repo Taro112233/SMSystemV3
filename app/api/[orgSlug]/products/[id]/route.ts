@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/products/[id]/route.ts
-// UPDATED: Handle ProductAttribute updates
+// UPDATED: Fix params await + role check
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -10,9 +10,11 @@ import { createUserSnapshot } from '@/lib/user-snapshot';
 // ===== GET: Get single product =====
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orgSlug: string; id: string } }
+  { params }: { params: Promise<{ orgSlug: string; id: string }> }
 ) {
   try {
+    const { orgSlug, id } = await params; // ✅ แก้ไข
+
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -21,7 +23,7 @@ export async function GET(
       );
     }
 
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -31,7 +33,7 @@ export async function GET(
 
     const product = await prisma.product.findFirst({
       where: {
-        id: params.id,
+        id: id,
         organizationId: access.organizationId,
       },
       include: {
@@ -67,9 +69,11 @@ export async function GET(
 // ===== PATCH: Update product =====
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { orgSlug: string; id: string } }
+  { params }: { params: Promise<{ orgSlug: string; id: string }> }
 ) {
   try {
+    const { orgSlug, id } = await params; // ✅ แก้ไข
+
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -78,7 +82,7 @@ export async function PATCH(
       );
     }
 
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -86,17 +90,20 @@ export async function PATCH(
       );
     }
 
-    // Check permissions
+    // ✅ แก้ไข: ใช้ access.role
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions. ADMIN or OWNER required.' },
+        { 
+          error: 'Insufficient permissions. ADMIN or OWNER required.',
+          userRole: access.role 
+        },
         { status: 403 }
       );
     }
 
     const existingProduct = await prisma.product.findFirst({
       where: {
-        id: params.id,
+        id: id,
         organizationId: access.organizationId,
       },
       include: {
@@ -133,7 +140,7 @@ export async function PATCH(
         where: {
           organizationId: access.organizationId,
           code,
-          id: { not: params.id },
+          id: { not: id },
         },
       });
 
@@ -166,7 +173,7 @@ export async function PATCH(
     const updatedProduct = await prisma.$transaction(async (tx) => {
       // Update product
       const updated = await tx.product.update({
-        where: { id: params.id },
+        where: { id: id },
         data: {
           code: code || existingProduct.code,
           name: name || existingProduct.name,
@@ -183,14 +190,14 @@ export async function PATCH(
       if (attributes !== undefined) {
         // Delete existing attributes
         await tx.productAttribute.deleteMany({
-          where: { productId: params.id },
+          where: { productId: id },
         });
 
         // Create new attributes
         if (attributes.length > 0) {
           await tx.productAttribute.createMany({
             data: attributes.map((attr: any) => ({
-              productId: params.id,
+              productId: id,
               categoryId: attr.categoryId,
               optionId: attr.optionId,
             })),
@@ -233,7 +240,7 @@ export async function PATCH(
 
     // Fetch complete product with attributes
     const completeProduct = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         attributes: {
           include: {
@@ -257,12 +264,14 @@ export async function PATCH(
   }
 }
 
-// ===== PATCH: Toggle isActive status =====
+// ===== PUT: Toggle isActive status =====
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { orgSlug: string; id: string } }
+  { params }: { params: Promise<{ orgSlug: string; id: string }> }
 ) {
   try {
+    const { orgSlug, id } = await params; // ✅ แก้ไข
+
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -271,7 +280,7 @@ export async function PUT(
       );
     }
 
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -279,17 +288,20 @@ export async function PUT(
       );
     }
 
-    // Check permissions
+    // ✅ แก้ไข: ใช้ access.role
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions. ADMIN or OWNER required.' },
+        { 
+          error: 'Insufficient permissions. ADMIN or OWNER required.',
+          userRole: access.role 
+        },
         { status: 403 }
       );
     }
 
     const product = await prisma.product.findFirst({
       where: {
-        id: params.id,
+        id: id,
         organizationId: access.organizationId,
       },
     });
@@ -316,7 +328,7 @@ export async function PUT(
 
     // Update status
     const updatedProduct = await prisma.product.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         isActive,
         updatedBy: user.userId,
@@ -364,9 +376,11 @@ export async function PUT(
 // ===== DELETE: Delete product =====
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { orgSlug: string; id: string } }
+  { params }: { params: Promise<{ orgSlug: string; id: string }> }
 ) {
   try {
+    const { orgSlug, id } = await params; // ✅ แก้ไข
+
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -375,7 +389,7 @@ export async function DELETE(
       );
     }
 
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -383,17 +397,20 @@ export async function DELETE(
       );
     }
 
-    // Check permissions
+    // ✅ แก้ไข: ใช้ access.role
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions. ADMIN or OWNER required.' },
+        { 
+          error: 'Insufficient permissions. ADMIN or OWNER required.',
+          userRole: access.role 
+        },
         { status: 403 }
       );
     }
 
     const product = await prisma.product.findFirst({
       where: {
-        id: params.id,
+        id: id,
         organizationId: access.organizationId,
       },
     });
@@ -407,7 +424,7 @@ export async function DELETE(
 
     // Check if product has stocks
     const stockCount = await prisma.stock.count({
-      where: { productId: params.id },
+      where: { productId: id },
     });
 
     if (stockCount > 0) {
@@ -425,7 +442,7 @@ export async function DELETE(
 
     // Delete product (cascade will delete attributes)
     await prisma.product.delete({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     // Get request metadata

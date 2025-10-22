@@ -24,7 +24,8 @@ export default function ProductsPage() {
         setLoading(true);
         setError(null);
 
-        // Direct API call to validate access
+        // ✅ Direct API call to validate access
+        console.log('🔍 Fetching user data from /api/auth/me...');
         const response = await fetch(`/api/auth/me?orgSlug=${orgSlug}`);
 
         if (!response.ok) {
@@ -36,6 +37,7 @@ export default function ProductsPage() {
         }
 
         const data = await response.json();
+        console.log('✅ API Response:', data);
 
         // Check organization access
         if (!data.data.currentOrganization || data.data.currentOrganization.slug !== orgSlug) {
@@ -45,8 +47,15 @@ export default function ProductsPage() {
 
         setUser(data.data.user);
         setOrganizationData(data.data.currentOrganization);
+
+        // ✅ Debug: แสดง role ที่ได้จาก API
+        console.log('🔍 Organization Data:', {
+          organizationName: data.data.currentOrganization.name,
+          userRole: data.data.currentOrganization.userRole,
+          permissions: data.data.permissions,
+        });
       } catch (error: any) {
-        console.error('Error loading page data:', error);
+        console.error('❌ Error loading page data:', error);
         setError(error.message || 'Failed to load page data');
       } finally {
         setLoading(false);
@@ -93,6 +102,14 @@ export default function ProductsPage() {
     );
   }
 
+  // ✅ Debug: แสดงค่าก่อนส่งไปยัง component
+  console.log('🔍 Passing to ProductsManagement:', {
+    organizationId: organizationData.id,
+    orgSlug: orgSlug,
+    userRole: organizationData.userRole,
+    userRoleType: typeof organizationData.userRole,
+  });
+
   // Main content - will be wrapped by layout.tsx
   return (
     <div className="space-y-6">
@@ -103,15 +120,27 @@ export default function ProductsPage() {
         </h1>
         <p className="text-sm text-gray-500 mt-1">
           จัดการข้อมูลสินค้าและยาในองค์กร {organizationData.name}
+          {' '}(Role: {organizationData.userRole || 'ไม่ระบุ'})
         </p>
       </div>
 
-      {/* Products Management Component */}
-      <ProductsManagement
-        organizationId={organizationData.id}
-        orgSlug={orgSlug}
-        userRole={organizationData.userRole || 'MEMBER'}
-      />
+      {/* ✅ Products Management Component - ตรวจสอบว่า userRole มีค่า */}
+      {organizationData.userRole ? (
+        <ProductsManagement
+          organizationId={organizationData.id}
+          orgSlug={orgSlug}
+          userRole={organizationData.userRole}
+        />
+      ) : (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            ⚠️ ไม่พบข้อมูล Role ของผู้ใช้ กรุณาติดต่อผู้ดูแลระบบ
+          </p>
+          <pre className="mt-2 text-xs">
+            {JSON.stringify(organizationData, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }

@@ -33,14 +33,24 @@ export default function ProductsTableRow({
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
-      {/* รหัสสินค้า */}
-      <td className="px-4 py-3">
-        <div className="text-sm font-medium text-gray-900">{product.code}</div>
+      {/* รหัสสินค้า - คลิกดูรายละเอียด */}
+      <td 
+        className="px-4 py-3 cursor-pointer"
+        onClick={() => onViewClick(product)}
+      >
+        <div className="text-sm font-medium text-blue-600 hover:text-blue-800">
+          {product.code}
+        </div>
       </td>
 
-      {/* ชื่อสินค้า */}
-      <td className="px-4 py-3">
-        <div className="text-sm text-gray-900">{product.name}</div>
+      {/* ชื่อสินค้า - คลิกดูรายละเอียด */}
+      <td 
+        className="px-4 py-3 cursor-pointer"
+        onClick={() => onViewClick(product)}
+      >
+        <div className="text-sm text-gray-900 hover:text-blue-600">
+          {product.name}
+        </div>
         {product.genericName && (
           <div className="text-xs text-gray-500">({product.genericName})</div>
         )}
@@ -67,13 +77,18 @@ export default function ProductsTableRow({
         <div className="text-sm text-gray-900">{product.baseUnit}</div>
       </td>
 
-      {/* สถานะ (Switch) */}
+      {/* สถานะ (Switch) - ✅ ไม่ disable ให้ logic จัดการเอง */}
       <td className="px-4 py-3">
-        <Switch
-          checked={product.isActive}
-          onCheckedChange={(checked) => onToggleStatus(product, checked)}
-          disabled={!canManage}
-        />
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={product.isActive}
+            onCheckedChange={(checked) => onToggleStatus(product, checked)}
+            className="data-[state=checked]:bg-green-600"
+          />
+          <span className="text-xs text-gray-500">
+            {product.isActive ? 'เปิด' : 'ปิด'}
+          </span>
+        </div>
       </td>
 
       {/* จัดการ */}

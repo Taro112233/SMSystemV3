@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/products/route.ts
-// UPDATED: Include ProductAttribute relations for display
+// UPDATED: Remove isOwner reference
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -10,9 +10,11 @@ import { createUserSnapshot } from '@/lib/user-snapshot';
 // ===== GET: List all products with attributes =====
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orgSlug: string } }
+  { params }: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
+    const { orgSlug } = await params;
+
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -21,7 +23,7 @@ export async function GET(
       );
     }
 
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -107,9 +109,11 @@ export async function GET(
 // ===== POST: Create new product with attributes =====
 export async function POST(
   request: NextRequest,
-  { params }: { params: { orgSlug: string } }
+  { params }: { params: Promise<{ orgSlug: string }> }
 ) {
   try {
+    const { orgSlug } = await params;
+
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -118,7 +122,7 @@ export async function POST(
       );
     }
 
-    const access = await getUserOrgRole(user.userId, params.orgSlug);
+    const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
@@ -126,10 +130,19 @@ export async function POST(
       );
     }
 
+    // ✅ แก้ไข: ลบ isOwner ออก
+    console.log('🔍 User role check:', { 
+      userId: user.userId, 
+      role: access.role
+    });
+
     // Check permissions
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions. ADMIN or OWNER required.' },
+        { 
+          error: 'Insufficient permissions. ADMIN or OWNER required.',
+          userRole: access.role 
+        },
         { status: 403 }
       );
     }
@@ -142,7 +155,7 @@ export async function POST(
       description,
       baseUnit,
       isActive = true,
-      attributes = [], // Array of { categoryId, optionId }
+      attributes = [],
     } = body;
 
     // Validation
