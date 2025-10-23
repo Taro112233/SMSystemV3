@@ -1,8 +1,9 @@
 // components/ProductsManagement/ProductsFilters.tsx
-// ProductsFilters - Filter panel with category filters
+// ProductsFilters - Filter panel with category filters and batch save functionality
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { ProductFilters } from '@/lib/product-helpers';
 import { CategoryWithOptions } from '@/lib/category-helpers';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Filter, X } from 'lucide-react';
+import { Filter, X, Save } from 'lucide-react';
 
 interface ProductsFiltersProps {
   filters: ProductFilters;
@@ -21,6 +22,9 @@ interface ProductsFiltersProps {
   categories: CategoryWithOptions[];
   onFilterChange: (filters: Partial<ProductFilters>) => void;
   onCategoryFilterChange: (filters: any) => void;
+  pendingStatusChanges?: Map<string, boolean>;
+  onSaveStatusChanges?: () => void;
+  hasPendingChanges?: boolean;
 }
 
 export default function ProductsFilters({
@@ -29,6 +33,9 @@ export default function ProductsFilters({
   categories,
   onFilterChange,
   onCategoryFilterChange,
+  pendingStatusChanges,
+  onSaveStatusChanges,
+  hasPendingChanges = false,
 }: ProductsFiltersProps) {
   const hasActiveFilters = 
     filters.isActive !== true || // เปลี่ยนจาก !== null เป็น !== true
@@ -71,7 +78,7 @@ export default function ProductsFilters({
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="z-50">
             <SelectItem value="all">ทั้งหมด</SelectItem>
             <SelectItem value="active">ใช้งาน</SelectItem>
             <SelectItem value="inactive">ไม่ใช้งาน</SelectItem>
@@ -90,7 +97,7 @@ export default function ProductsFilters({
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-50">
               <SelectItem value="all">ทั้งหมด</SelectItem>
               {categories[0].options.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
@@ -113,7 +120,7 @@ export default function ProductsFilters({
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-50">
               <SelectItem value="all">ทั้งหมด</SelectItem>
               {categories[1].options.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
@@ -136,7 +143,7 @@ export default function ProductsFilters({
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-50">
               <SelectItem value="all">ทั้งหมด</SelectItem>
               {categories[2].options.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
@@ -159,6 +166,20 @@ export default function ProductsFilters({
           <X className="h-4 w-4" />
           ล้างตัวกรอง
         </Button>
+      )}
+
+      {/* Save Changes Button - แสดงเมื่อมีการเปลี่ยนแปลงสถานะที่ยังไม่บันทึก */}
+      {hasPendingChanges && onSaveStatusChanges && (
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            onClick={onSaveStatusChanges}
+            size="sm"
+            className="gap-1 bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Save className="h-4 w-4" />
+            บันทึก
+          </Button>
+        </div>
       )}
     </div>
   );

@@ -25,6 +25,8 @@ interface ProductsTableProps {
   onDeleteClick: (product: any) => void;
   onToggleStatus: (product: any, newStatus: boolean) => void;
   canManage: boolean;
+  pendingStatusChanges?: Map<string, boolean>;
+  onSaveStatusChanges?: () => void;
 }
 
 export default function ProductsTable({
@@ -40,6 +42,8 @@ export default function ProductsTable({
   onDeleteClick,
   onToggleStatus,
   canManage,
+  pendingStatusChanges,
+  onSaveStatusChanges,
 }: ProductsTableProps) {
   const handleSort = (field: string) => {
     const newOrder =
@@ -63,6 +67,9 @@ export default function ProductsTable({
           categories={top3Categories}
           onFilterChange={onFilterChange}
           onCategoryFilterChange={onCategoryFilterChange}
+          pendingStatusChanges={pendingStatusChanges}
+          onSaveStatusChanges={onSaveStatusChanges}
+          hasPendingChanges={!!pendingStatusChanges && pendingStatusChanges.size > 0}
         />
 
         {/* Table */}
@@ -100,6 +107,7 @@ export default function ProductsTable({
                     onDeleteClick={onDeleteClick}
                     onToggleStatus={onToggleStatus}
                     canManage={canManage}
+                    pendingStatusChanges={pendingStatusChanges}
                   />
                 ))
               )}

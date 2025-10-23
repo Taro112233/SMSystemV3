@@ -15,7 +15,7 @@ interface ProductsTableRowProps {
   onDeleteClick: (product: any) => void;
   onToggleStatus: (product: any, newStatus: boolean) => void;
   canManage: boolean;
-  pendingStatusChange?: boolean;
+  pendingStatusChanges?: Map<string, boolean>;
 }
 
 export default function ProductsTableRow({
@@ -26,12 +26,13 @@ export default function ProductsTableRow({
   onDeleteClick,
   onToggleStatus,
   canManage,
-  pendingStatusChange,
+  pendingStatusChanges,
 }: ProductsTableRowProps) {
   // Mock stock quantity (replace with real data later)
   const mockStockQuantity = Math.floor(Math.random() * 1000);
 
-  // Determine current status (pending change takes priority)
+  // ✅ UPDATED: Check pending status from Map
+  const pendingStatusChange = pendingStatusChanges?.get(product.id);
   const currentStatus = pendingStatusChange !== undefined ? pendingStatusChange : product.isActive;
   const hasPendingChange = pendingStatusChange !== undefined;
 

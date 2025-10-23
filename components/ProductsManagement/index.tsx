@@ -1,5 +1,5 @@
 // components/ProductsManagement/index.tsx
-// ProductsManagement - Main orchestrator component with category support
+// ProductsManagement - Main orchestrator component with category support and batch status save
 
 'use client';
 
@@ -42,6 +42,9 @@ export default function ProductsManagement({
     category2?: string;
     category3?: string;
   }>({});
+
+  // ✅ NEW: Pending status changes for batch save
+  const [pendingStatusChanges, setPendingStatusChanges] = useState<Map<string, boolean>>(new Map());
 
   // Dialog states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -104,6 +107,9 @@ export default function ProductsManagement({
 
       const data = await response.json();
       setProducts(data.data || []);
+      
+      // ✅ NEW: Clear pending changes when products reload
+      setPendingStatusChanges(new Map());
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('เกิดข้อผิดพลาด', {
@@ -169,6 +175,7 @@ export default function ProductsManagement({
     setIsDeleteOpen(true);
   };
 
+  // ✅ UPDATED: Handle status toggle with batch save functionality
   const handleToggleStatus = async (product: any, newStatus: boolean) => {
     console.log('🔍 Toggle status clicked:', { canManage, userRole, newStatus });
     
@@ -179,26 +186,50 @@ export default function ProductsManagement({
       return;
     }
 
+    // ✅ Add to pending changes instead of immediate save
+    setPendingStatusChanges(prev => {
+      const newChanges = new Map(prev);
+      newChanges.set(product.id, newStatus);
+      return newChanges;
+    });
+
+    toast.success('เพิ่มการเปลี่ยนแปลง', {
+      description: 'กรุณากดปุ่ม "บันทึก" เพื่อยืนยัน',
+    });
+  };
+
+  // ✅ NEW: Save all pending status changes
+  const handleSaveStatusChanges = async () => {
+    if (pendingStatusChanges.size === 0) return;
+
     try {
-      const response = await fetch(`/api/${orgSlug}/products/${product.id}`, {
+      const updates = Array.from(pendingStatusChanges.entries()).map(([productId, isActive]) => ({
+        productId,
+        isActive,
+      }));
+
+      const response = await fetch(`/api/${orgSlug}/products/batch-update-status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: newStatus }),
+        body: JSON.stringify({ updates }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to toggle status');
+        throw new Error(errorData.error || 'Failed to update status');
       }
 
+      // Clear pending changes and refresh
+      setPendingStatusChanges(new Map());
       fetchProducts();
+      
       toast.success('สำเร็จ', {
-        description: `${newStatus ? 'เปิด' : 'ปิด'}ใช้งานสินค้าเรียบร้อย`,
+        description: `บันทึกการเปลี่ยนแปลงสถานะ ${updates.length} รายการเรียบร้อย`,
       });
     } catch (error: any) {
-      console.error('Error toggling status:', error);
+      console.error('Error saving status changes:', error);
       toast.error('เกิดข้อผิดพลาด', {
-        description: error.message || 'ไม่สามารถเปลี่ยนสถานะได้',
+        description: error.message || 'ไม่สามารถบันทึกการเปลี่ยนแปลงได้',
       });
     }
   };
@@ -253,6 +284,8 @@ export default function ProductsManagement({
         onDeleteClick={handleDeleteClick}
         onToggleStatus={handleToggleStatus}
         canManage={canManage}
+        pendingStatusChanges={pendingStatusChanges}
+        onSaveStatusChanges={handleSaveStatusChanges}
       />
 
       {/* Create/Edit Form Dialog */}
