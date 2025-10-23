@@ -104,13 +104,6 @@ export default function ProductsTableHeader({
             {getSortIcon('isActive')}
           </div>
         </th>
-
-        {/* จัดการ - Not sortable */}
-        {canManage && (
-          <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-            จัดการ
-          </th>
-        )}
       </tr>
     </thead>
   );

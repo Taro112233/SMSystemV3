@@ -136,14 +136,21 @@ export default function ProductsManagement({
   };
 
   const handleEditClick = (product: any) => {
-    if (!canManage) {
-      toast.error('ไม่มีสิทธิ์', {
-        description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่แก้ไขได้',
-      });
-      return;
+    // ✅ รองรับทั้ง edit จาก table และจาก detail dialog
+    // ถ้าส่ง product เข้ามา ให้เปิด form, ถ้าไม่ได้ส่งค่ามา (กด save จาก dialog) ให้ refresh
+    if (product) {
+      if (!canManage) {
+        toast.error('ไม่มีสิทธิ์', {
+          description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่แก้ไขได้',
+        });
+        return;
+      }
+      setSelectedProduct(product);
+      setIsFormOpen(true);
+    } else {
+      // Refresh products (called from ProductDetailDialog after save)
+      fetchProducts();
     }
-    setSelectedProduct(product);
-    setIsFormOpen(true);
   };
 
   const handleViewClick = (product: any) => {

@@ -1,19 +1,33 @@
 // components/ProductsManagement/ProductDetailDialog.tsx
-// ProductDetailDialog - View product details in tabs with edit button
+// ProductDetailDialog - View product details with editable form in info tab
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { CategoryWithOptions, getCategoryValue } from '@/lib/category-helpers';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, Info, Pencil } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Package, Info, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ProductDetailDialogProps {
   product: any | null;
@@ -25,6 +39,16 @@ interface ProductDetailDialogProps {
   onEditClick: (product: any) => void;
 }
 
+interface FormData {
+  code: string;
+  name: string;
+  genericName: string;
+  description: string;
+  baseUnit: string;
+  isActive: boolean;
+  attributes: { [categoryId: string]: string };
+}
+
 export default function ProductDetailDialog({
   product,
   categories,
@@ -34,7 +58,17 @@ export default function ProductDetailDialog({
   onOpenChange,
   onEditClick,
 }: ProductDetailDialogProps) {
-  if (!product) return null;
+  const [activeTab, setActiveTab] = useState('stock');
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
+    code: '',
+    name: '',
+    genericName: '',
+    description: '',
+    baseUnit: '',
+    isActive: true,
+    attributes: {},
+  });
 
   // Mock stock data by department
   const mockStockData = [
@@ -47,48 +81,126 @@ export default function ProductDetailDialog({
     },
     {
       department: 'OPD',
-      batches: [
-        { lot: 'LOT001', quantity: 100, exp: '2025-12-31' },
-      ],
+      batches: [{ lot: 'LOT001', quantity: 100, exp: '2025-12-31' }],
     },
     {
       department: 'IPD',
-      batches: [
-        { lot: 'LOT002', quantity: 150, exp: '2026-03-15' },
-      ],
+      batches: [{ lot: 'LOT002', quantity: 150, exp: '2026-03-15' }],
     },
   ];
 
-  const handleEdit = () => {
-    onOpenChange(false); // ปิด dialog รายละเอียด
-    onEditClick(product); // เปิด dialog แก้ไข
+  // Load product data into form
+  useEffect(() => {
+    if (product && open) {
+      const attributesMap: { [categoryId: string]: string } = {};
+      product.attributes?.forEach((attr: any) => {
+        attributesMap[attr.categoryId] = attr.optionId;
+      });
+
+      setFormData({
+        code: product.code,
+        name: product.name,
+        genericName: product.genericName || '',
+        description: product.description || '',
+        baseUnit: product.baseUnit,
+        isActive: product.isActive,
+        attributes: attributesMap,
+      });
+      setActiveTab('stock'); // Reset to stock tab when opening
+    }
+  }, [product, open]);
+
+  const handleChange = (field: keyof FormData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handleAttributeChange = (categoryId: string, optionId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      attributes: {
+        ...prev.attributes,
+        [categoryId]: optionId,
+      },
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!product) return;
+
+    // Validation
+    if (!formData.code || !formData.name || !formData.baseUnit) {
+      toast.error('ข้อมูลไม่ครบถ้วน', {
+        description: 'กรุณากรอกรหัสสินค้า ชื่อสินค้า และหน่วยนับ',
+      });
+      return;
+    }
+
+    // Check required categories
+    const missingCategories = categories
+      .filter((cat) => cat.isRequired && !formData.attributes[cat.id])
+      .map((cat) => cat.label);
+
+    if (missingCategories.length > 0) {
+      toast.error('ข้อมูลไม่ครบถ้วน', {
+        description: `กรุณาเลือก: ${missingCategories.join(', ')}`,
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Convert attributes map to array
+      const attributesArray = Object.entries(formData.attributes)
+        .filter(([_, optionId]) => optionId)
+        .map(([categoryId, optionId]) => ({ categoryId, optionId }));
+
+      const response = await fetch(`/api/${orgSlug}/products/${product.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          genericName: formData.genericName || null,
+          description: formData.description || null,
+          attributes: attributesArray,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save product');
+      }
+
+      toast.success('สำเร็จ', {
+        description: 'แก้ไขข้อมูลสินค้าเรียบร้อย',
+      });
+
+      onOpenChange(false);
+      onEditClick(data.product); // Trigger parent refresh
+    } catch (error: any) {
+      console.error('Error saving product:', error);
+      toast.error('เกิดข้อผิดพลาด', {
+        description: error.message || 'ไม่สามารถบันทึกข้อมูลได้',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!product) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              รายละเอียดสินค้า: {product.name}
-            </DialogTitle>
-            
-            {/* ✅ เพิ่มปุ่มแก้ไข */}
-            {canManage && (
-              <Button
-                onClick={handleEdit}
-                size="sm"
-                className="gap-2"
-              >
-                <Pencil className="h-4 w-4" />
-                แก้ไขข้อมูล
-              </Button>
-            )}
-          </div>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            รายละเอียดสินค้า: {product.name}
+          </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="stock" className="mt-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="stock">
               <Package className="h-4 w-4 mr-2" />
@@ -100,7 +212,7 @@ export default function ProductDetailDialog({
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: Stock Information (Mock) */}
+          {/* Tab 1: Stock Information (Read-only) */}
           <TabsContent value="stock" className="space-y-4 mt-4">
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-medium text-gray-900 mb-2">สรุปยอดรวม</h3>
@@ -111,97 +223,161 @@ export default function ProductDetailDialog({
             </div>
 
             <div className="space-y-3">
-              <h3 className="font-medium text-gray-900">รายการคงเหลือแยกตามหน่วยงาน</h3>
-              
-              {mockStockData.map((dept, idx) => (
-                <div key={idx} className="border rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-3">{dept.department}</h4>
-                  
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-3 py-2 text-left">Lot Number</th>
-                          <th className="px-3 py-2 text-left">จำนวน</th>
-                          <th className="px-3 py-2 text-left">วันหมดอายุ</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {dept.batches.map((batch, bIdx) => (
-                          <tr key={bIdx}>
-                            <td className="px-3 py-2 font-mono">{batch.lot}</td>
-                            <td className="px-3 py-2">
-                              {batch.quantity.toLocaleString()} {product.baseUnit}
-                            </td>
-                            <td className="px-3 py-2">{batch.exp}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              <h3 className="font-medium text-gray-900">รายละเอียดแต่ละหน่วยงาน</h3>
+
+              {mockStockData.map((dept, deptIdx) => (
+                <div key={deptIdx} className="p-4 bg-gray-50 rounded-lg space-y-2">
+                  <div className="font-medium text-gray-900">{dept.department}</div>
+
+                  <div className="space-y-1.5">
+                    {dept.batches.map((batch, batchIdx) => (
+                      <div
+                        key={batchIdx}
+                        className="flex justify-between items-center text-sm bg-white p-2 rounded"
+                      >
+                        <div>
+                          <span className="font-medium">Lot: {batch.lot}</span>
+                          <span className="text-gray-500 ml-2">
+                            (หมดอายุ: {batch.exp})
+                          </span>
+                        </div>
+                        <div className="font-semibold text-gray-900">
+                          {batch.quantity.toLocaleString()} {product.baseUnit}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  
-                  <div className="mt-2 pt-2 border-t">
-                    <p className="text-sm font-medium text-gray-700">
-                      รวม: {dept.batches.reduce((sum, b) => sum + b.quantity, 0).toLocaleString()} {product.baseUnit}
-                    </p>
+
+                  <div className="text-sm font-medium text-gray-700 border-t pt-2 mt-2">
+                    รวม: {dept.batches.reduce((sum, b) => sum + b.quantity, 0).toLocaleString()}{' '}
+                    {product.baseUnit}
                   </div>
                 </div>
               ))}
             </div>
           </TabsContent>
 
-          {/* Tab 2: Product Information */}
+          {/* Tab 2: Product Information (Editable Form) */}
           <TabsContent value="info" className="space-y-4 mt-4">
-            {/* Basic Info */}
-            <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+            {/* Basic Info Section */}
+            <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <h3 className="font-medium text-gray-900">ข้อมูลพื้นฐาน</h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">รหัสสินค้า</p>
-                  <p className="font-medium">{product.code}</p>
+                {/* Code */}
+                <div className="space-y-2">
+                  <Label htmlFor="code">
+                    รหัสสินค้า <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="code"
+                    value={formData.code}
+                    onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                    placeholder="เช่น MED001"
+                    disabled={loading || !canManage}
+                  />
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">หน่วยนับ</p>
-                  <p className="font-medium">{product.baseUnit}</p>
+
+                {/* Base Unit */}
+                <div className="space-y-2">
+                  <Label htmlFor="baseUnit">
+                    หน่วยนับ <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="baseUnit"
+                    value={formData.baseUnit}
+                    onChange={(e) => handleChange('baseUnit', e.target.value)}
+                    placeholder="เช่น เม็ด, กล่อง, ขวด"
+                    disabled={loading || !canManage}
+                  />
                 </div>
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-600">ชื่อสินค้า</p>
-                  <p className="font-medium">{product.name}</p>
-                </div>
-                {product.genericName && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-gray-600">ชื่อสามัญ</p>
-                    <p className="font-medium">{product.genericName}</p>
+              </div>
+
+              {/* Name */}
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  ชื่อสินค้า <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  placeholder="ระบุชื่อสินค้า"
+                  disabled={loading || !canManage}
+                />
+              </div>
+
+              {/* Generic Name */}
+              <div className="space-y-2">
+                <Label htmlFor="genericName">ชื่อสามัญ</Label>
+                <Input
+                  id="genericName"
+                  value={formData.genericName}
+                  onChange={(e) => handleChange('genericName', e.target.value)}
+                  placeholder="ระบุชื่อสามัญ (ถ้ามี)"
+                  disabled={loading || !canManage}
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">รายละเอียด</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleChange('description', e.target.value)}
+                  placeholder="ระบุรายละเอียดเพิ่มเติม"
+                  className="resize-none"
+                  rows={3}
+                  disabled={loading || !canManage}
+                />
+              </div>
+
+              {/* Active Status */}
+              <div className="flex items-center justify-between p-4 bg-white rounded-lg">
+                <div className="space-y-1">
+                  <div className="font-medium">สถานะการใช้งาน</div>
+                  <div className="text-sm text-gray-600">
+                    เปิดใช้งานสินค้านี้ในระบบ
                   </div>
-                )}
-                {product.description && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-gray-600">รายละเอียด</p>
-                    <p className="text-gray-700">{product.description}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-gray-600">สถานะ</p>
-                  <Badge variant={product.isActive ? 'default' : 'secondary'}>
-                    {product.isActive ? 'ใช้งาน' : 'ไม่ใช้งาน'}
-                  </Badge>
                 </div>
+                <Switch
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => handleChange('isActive', checked)}
+                  disabled={loading || !canManage}
+                  className="data-[state=checked]:bg-green-600"
+                />
               </div>
             </div>
 
-            {/* Category Attributes */}
+            {/* Category Attributes Section */}
             {categories.length > 0 && (
-              <div className="space-y-3 p-4 bg-blue-50 rounded-lg">
+              <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
                 <h3 className="font-medium text-gray-900">คุณสมบัติสินค้า</h3>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   {categories.map((category) => (
-                    <div key={category.id}>
-                      <p className="text-sm text-gray-600">{category.label}</p>
-                      <p className="font-medium">
-                        {getCategoryValue(product.attributes || [], category.id)}
-                      </p>
+                    <div key={category.id} className="space-y-2">
+                      <Label htmlFor={`category-${category.id}`}>
+                        {category.label}
+                        {category.isRequired && <span className="text-red-500 ml-1">*</span>}
+                      </Label>
+                      <Select
+                        value={formData.attributes[category.id] || ''}
+                        onValueChange={(value) => handleAttributeChange(category.id, value)}
+                        disabled={loading || !canManage}
+                      >
+                        <SelectTrigger id={`category-${category.id}`}>
+                          <SelectValue placeholder={`เลือก${category.label}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {category.options.map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   ))}
                 </div>
@@ -209,6 +385,26 @@ export default function ProductDetailDialog({
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Footer with Save Button - Show only on info tab and when user can manage */}
+        {activeTab === 'info' && canManage && (
+          <DialogFooter>
+            <Button
+              onClick={handleSave}
+              disabled={loading}
+              className="min-w-[120px]"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  กำลังบันทึก...
+                </>
+              ) : (
+                'บันทึก'
+              )}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

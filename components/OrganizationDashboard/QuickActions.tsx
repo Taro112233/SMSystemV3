@@ -23,7 +23,7 @@ export const QuickActions = () => {
       icon: Package,
       iconColor: 'text-blue-500',
       actions: [
-        { icon: Package, label: 'รายการสินค้าทั้งหมด', onClick: () => console.log('All products') },
+        { icon: Package, label: 'รายการสินค้าทั้งหมด', onClick: () => router.push(`/${orgSlug}/products`) },
         { icon: FolderTree, label: 'หมวดหมู่สินค้า', onClick: () => router.push(`/${orgSlug}/products/categories`) },
         { icon: Calculator, label: 'ตั้งค่าหน่วยนับ', onClick: () => console.log('Unit settings') }
       ]

@@ -78,14 +78,14 @@ export default function ProductsTable({
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={9 + top3Categories.length} className="py-8 text-center">
+                  <td colSpan={8 + top3Categories.length} className="py-8 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
                     <p className="text-sm text-gray-500 mt-2">กำลังโหลด...</p>
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={9 + top3Categories.length} className="py-8 text-center">
+                  <td colSpan={8 + top3Categories.length} className="py-8 text-center">
                     <p className="text-sm text-gray-500">ไม่พบข้อมูลสินค้า</p>
                   </td>
                 </tr>
