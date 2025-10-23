@@ -380,7 +380,7 @@ export default function ProductDetailDialog({
                           disabled={loading || !canManage}
                         >
                           <SelectTrigger id={`category-${category.id}`}>
-                            <SelectValue placeholder={`เลือก${category.label}`} />
+                            <SelectValue placeholder={`-`} />
                           </SelectTrigger>
                           <SelectContent>
                             {category.options.map((option) => (

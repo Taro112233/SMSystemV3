@@ -294,7 +294,7 @@ export default function ProductForm({
                     </SelectTrigger>
                     <SelectContent>
                       {!category.isRequired && (
-                        <SelectItem value={EMPTY_SELECTION_VALUE}>ไม่ระบุ</SelectItem>
+                        <SelectItem value={EMPTY_SELECTION_VALUE}>-</SelectItem>
                       )}
                       {category.options.map((option) => (
                         <SelectItem key={option.id} value={option.id}>
