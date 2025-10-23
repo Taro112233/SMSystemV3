@@ -88,11 +88,10 @@ export default function ProductsTableRow({
           <Switch
             checked={currentStatus}
             onCheckedChange={(checked) => onToggleStatus(product, checked)}
-            className="data-[state=checked]:bg-green-600"
           />
           <span className={`text-xs ${hasPendingChange ? 'text-orange-600 font-semibold' : 'text-gray-500'}`}>
             {currentStatus ? 'เปิด' : 'ปิด'}
-            {hasPendingChange && ' *'}
+            {hasPendingChange}
           </span>
         </div>
       </td>
