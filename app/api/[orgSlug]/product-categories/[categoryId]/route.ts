@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/product-categories/[categoryId]/route.ts
-// Product Attribute Categories API - UPDATED for relational options
+// Product Attribute Categories API - SAFE UPDATE STRATEGY
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -64,7 +64,7 @@ export async function GET(
   }
 }
 
-// PATCH - Update category and options
+// PATCH - Update category and options (SAFE UPDATE STRATEGY)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string; categoryId: string }> }
@@ -101,7 +101,9 @@ export async function PATCH(
         organizationId: access.organizationId,
       },
       include: {
-        options: true
+        options: {
+          orderBy: { sortOrder: 'asc' }
+        }
       }
     });
 
@@ -159,9 +161,9 @@ export async function PATCH(
       ? (typeof displayOrder === 'string' ? parseInt(displayOrder, 10) : displayOrder)
       : existingCategory.displayOrder;
 
-    // ✅ Update category and options using transaction
+    // ✅ SAFE UPDATE: Update category and options
     const updatedCategory = await prisma.$transaction(async (tx) => {
-      // Update category
+      // Update category basic info
       const updated = await tx.productAttributeCategory.update({
         where: { id: categoryId },
         data: {
@@ -176,28 +178,81 @@ export async function PATCH(
         },
       });
 
-      // ✅ Update options if provided
-      if (options) {
-        // Delete all existing options
-        await tx.productAttributeOption.deleteMany({
-          where: { categoryId }
-        });
+      // ✅ SAFE UPDATE OPTIONS (if provided)
+      if (options && Array.isArray(options)) {
+        const newOptions = options.map((val: string) => val.trim());
+        const existingOptions = existingCategory.options;
 
-        // Create new options
-        await tx.productAttributeOption.createMany({
-          data: options.map((value: string, index: number) => ({
-            categoryId,
-            value: value.trim(),
-            sortOrder: index,
-            isActive: true,
-          })),
-        });
+        // Strategy: Update existing options by index, create new ones
+        for (let i = 0; i < newOptions.length; i++) {
+          const newValue = newOptions[i];
+          const existingOption = existingOptions[i];
+
+          if (existingOption) {
+            // ✅ Update existing option (สินค้าที่ใช้งานจะยังอ้างอิงถูกต้อง)
+            await tx.productAttributeOption.update({
+              where: { id: existingOption.id },
+              data: {
+                value: newValue,
+                label: newValue, // sync label with value
+                sortOrder: i,
+                isActive: true,
+              },
+            });
+          } else {
+            // ✅ Create new option (ถ้ามี options เพิ่มมากกว่าเดิม)
+            await tx.productAttributeOption.create({
+              data: {
+                categoryId,
+                value: newValue,
+                label: newValue,
+                sortOrder: i,
+                isActive: true,
+              },
+            });
+          }
+        }
+
+        // ✅ Soft delete unused options (ถ้า options ใหม่น้อยกว่าเดิม)
+        if (newOptions.length < existingOptions.length) {
+          const unusedOptionIds = existingOptions
+            .slice(newOptions.length)
+            .map(opt => opt.id);
+
+          // Check if any unused options are being used by products
+          const usedOptions = await tx.productAttribute.findMany({
+            where: {
+              optionId: { in: unusedOptionIds }
+            },
+            select: { optionId: true }
+          });
+
+          const usedOptionIds = new Set(usedOptions.map(pa => pa.optionId));
+
+          // Soft delete unused options that are NOT being used
+          const safeToDeleteIds = unusedOptionIds.filter(id => !usedOptionIds.has(id));
+          
+          if (safeToDeleteIds.length > 0) {
+            await tx.productAttributeOption.updateMany({
+              where: { id: { in: safeToDeleteIds } },
+              data: { isActive: false },
+            });
+          }
+
+          // If some options are still being used, keep them active
+          // (สินค้าที่ใช้ options เหล่านี้จะยังใช้งานได้ตามปกติ)
+        }
       }
 
-      // Return with options
+      // Return with updated options
       return await tx.productAttributeCategory.findUnique({
         where: { id: categoryId },
-        include: { options: { orderBy: { sortOrder: 'asc' } } }
+        include: { 
+          options: { 
+            where: { isActive: true },
+            orderBy: { sortOrder: 'asc' } 
+          } 
+        }
       });
     });
 
@@ -246,7 +301,7 @@ export async function PATCH(
   }
 }
 
-// DELETE - Delete category (options cascade automatically)
+// DELETE - Delete category (ห้ามลบถ้ามีสินค้าใช้งาน)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string; categoryId: string }> }
@@ -283,7 +338,10 @@ export async function DELETE(
         organizationId: access.organizationId,
       },
       include: {
-        options: true
+        options: true,
+        productAttributes: {
+          take: 1, // ✅ Check if any products use this category
+        }
       }
     });
 
@@ -294,9 +352,21 @@ export async function DELETE(
       );
     }
 
+    // ✅ CRITICAL: ห้ามลบถ้ามีสินค้าใช้งาน
+    if (category.productAttributes.length > 0) {
+      return NextResponse.json(
+        { 
+          error: 'Cannot delete category',
+          message: 'มีสินค้าที่ใช้หมวดหมู่นี้อยู่ กรุณาลบหรือเปลี่ยนหมวดหมู่ของสินค้าเหล่านั้นก่อน',
+          code: 'CATEGORY_IN_USE'
+        },
+        { status: 409 }
+      );
+    }
+
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
 
-    // ✅ Delete category (options will cascade automatically via onDelete: Cascade)
+    // ✅ Safe to delete (options will cascade automatically)
     await prisma.productAttributeCategory.delete({
       where: { id: categoryId },
     });
