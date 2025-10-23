@@ -89,7 +89,7 @@ export default function ProductsTableRow({
             checked={currentStatus}
             onCheckedChange={(checked) => onToggleStatus(product, checked)}
           />
-          <span className={`text-xs ${hasPendingChange ? 'text-orange-600 font-semibold' : 'text-gray-500'}`}>
+          <span className={`text-xs ${hasPendingChange ? 'text-green-600 font-semibold' : 'text-gray-500'}`}>
             {currentStatus ? 'เปิด' : 'ปิด'}
             {hasPendingChange}
           </span>
