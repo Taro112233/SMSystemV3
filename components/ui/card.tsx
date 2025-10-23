@@ -11,7 +11,7 @@ export interface CardProps extends HTMLMotionProps<"div"> {
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, gradient, hoverable = true, ...props }, ref) => {
+  ({ className, gradient, hoverable = false, ...props }, ref) => {
     return (
       <motion.div
         ref={ref}
