@@ -22,6 +22,9 @@ import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+// IMPORTANT: Fix for SelectItem error - Use a non-empty value instead of empty string
+const EMPTY_SELECTION_VALUE = "none"; // Cannot use empty string
+
 interface ProductFormProps {
   organizationId: string;
   orgSlug: string;
@@ -112,9 +115,9 @@ export default function ProductForm({
       
       const method = product ? 'PATCH' : 'POST';
 
-      // Convert attributes map to array
+      // Convert attributes map to array, filtering out EMPTY_SELECTION_VALUE
       const attributesArray = Object.entries(formData.attributes)
-        .filter(([_, optionId]) => optionId)
+        .filter(([_, optionId]) => optionId && optionId !== EMPTY_SELECTION_VALUE)
         .map(([categoryId, optionId]) => ({ categoryId, optionId }));
 
       const response = await fetch(url, {
@@ -154,9 +157,16 @@ export default function ProductForm({
       ...prev,
       attributes: {
         ...prev.attributes,
-        [categoryId]: optionId,
+        [categoryId]: optionId === EMPTY_SELECTION_VALUE ? "" : optionId,
       },
     }));
+  };
+
+  // Helper to map the stored value (which could be empty string) to UI value
+  const getSelectValue = (categoryId: string) => {
+    const value = formData.attributes[categoryId];
+    // If value is empty string or undefined, return EMPTY_SELECTION_VALUE
+    return value || EMPTY_SELECTION_VALUE;
   };
 
   return (
@@ -213,7 +223,7 @@ export default function ProductForm({
               id="name"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="ชื่อสินค้า/ยา"
+              placeholder="ระบุชื่อสินค้า"
               disabled={loading}
               required
             />
@@ -226,7 +236,7 @@ export default function ProductForm({
               id="genericName"
               value={formData.genericName}
               onChange={(e) => handleChange('genericName', e.target.value)}
-              placeholder="ชื่อสามัญของยา (ถ้ามี)"
+              placeholder="ระบุชื่อสามัญ (ถ้ามี)"
               disabled={loading}
             />
           </div>
@@ -238,9 +248,26 @@ export default function ProductForm({
               id="description"
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="รายละเอียดเพิ่มเติม"
-              disabled={loading}
+              placeholder="ระบุรายละเอียดเพิ่มเติม"
+              className="resize-none"
               rows={3}
+              disabled={loading}
+            />
+          </div>
+
+          {/* Active Status */}
+          <div className="flex items-center justify-between p-4 bg-white rounded-lg">
+            <div className="space-y-1">
+              <div className="font-medium">สถานะการใช้งาน</div>
+              <div className="text-sm text-gray-600">
+                เปิดใช้งานสินค้านี้ในระบบ
+              </div>
+            </div>
+            <Switch
+              checked={formData.isActive}
+              onCheckedChange={(checked) => handleChange('isActive', checked)}
+              disabled={loading}
+              className="data-[state=checked]:bg-green-600"
             />
           </div>
         </div>
@@ -249,16 +276,16 @@ export default function ProductForm({
         {categories.length > 0 && (
           <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
             <h3 className="font-medium text-gray-900">คุณสมบัติสินค้า</h3>
-            
+
             <div className="grid grid-cols-2 gap-4">
               {categories.map((category) => (
                 <div key={category.id} className="space-y-2">
                   <Label htmlFor={`category-${category.id}`}>
                     {category.label}
-                    {category.isRequired && <span className="text-red-500"> *</span>}
+                    {category.isRequired && <span className="text-red-500 ml-1">*</span>}
                   </Label>
                   <Select
-                    value={formData.attributes[category.id] || ''}
+                    value={getSelectValue(category.id)}
                     onValueChange={(value) => handleAttributeChange(category.id, value)}
                     disabled={loading}
                   >
@@ -267,7 +294,7 @@ export default function ProductForm({
                     </SelectTrigger>
                     <SelectContent>
                       {!category.isRequired && (
-                        <SelectItem value="">ไม่ระบุ</SelectItem>
+                        <SelectItem value={EMPTY_SELECTION_VALUE}>ไม่ระบุ</SelectItem>
                       )}
                       {category.options.map((option) => (
                         <SelectItem key={option.id} value={option.id}>
@@ -281,19 +308,6 @@ export default function ProductForm({
             </div>
           </div>
         )}
-
-        {/* Status */}
-        <div className="flex items-center justify-between py-2">
-          <Label htmlFor="isActive" className="cursor-pointer">
-            เปิดใช้งาน
-          </Label>
-          <Switch
-            id="isActive"
-            checked={formData.isActive}
-            onCheckedChange={(checked) => handleChange('isActive', checked)}
-            disabled={loading}
-          />
-        </div>
       </div>
 
       {/* Actions */}
@@ -306,9 +320,15 @@ export default function ProductForm({
         >
           ยกเลิก
         </Button>
-        <Button type="submit" disabled={loading}>
-          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {product ? 'บันทึกการแก้ไข' : 'สร้างสินค้า'}
+        <Button type="submit" disabled={loading} className="min-w-[120px]">
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              กำลังบันทึก...
+            </>
+          ) : (
+            product ? 'บันทึกการแก้ไข' : 'สร้างสินค้า'
+          )}
         </Button>
       </div>
     </form>

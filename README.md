@@ -24,6 +24,7 @@ Directory structure:
     │   │   ├── [deptSlug]/
     │   │   │   └── page.tsx
     │   │   ├── products/
+    │   │   │   ├── page.tsx
     │   │   │   └── categories/
     │   │   │       └── page.tsx
     │   │   └── settings/
@@ -46,6 +47,12 @@ Directory structure:
     │   │   │   ├── product-categories/
     │   │   │   │   ├── route.ts
     │   │   │   │   └── [categoryId]/
+    │   │   │   │       └── route.ts
+    │   │   │   ├── products/
+    │   │   │   │   ├── route.ts
+    │   │   │   │   ├── [id]/
+    │   │   │   │   │   └── route.ts
+    │   │   │   │   └── batch-update-status/
     │   │   │   │       └── route.ts
     │   │   │   └── settings/
     │   │   │       └── route.ts
@@ -114,6 +121,16 @@ Directory structure:
     │   │   ├── JoinOrganizationModal.tsx
     │   │   ├── OrganizationCard.tsx
     │   │   └── OrganizationGrid.tsx
+    │   ├── ProductsManagement/
+    │   │   ├── DeleteProductDialog.tsx
+    │   │   ├── index.tsx
+    │   │   ├── ProductDetailDialog.tsx
+    │   │   ├── ProductForm.tsx
+    │   │   ├── ProductsFilters.tsx
+    │   │   ├── ProductsHeader.tsx
+    │   │   ├── ProductsTable.tsx
+    │   │   ├── ProductsTableHeader.tsx
+    │   │   └── ProductsTableRow.tsx
     │   ├── ProfileSettings/
     │   │   ├── index.tsx
     │   │   ├── PasswordChange.tsx
@@ -206,6 +223,7 @@ Directory structure:
     │   ├── audit-logger.ts
     │   ├── auth-server.ts
     │   ├── auth.ts
+    │   ├── category-helpers.ts
     │   ├── config.ts
     │   ├── department-helpers.ts
     │   ├── prisma.ts
