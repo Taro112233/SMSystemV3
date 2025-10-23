@@ -4,7 +4,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CategoryWithOptions, getCategoryValue } from '@/lib/category-helpers';
+import { CategoryWithOptions, getCategoryValue, getCategoryOptionById } from '@/lib/category-helpers';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,16 @@ interface FormData {
   baseUnit: string;
   isActive: boolean;
   attributes: { [categoryId: string]: string };
+}
+
+interface ProductAttribute {
+  categoryId: string;
+  optionId: string;
+  option?: {
+    id?: string;
+    label?: string;
+    value?: string;
+  };
 }
 
 export default function ProductDetailDialog({
@@ -362,22 +372,32 @@ export default function ProductDetailDialog({
                         {category.label}
                         {category.isRequired && <span className="text-red-500 ml-1">*</span>}
                       </Label>
-                      <Select
-                        value={formData.attributes[category.id] || ''}
-                        onValueChange={(value) => handleAttributeChange(category.id, value)}
-                        disabled={loading || !canManage}
-                      >
-                        <SelectTrigger id={`category-${category.id}`}>
-                          <SelectValue placeholder={`เลือก${category.label}`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {category.options.map((option) => (
-                            <SelectItem key={option.id} value={option.id}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {activeTab === 'info' && canManage ? (
+                        // Editable mode - show select dropdown
+                        <Select
+                          value={formData.attributes[category.id] || ''}
+                          onValueChange={(value) => handleAttributeChange(category.id, value)}
+                          disabled={loading || !canManage}
+                        >
+                          <SelectTrigger id={`category-${category.id}`}>
+                            <SelectValue placeholder={`เลือก${category.label}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {category.options.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.label || option.value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        // Display mode - show the selected value as text
+                        <div className="p-2 bg-white border rounded-md text-sm">
+                          {formData.attributes[category.id] ? 
+                            getCategoryOptionById(categories, category.id, formData.attributes[category.id]) : 
+                            '-'}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
