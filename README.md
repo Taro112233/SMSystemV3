@@ -24,11 +24,13 @@ Directory structure:
     │   │   ├── [deptSlug]/
     │   │   │   └── page.tsx
     │   │   ├── products/
-    │   │   │   ├── page.tsx
-    │   │   │   └── categories/
-    │   │   │       └── page.tsx
+    │   │   │   └── page.tsx
     │   │   └── settings/
-    │   │       └── page.tsx
+    │   │       ├── page.tsx
+    │   │       ├── categories/
+    │   │       │   └── page.tsx
+    │   │       └── units/
+    │   │           └── page.tsx
     │   ├── api/
     │   │   ├── [orgSlug]/
     │   │   │   ├── route.ts
@@ -47,6 +49,10 @@ Directory structure:
     │   │   │   ├── product-categories/
     │   │   │   │   ├── route.ts
     │   │   │   │   └── [categoryId]/
+    │   │   │   │       └── route.ts
+    │   │   │   ├── product-units/
+    │   │   │   │   ├── route.ts
+    │   │   │   │   └── [unitId]/
     │   │   │   │       └── route.ts
     │   │   │   ├── products/
     │   │   │   │   ├── route.ts
@@ -161,6 +167,12 @@ Directory structure:
     │   │   │   ├── CategoryFormModal.tsx
     │   │   │   ├── CategoryList.tsx
     │   │   │   └── index.tsx
+    │   │   ├── ProductUnitSettings/
+    │   │   │   ├── index.tsx
+    │   │   │   ├── UnitCard.tsx
+    │   │   │   ├── UnitFormFields.tsx
+    │   │   │   ├── UnitFormModal.tsx
+    │   │   │   └── UnitList.tsx
     │   │   └── shared/
     │   │       ├── ConfirmDialog.tsx
     │   │       ├── SettingsCard.tsx
@@ -233,6 +245,7 @@ Directory structure:
     │   ├── security-logger.ts
     │   ├── slug-validator.ts
     │   ├── stock-helpers.ts
+    │   ├── unit-helpers.ts
     │   ├── user-snapshot.ts
     │   └── utils.ts
     ├── prisma/
@@ -255,4 +268,5 @@ Directory structure:
     └── types/
         ├── auth.d.ts
         ├── cookie.d.ts
-        └── product-category.ts
+        ├── product-category.ts
+        └── product-unit.ts
