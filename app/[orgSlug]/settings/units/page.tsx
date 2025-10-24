@@ -1,5 +1,5 @@
 // app/[orgSlug]/settings/units/page.tsx
-// Product Units Settings Page
+// Product Units Settings Page (SIMPLIFIED)
 // ============================================
 
 "use client";

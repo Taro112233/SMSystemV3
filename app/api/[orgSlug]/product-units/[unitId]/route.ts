@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/product-units/[unitId]/route.ts
-// Product Units Management API - Update & Delete
+// Product Units API - Get, Update, Delete (SIMPLIFIED)
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,7 +7,61 @@ import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
-import { Decimal } from '@prisma/client/runtime/library';
+import { isUnitNameUnique } from '@/lib/unit-helpers';
+
+// GET - Get specific product unit
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ orgSlug: string; unitId: string }> }
+) {
+  try {
+    const { orgSlug, unitId } = await params;
+    
+    const user = getUserFromHeaders(request.headers);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const access = await getUserOrgRole(user.userId, orgSlug);
+    if (!access) {
+      return NextResponse.json(
+        { error: 'No access to organization' },
+        { status: 403 }
+      );
+    }
+
+    const unit = await prisma.productUnit.findFirst({
+      where: {
+        id: unitId,
+        organizationId: access.organizationId,
+      },
+    });
+
+    if (!unit) {
+      return NextResponse.json(
+        { error: 'Product unit not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      unit: {
+        ...unit,
+        conversionRatio: Number(unit.conversionRatio),
+      },
+    });
+  } catch (error) {
+    console.error('Get product unit failed:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
 
 // PATCH - Update product unit
 export async function PATCH(
@@ -55,12 +109,12 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, symbol, description, conversionRatio, displayOrder, isActive } = body;
+    const { name, conversionRatio, isActive } = body;
 
     // Validation
-    if (name !== undefined && !name.trim()) {
+    if (name && !name.trim()) {
       return NextResponse.json(
-        { error: 'Unit name cannot be empty' },
+        { error: 'Name cannot be empty' },
         { status: 400 }
       );
     }
@@ -72,25 +126,10 @@ export async function PATCH(
       );
     }
 
-    // Prevent changing base unit's conversion ratio
-    if (existingUnit.isBaseUnit && conversionRatio !== undefined && conversionRatio !== 1) {
-      return NextResponse.json(
-        { error: 'Base unit must have conversion ratio of 1' },
-        { status: 400 }
-      );
-    }
-
-    // Check unique name if name is being changed
-    if (name !== undefined && name.trim() !== existingUnit.name) {
-      const nameConflict = await prisma.productUnit.findFirst({
-        where: {
-          organizationId: access.organizationId,
-          name: name.trim(),
-          id: { not: unitId },
-        },
-      });
-
-      if (nameConflict) {
+    // Check unique name if changed
+    if (name && name.trim() !== existingUnit.name) {
+      const isUnique = await isUnitNameUnique(access.organizationId, name, unitId);
+      if (!isUnique) {
         return NextResponse.json(
           { error: 'Unit with this name already exists' },
           { status: 409 }
@@ -103,13 +142,12 @@ export async function PATCH(
 
     // Update product unit
     const updatedUnit = await prisma.productUnit.update({
-      where: { id: unitId },
+      where: {
+        id: unitId,
+      },
       data: {
-        ...(name !== undefined && { name: name.trim() }),
-        ...(symbol !== undefined && { symbol: symbol?.trim() || null }),
-        ...(description !== undefined && { description: description?.trim() || null }),
-        ...(conversionRatio !== undefined && { conversionRatio: new Decimal(conversionRatio) }),
-        ...(displayOrder !== undefined && { displayOrder }),
+        ...(name && { name: name.trim() }),
+        ...(conversionRatio !== undefined && { conversionRatio }),
         ...(isActive !== undefined && { isActive }),
         updatedBy: user.userId,
         updatedBySnapshot: userSnapshot,
@@ -123,7 +161,7 @@ export async function PATCH(
       organizationId: access.organizationId,
       userId: user.userId,
       userSnapshot,
-      action: 'product_units.update',
+      action: 'units.update',
       category: 'PRODUCT',
       severity: 'INFO',
       description: `แก้ไขหน่วยนับ ${updatedUnit.name}`,
@@ -207,19 +245,14 @@ export async function DELETE(
       );
     }
 
-    // Prevent deleting base unit
-    if (unit.isBaseUnit) {
-      return NextResponse.json(
-        { error: 'Cannot delete base unit' },
-        { status: 400 }
-      );
-    }
-
     // Create user snapshot before deletion
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
 
+    // Delete product unit
     await prisma.productUnit.delete({
-      where: { id: unitId },
+      where: {
+        id: unitId,
+      },
     });
 
     // Create audit log
@@ -229,7 +262,7 @@ export async function DELETE(
       organizationId: access.organizationId,
       userId: user.userId,
       userSnapshot,
-      action: 'product_units.delete',
+      action: 'units.delete',
       category: 'PRODUCT',
       severity: 'WARNING',
       description: `ลบหน่วยนับ ${unit.name}`,

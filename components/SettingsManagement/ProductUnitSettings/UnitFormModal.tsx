@@ -1,5 +1,5 @@
 // components/SettingsManagement/ProductUnitSettings/UnitFormModal.tsx
-// UnitFormModal - Create/Edit modal dialog
+// UnitFormModal - Create/Edit modal dialog (SIMPLIFIED)
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -21,7 +21,6 @@ interface UnitFormModalProps {
   onOpenChange: (open: boolean) => void;
   organizationId: string;
   unit?: ProductUnit;
-  hasBaseUnit: boolean;
   onSubmit: (data: UnitFormData) => Promise<void>;
 }
 
@@ -30,18 +29,13 @@ export const UnitFormModal = ({
   onOpenChange,
   organizationId,
   unit,
-  hasBaseUnit,
   onSubmit,
 }: UnitFormModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState<UnitFormData>({
     name: unit?.name || '',
-    symbol: unit?.symbol || '',
-    description: unit?.description || '',
     conversionRatio: unit?.conversionRatio || 1,
-    isBaseUnit: unit?.isBaseUnit ?? false,
-    displayOrder: unit?.displayOrder || 0,
     isActive: unit?.isActive ?? true,
   });
 
@@ -49,11 +43,7 @@ export const UnitFormModal = ({
     if (open) {
       setFormData({
         name: unit?.name || '',
-        symbol: unit?.symbol || '',
-        description: unit?.description || '',
         conversionRatio: unit?.conversionRatio || 1,
-        isBaseUnit: unit?.isBaseUnit ?? false,
-        displayOrder: unit?.displayOrder || 0,
         isActive: unit?.isActive ?? true,
       });
     }
@@ -67,16 +57,6 @@ export const UnitFormModal = ({
 
     if (formData.conversionRatio <= 0) {
       toast.error('อัตราส่วนการแปลงต้องมากกว่า 0');
-      return false;
-    }
-
-    if (formData.isBaseUnit && formData.conversionRatio !== 1) {
-      toast.error('หน่วยนับพื้นฐานต้องมีอัตราส่วนเท่ากับ 1');
-      return false;
-    }
-
-    if (!unit && formData.isBaseUnit && hasBaseUnit) {
-      toast.error('มีหน่วยนับพื้นฐานอยู่แล้ว');
       return false;
     }
 
@@ -127,7 +107,6 @@ export const UnitFormModal = ({
             formData={formData}
             setFormData={setFormData}
             isEditing={!!unit}
-            hasBaseUnit={hasBaseUnit}
           />
 
           <div className="flex gap-2 pt-4 border-t">

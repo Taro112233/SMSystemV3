@@ -1,5 +1,5 @@
 // components/SettingsManagement/ProductUnitSettings/index.tsx
-// ProductUnitSettings - Main container for unit management
+// ProductUnitSettings - Main container for unit management (SIMPLIFIED)
 // ============================================
 
 import React from 'react';

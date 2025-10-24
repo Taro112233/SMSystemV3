@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-10-24T07:29:40.808Z
+// Last generated: 2025-10-24T08:19:29.490Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -185,7 +185,8 @@ model Organization {
   
   // ✅ Product-related relations
   products              Product[]
-  productAttributeCategories ProductAttributeCategory[]  // ✅ เพิ่มบรรทัดนี้
+  productAttributeCategories ProductAttributeCategory[]
+  productUnits          ProductUnit[]  // ✅ เพิ่มบรรทัดนี้
   stocks                Stock[]
   
   @@index([slug])
@@ -264,6 +265,36 @@ model Department {
 
 // prisma/schemas/product.prisma
 
+// ===== PRODUCT UNIT (SIMPLIFIED) =====
+model ProductUnit {
+  id               String   @id @default(cuid())
+  organizationId   String
+  
+  // Basic Info
+  name             String   // "โหล", "ลัง", "กล่อง"
+  conversionRatio  Decimal  @db.Decimal(10, 4)  // 1 โหล = 12 หน่วย
+  
+  // Status
+  isActive         Boolean  @default(true)
+  
+  // User Tracking
+  createdBy         String
+  createdBySnapshot Json?
+  updatedBy         String?
+  updatedBySnapshot Json?
+  
+  // Timestamps
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@map("product_units")
+}
+
 // ===== PRODUCT ATTRIBUTE CATEGORY (Definition) =====
 model ProductAttributeCategory {
   id             String   @id @default(cuid())
@@ -290,8 +321,8 @@ model ProductAttributeCategory {
   
   // ✅ Relations
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  options        ProductAttributeOption[]  // ✅ แยกเป็น table ต่างหาก
-  productAttributes ProductAttribute[]     // ✅ เชื่อมกับ Product
+  options        ProductAttributeOption[]
+  productAttributes ProductAttribute[]
   
   @@unique([organizationId, key])
   @@index([organizationId, isActive])
@@ -335,7 +366,7 @@ model ProductAttribute {
   category   ProductAttributeCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   option     ProductAttributeOption @relation(fields: [optionId], references: [id], onDelete: Restrict)
   
-  @@unique([productId, categoryId])  // Each product can have only one value per category
+  @@unique([productId, categoryId])
   @@index([productId])
   @@index([categoryId])
   @@index([optionId])
@@ -353,9 +384,6 @@ model Product {
   genericName    String?
   description    String?
   
-  // ❌ REMOVED: attributes Json?
-  // ✅ REPLACED WITH: Normalized relations
-  
   baseUnit       String
   isActive       Boolean  @default(true)
   
@@ -369,7 +397,7 @@ model Product {
   
   // ✅ Relations
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  attributes     ProductAttribute[]  // ✅ NEW: Junction table relation
+  attributes     ProductAttribute[]
   stocks         Stock[]
   
   @@unique([organizationId, code])

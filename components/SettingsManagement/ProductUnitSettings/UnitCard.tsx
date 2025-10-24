@@ -1,12 +1,12 @@
 // components/SettingsManagement/ProductUnitSettings/UnitCard.tsx
-// UnitCard - Individual unit display card
+// UnitCard - Individual unit display card (SIMPLIFIED)
 // ============================================
 
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Calculator, CheckCircle, XCircle, Crown } from 'lucide-react';
+import { Edit, Trash2, Calculator, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import type { ProductUnit } from '@/types/product-unit';
@@ -48,12 +48,8 @@ export const UnitCard = ({
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             {/* Icon */}
-            <div className={`w-10 h-10 ${unit.isBaseUnit ? 'bg-blue-500' : 'bg-gray-500'} rounded-lg flex items-center justify-center flex-shrink-0`}>
-              {unit.isBaseUnit ? (
-                <Crown className="w-5 h-5 text-white" />
-              ) : (
-                <Calculator className="w-5 h-5 text-white" />
-              )}
+            <div className="w-10 h-10 bg-gray-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Calculator className="w-5 h-5 text-white" />
             </div>
 
             {/* Content */}
@@ -62,23 +58,8 @@ export const UnitCard = ({
                 <h3 className="font-semibold text-gray-900 truncate">
                   {unit.name}
                 </h3>
-                {unit.symbol && (
-                  <Badge variant="outline" className="text-xs">
-                    {unit.symbol}
-                  </Badge>
-                )}
               </div>
               
-              {unit.description ? (
-                <p className="text-sm text-gray-600 truncate mb-2">
-                  {unit.description}
-                </p>
-              ) : (
-                <p className="text-sm text-gray-400 italic mb-2">
-                  ไม่มีคำอธิบาย
-                </p>
-              )}
-
               <div className="flex items-center gap-3 text-sm">
                 <div className="flex items-center gap-1">
                   <span className="text-gray-500">อัตราส่วน:</span>
@@ -91,13 +72,6 @@ export const UnitCard = ({
 
             {/* Badges */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              {unit.isBaseUnit && (
-                <Badge variant="default" className="bg-blue-500">
-                  <Crown className="w-3 h-3 mr-1" />
-                  พื้นฐาน
-                </Badge>
-              )}
-              
               {unit.isActive ? (
                 <Badge variant="default" className="bg-green-500">
                   <CheckCircle className="w-3 h-3 mr-1" />
@@ -122,17 +96,15 @@ export const UnitCard = ({
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
-                {!unit.isBaseUnit && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => setShowDeleteDialog(true)}
-                    title="ลบหน่วยนับ"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => setShowDeleteDialog(true)}
+                  title="ลบหน่วยนับ"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
             )}
           </div>

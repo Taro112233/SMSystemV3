@@ -34,7 +34,8 @@ model Organization {
   
   // ✅ Product-related relations
   products              Product[]
-  productAttributeCategories ProductAttributeCategory[]  // ✅ เพิ่มบรรทัดนี้
+  productAttributeCategories ProductAttributeCategory[]
+  productUnits          ProductUnit[]  // ✅ เพิ่มบรรทัดนี้
   stocks                Stock[]
   
   @@index([slug])

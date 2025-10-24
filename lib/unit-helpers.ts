@@ -1,5 +1,5 @@
 // lib/unit-helpers.ts
-// Product unit conversion helpers
+// Product unit conversion helpers (SIMPLIFIED)
 // ============================================
 
 import { prisma } from '@/lib/prisma';
@@ -15,8 +15,6 @@ export async function getOrganizationUnits(organizationId: string): Promise<Prod
       isActive: true,
     },
     orderBy: [
-      { isBaseUnit: 'desc' },  // Base unit first
-      { displayOrder: 'asc' },
       { name: 'asc' }
     ],
   });
@@ -25,26 +23,6 @@ export async function getOrganizationUnits(organizationId: string): Promise<Prod
     ...unit,
     conversionRatio: Number(unit.conversionRatio),
   }));
-}
-
-/**
- * Get base unit for organization
- */
-export async function getBaseUnit(organizationId: string): Promise<ProductUnit | null> {
-  const baseUnit = await prisma.productUnit.findFirst({
-    where: {
-      organizationId,
-      isBaseUnit: true,
-      isActive: true,
-    },
-  });
-
-  if (!baseUnit) return null;
-
-  return {
-    ...baseUnit,
-    conversionRatio: Number(baseUnit.conversionRatio),
-  };
 }
 
 /**
@@ -128,21 +106,6 @@ export async function isUnitNameUnique(
   });
 
   return !existing;
-}
-
-/**
- * Check if organization already has a base unit
- */
-export async function hasBaseUnit(organizationId: string): Promise<boolean> {
-  const baseUnit = await prisma.productUnit.findFirst({
-    where: {
-      organizationId,
-      isBaseUnit: true,
-      isActive: true,
-    }
-  });
-
-  return !!baseUnit;
 }
 
 /**

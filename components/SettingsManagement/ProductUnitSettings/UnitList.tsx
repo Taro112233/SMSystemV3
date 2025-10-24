@@ -1,12 +1,11 @@
 // components/SettingsManagement/ProductUnitSettings/UnitList.tsx
-// UnitList - List component with search and filtering
+// UnitList - List component with search and filtering (SIMPLIFIED)
 // ============================================
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Loader2, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Plus, Search, Loader2 } from 'lucide-react';
 import { SettingsCard } from '../shared/SettingsCard';
 import type { ProductUnit, UnitFormData } from '@/types/product-unit';
 import { UnitCard } from './UnitCard';
@@ -38,16 +37,11 @@ export const UnitList = ({
   const [editingUnit, setEditingUnit] = useState<ProductUnit | null>(null);
 
   const filteredUnits = units.filter(unit =>
-    unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    unit.symbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    unit.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    unit.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const baseUnit = filteredUnits.find(u => u.isBaseUnit && u.isActive);
-  const activeUnits = filteredUnits.filter(u => u.isActive && !u.isBaseUnit);
+  const activeUnits = filteredUnits.filter(u => u.isActive);
   const inactiveUnits = filteredUnits.filter(u => !u.isActive);
-
-  const hasBaseUnit = units.some(u => u.isBaseUnit && u.isActive);
 
   const handleCreate = async (data: UnitFormData) => {
     await onCreate({ ...data, organizationId });
@@ -81,7 +75,7 @@ export const UnitList = ({
           <div>
             <h3 className="text-lg font-semibold">จัดการหน่วยนับสินค้า</h3>
             <p className="text-sm text-gray-600">
-              {units.length} หน่วยนับทั้งหมด ({activeUnits.length + (baseUnit ? 1 : 0)} ใช้งาน, {inactiveUnits.length} ปิดใช้งาน)
+              {units.length} หน่วยนับทั้งหมด ({activeUnits.length} ใช้งาน, {inactiveUnits.length} ปิดใช้งาน)
             </p>
           </div>
           {canManage && (
@@ -101,29 +95,7 @@ export const UnitList = ({
             className="pl-10"
           />
         </div>
-
-        {!hasBaseUnit && canManage && (
-          <Alert className="mt-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              ยังไม่มีหน่วยนับพื้นฐาน กรุณาสร้างหน่วยนับพื้นฐาน (อัตราส่วน = 1) เช่น "หน่วย", "ชิ้น", "เม็ด"
-            </AlertDescription>
-          </Alert>
-        )}
       </SettingsCard>
-
-      {/* Base Unit Section */}
-      {baseUnit && (
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-blue-900">หน่วยนับพื้นฐาน</h3>
-          <UnitCard
-            unit={baseUnit}
-            canManage={canManage}
-            onEdit={handleEdit}
-            onDelete={onDelete}
-          />
-        </div>
-      )}
 
       {/* Active Units Section */}
       {activeUnits.length > 0 && (
@@ -173,7 +145,6 @@ export const UnitList = ({
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         organizationId={organizationId}
-        hasBaseUnit={hasBaseUnit}
         onSubmit={handleCreate}
       />
 
@@ -182,7 +153,6 @@ export const UnitList = ({
         onOpenChange={(open) => !open && setEditingUnit(null)}
         organizationId={organizationId}
         unit={editingUnit || undefined}
-        hasBaseUnit={hasBaseUnit}
         onSubmit={handleUpdate}
       />
     </div>
