@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Product } from '@prisma/client';
 import { ProductFilters } from '@/lib/product-helpers';
 import { CategoryWithOptions } from '@/lib/category-helpers';
+import { ProductUnit } from '@/types/product-unit'; // ✅ FIXED: Import from types file
 import ProductsHeader from './ProductsHeader';
 import ProductsTable from './ProductsTable';
 import ProductForm from './ProductForm';
@@ -14,6 +15,8 @@ import ProductDetailDialog from './ProductDetailDialog';
 import DeleteProductDialog from './DeleteProductDialog';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+
+// ✅ REMOVED: Local ProductUnit interface - use imported type instead
 
 interface ProductsManagementProps {
   organizationId: string;
@@ -28,6 +31,7 @@ export default function ProductsManagement({
 }: ProductsManagementProps) {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<CategoryWithOptions[]>([]);
+  const [productUnits, setProductUnits] = useState<ProductUnit[]>([]); // ✅ Now uses correct type
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({
     search: '',
@@ -43,7 +47,6 @@ export default function ProductsManagement({
     category3?: string;
   }>({});
 
-  // ✅ NEW: Pending status changes for batch save
   const [pendingStatusChanges, setPendingStatusChanges] = useState<Map<string, boolean>>(new Map());
 
   // Dialog states
@@ -52,12 +55,10 @@ export default function ProductsManagement({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  // ✅ แก้ไข: Convert to boolean explicitly และใช้ enum values ที่ถูกต้อง
   const canManage: boolean = Boolean(
     userRole && ['ADMIN', 'OWNER'].includes(userRole)
   );
 
-  // ✅ เพิ่ม: Debug log เพื่อตรวจสอบ
   useEffect(() => {
     console.log('🔍 ProductsManagement - Role Check:', { 
       userRole, 
@@ -78,6 +79,22 @@ export default function ProductsManagement({
       setCategories(data.categories || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  }, [orgSlug]);
+
+  // Fetch product units (preload once)
+  const fetchProductUnits = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/${orgSlug}/product-units`);
+      if (!response.ok) throw new Error('Failed to fetch product units');
+      
+      const data = await response.json();
+      // Filter only active units
+      const activeUnits = (data.units || []).filter((unit: ProductUnit) => unit.isActive);
+      setProductUnits(activeUnits);
+    } catch (error) {
+      console.error('Error fetching product units:', error);
+      toast.error('ไม่สามารถโหลดหน่วยนับได้');
     }
   }, [orgSlug]);
 
@@ -108,7 +125,6 @@ export default function ProductsManagement({
       const data = await response.json();
       setProducts(data.data || []);
       
-      // ✅ NEW: Clear pending changes when products reload
       setPendingStatusChanges(new Map());
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -122,7 +138,8 @@ export default function ProductsManagement({
 
   useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]);
+    fetchProductUnits();
+  }, [fetchCategories, fetchProductUnits]);
 
   useEffect(() => {
     fetchProducts();
@@ -142,8 +159,6 @@ export default function ProductsManagement({
   };
 
   const handleEditClick = (product: any) => {
-    // ✅ รองรับทั้ง edit จาก table และจาก detail dialog
-    // ถ้าส่ง product เข้ามา ให้เปิด form, ถ้าไม่ได้ส่งค่ามา (กด save จาก dialog) ให้ refresh
     if (product) {
       if (!canManage) {
         toast.error('ไม่มีสิทธิ์', {
@@ -154,7 +169,6 @@ export default function ProductsManagement({
       setSelectedProduct(product);
       setIsFormOpen(true);
     } else {
-      // Refresh products (called from ProductDetailDialog after save)
       fetchProducts();
     }
   };
@@ -175,7 +189,6 @@ export default function ProductsManagement({
     setIsDeleteOpen(true);
   };
 
-  // ✅ UPDATED: Handle status toggle with batch save functionality
   const handleToggleStatus = async (product: any, newStatus: boolean) => {
     console.log('🔍 Toggle status clicked:', { canManage, userRole, newStatus });
     
@@ -186,7 +199,6 @@ export default function ProductsManagement({
       return;
     }
 
-    // ✅ Add to pending changes instead of immediate save
     setPendingStatusChanges(prev => {
       const newChanges = new Map(prev);
       newChanges.set(product.id, newStatus);
@@ -198,7 +210,6 @@ export default function ProductsManagement({
     });
   };
 
-  // ✅ NEW: Save all pending status changes
   const handleSaveStatusChanges = async () => {
     if (pendingStatusChanges.size === 0) return;
 
@@ -219,7 +230,6 @@ export default function ProductsManagement({
         throw new Error(errorData.error || 'Failed to update status');
       }
 
-      // Clear pending changes and refresh
       setPendingStatusChanges(new Map());
       fetchProducts();
       
@@ -295,6 +305,7 @@ export default function ProductsManagement({
             organizationId={organizationId}
             orgSlug={orgSlug}
             categories={categories}
+            productUnits={productUnits}
             product={selectedProduct}
             onSuccess={handleFormSuccess}
             onCancel={() => setIsFormOpen(false)}
@@ -306,6 +317,7 @@ export default function ProductsManagement({
       <ProductDetailDialog
         product={selectedProduct}
         categories={categories}
+        productUnits={productUnits}
         orgSlug={orgSlug}
         canManage={canManage}
         open={isDetailOpen}

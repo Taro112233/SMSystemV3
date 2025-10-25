@@ -53,6 +53,7 @@ interface FormData {
 interface ProductInfoTabProps {
   product: any;
   categories: CategoryWithOptions[];
+  productUnits: ProductUnit[]; // ✅ NEW: Receive preloaded units
   orgSlug: string;
   canManage: boolean;
   onSaveComplete: (updatedProduct: any) => void;
@@ -61,13 +62,14 @@ interface ProductInfoTabProps {
 export default function ProductInfoTab({
   product,
   categories,
+  productUnits, // ✅ NEW: Use preloaded units
   orgSlug,
   canManage,
   onSaveComplete,
 }: ProductInfoTabProps) {
   const [loading, setLoading] = useState(false);
-  const [unitsLoading, setUnitsLoading] = useState(true);
-  const [productUnits, setProductUnits] = useState<ProductUnit[]>([]);
+  // ✅ REMOVED: unitsLoading state - no longer needed
+  // ✅ REMOVED: productUnits state - now comes from props
   const [formData, setFormData] = useState<FormData>({
     code: '',
     name: '',
@@ -78,38 +80,7 @@ export default function ProductInfoTab({
     attributes: {},
   });
 
-  // Fetch product units from organization
-  useEffect(() => {
-    const fetchProductUnits = async () => {
-      try {
-        setUnitsLoading(true);
-        const response = await fetch(`/api/${orgSlug}/product-units`, {
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch product units');
-        }
-
-        const data = await response.json();
-        
-        // Filter only active units
-        const activeUnits = (data.units || []).filter((unit: ProductUnit) => unit.isActive);
-        setProductUnits(activeUnits);
-      } catch (error) {
-        console.error('Failed to fetch product units:', error);
-        toast.error('ไม่สามารถโหลดหน่วยนับได้', {
-          description: 'กรุณาลองใหม่อีกครั้ง',
-        });
-      } finally {
-        setUnitsLoading(false);
-      }
-    };
-
-    if (orgSlug) {
-      fetchProductUnits();
-    }
-  }, [orgSlug]);
+  // ✅ REMOVED: Fetch product units useEffect - no longer needed
 
   // Load product data into form
   useEffect(() => {
@@ -248,18 +219,13 @@ export default function ProductInfoTab({
             />
           </div>
 
-          {/* Base Unit */}
+          {/* Base Unit - ✅ UPDATED: Remove loading state, simplify logic */}
           <div className="space-y-2">
             <Label htmlFor="baseUnit">
               หน่วยนับ <span className="text-red-500">*</span>
             </Label>
             {canManage ? (
-              unitsLoading ? (
-                <div className="flex items-center gap-2 p-2 border rounded-md bg-white">
-                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                  <span className="text-sm text-gray-500">กำลังโหลดหน่วยนับ...</span>
-                </div>
-              ) : productUnits.length > 0 ? (
+              productUnits.length > 0 ? (
                 <Select
                   value={formData.baseUnit}
                   onValueChange={(value) => handleChange('baseUnit', value)}
@@ -410,12 +376,12 @@ export default function ProductInfoTab({
         </div>
       )}
 
-      {/* Save Button - Show only when user can manage */}
+      {/* Save Button - Show only when user can manage - ✅ UPDATED: Remove unitsLoading */}
       {canManage && (
         <div className="flex justify-end pt-4 border-t">
           <Button
             onClick={handleSave}
-            disabled={loading || unitsLoading}
+            disabled={loading}
             className="min-w-[120px]"
           >
             {loading ? (

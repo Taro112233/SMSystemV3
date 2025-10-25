@@ -136,7 +136,10 @@ Directory structure:
     │   │   ├── ProductsHeader.tsx
     │   │   ├── ProductsTable.tsx
     │   │   ├── ProductsTableHeader.tsx
-    │   │   └── ProductsTableRow.tsx
+    │   │   ├── ProductsTableRow.tsx
+    │   │   └── ProductDetailDialog/
+    │   │       ├── ProductInfoTab.tsx
+    │   │       └── StockSummaryTab.tsx
     │   ├── ProfileSettings/
     │   │   ├── index.tsx
     │   │   ├── PasswordChange.tsx

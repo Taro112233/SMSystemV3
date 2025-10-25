@@ -16,9 +16,18 @@ import { Package, Info } from 'lucide-react';
 import ProductInfoTab from './ProductDetailDialog/ProductInfoTab';
 import StockSummaryTab from './ProductDetailDialog/StockSummaryTab';
 
+// ✅ NEW: Add ProductUnit interface
+interface ProductUnit {
+  id: string;
+  name: string;
+  conversionRatio: number;
+  isActive: boolean;
+}
+
 interface ProductDetailDialogProps {
   product: any | null;
   categories: CategoryWithOptions[];
+  productUnits: ProductUnit[]; // ✅ NEW: Add productUnits prop
   orgSlug: string;
   canManage: boolean;
   open: boolean;
@@ -29,6 +38,7 @@ interface ProductDetailDialogProps {
 export default function ProductDetailDialog({
   product,
   categories,
+  productUnits, // ✅ NEW: Receive productUnits
   orgSlug,
   canManage,
   open,
@@ -76,11 +86,12 @@ export default function ProductDetailDialog({
             />
           </TabsContent>
 
-          {/* Product Info Tab */}
+          {/* Product Info Tab - ✅ UPDATED: Pass productUnits */}
           <TabsContent value="info">
             <ProductInfoTab
               product={product}
               categories={categories}
+              productUnits={productUnits} // ✅ NEW: Pass preloaded units
               orgSlug={orgSlug}
               canManage={canManage}
               onSaveComplete={handleSaveComplete}

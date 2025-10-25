@@ -113,17 +113,6 @@ export default function ProductsPage() {
   // Main content - will be wrapped by layout.tsx
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          จัดการสินค้าและยา
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          จัดการข้อมูลสินค้าและยาในองค์กร {organizationData.name}
-          {' '}(Role: {organizationData.userRole || 'ไม่ระบุ'})
-        </p>
-      </div>
-
       {/* ✅ Products Management Component - ตรวจสอบว่า userRole มีค่า */}
       {organizationData.userRole ? (
         <ProductsManagement

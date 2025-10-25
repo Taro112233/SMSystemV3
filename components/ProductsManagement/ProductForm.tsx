@@ -28,6 +28,7 @@ interface ProductFormProps {
   organizationId: string;
   orgSlug: string;
   categories: CategoryWithOptions[];
+  productUnits: ProductUnit[];
   product: any | null;
   onSuccess: () => void;
   onCancel: () => void;
@@ -47,13 +48,12 @@ export default function ProductForm({
   organizationId,
   orgSlug,
   categories,
+  productUnits,
   product,
   onSuccess,
   onCancel,
 }: ProductFormProps) {
   const [loading, setLoading] = useState(false);
-  const [loadingUnits, setLoadingUnits] = useState(true);
-  const [units, setUnits] = useState<ProductUnit[]>([]);
   
   const [formData, setFormData] = useState<FormData>({
     code: '',
@@ -64,32 +64,6 @@ export default function ProductForm({
     isActive: true,
     attributes: {},
   });
-
-  // ✅ NEW: Load units from API
-  useEffect(() => {
-    const loadUnits = async () => {
-      try {
-        setLoadingUnits(true);
-        const response = await fetch(`/api/${orgSlug}/product-units`, {
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to load units');
-        }
-
-        const data = await response.json();
-        setUnits(data.units.filter((u: ProductUnit) => u.isActive));
-      } catch (error) {
-        console.error('Error loading units:', error);
-        toast.error('ไม่สามารถโหลดหน่วยนับได้');
-      } finally {
-        setLoadingUnits(false);
-      }
-    };
-
-    loadUnits();
-  }, [orgSlug]);
 
   // Load existing product data
   useEffect(() => {
@@ -223,39 +197,38 @@ export default function ProductForm({
               />
             </div>
 
-            {/* ✅ UPDATED: Base Unit - Use Select instead of Input */}
+            {/* ✅ UPDATED: Base Unit - แสดงอัตราส่วนเหมือน ProductInfoTab */}
             <div className="space-y-2">
               <Label htmlFor="baseUnit">
                 หน่วยนับ <span className="text-red-500">*</span>
               </Label>
-              {loadingUnits ? (
-                <div className="flex items-center justify-center h-10 border rounded-md">
-                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                </div>
-              ) : (
-                <Select
-                  value={formData.baseUnit || EMPTY_SELECTION_VALUE}
-                  onValueChange={(value) => handleChange('baseUnit', value === EMPTY_SELECTION_VALUE ? '' : value)}
-                  disabled={loading}
-                >
-                  <SelectTrigger id="baseUnit">
-                    <SelectValue placeholder="เลือกหน่วยนับ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.length === 0 ? (
-                      <SelectItem value={EMPTY_SELECTION_VALUE} disabled>
-                        ไม่มีหน่วยนับในระบบ
+              <Select
+                value={formData.baseUnit || EMPTY_SELECTION_VALUE}
+                onValueChange={(value) => handleChange('baseUnit', value === EMPTY_SELECTION_VALUE ? '' : value)}
+                disabled={loading}
+              >
+                <SelectTrigger id="baseUnit">
+                  <SelectValue placeholder="เลือกหน่วยนับ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {productUnits.length === 0 ? (
+                    <SelectItem value={EMPTY_SELECTION_VALUE} disabled>
+                      ไม่มีหน่วยนับในระบบ
+                    </SelectItem>
+                  ) : (
+                    productUnits.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.name}>
+                        <div className="flex items-center gap-2">
+                          <span>{unit.name}</span>
+                          <span className="text-xs text-gray-500">
+                            (1:{unit.conversionRatio.toLocaleString('th-TH')})
+                          </span>
+                        </div>
                       </SelectItem>
-                    ) : (
-                      units.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.name}>
-                          {unit.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              )}
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -365,7 +338,7 @@ export default function ProductForm({
         >
           ยกเลิก
         </Button>
-        <Button type="submit" disabled={loading || loadingUnits} className="min-w-[120px]">
+        <Button type="submit" disabled={loading} className="min-w-[120px]">
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
