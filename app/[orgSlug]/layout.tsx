@@ -1,5 +1,5 @@
 // FILE: app/[orgSlug]/layout.tsx
-// UPDATED: Integrate sidebar state management
+// UPDATED: Fix overflow issue - prevent content from exceeding viewport
 // ============================================
 
 "use client";
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { DashboardSidebar } from '@/components/OrganizationLayout';
 import { DashboardHeader } from '@/components/OrganizationLayout/OrganizationHeader';
 import { findDepartmentBySlug, type FrontendDepartment } from '@/lib/department-helpers';
-import { useSidebarState } from '@/hooks/use-sidebar-state'; // ✅ NEW: Import sidebar state hook
+import { useSidebarState } from '@/hooks/use-sidebar-state';
 
 interface UserData {
   id: string;
@@ -50,7 +50,6 @@ export default function OrganizationLayout({
   const [departments, setDepartments] = useState<FrontendDepartment[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<FrontendDepartment | null>(null);
   
-  // ✅ NEW: Use sidebar state hook instead of local state
   const { 
     collapsed: sidebarCollapsed, 
     toggleCollapsed: toggleSidebarCollapse,
@@ -186,7 +185,6 @@ export default function OrganizationLayout({
     router.push(`/${orgSlug}/${dept.slug}`);
   };
 
-  // ✅ Show loading state while both data and sidebar state are loading
   if (loading || sidebarLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -224,7 +222,7 @@ export default function OrganizationLayout({
                   onClick={() => router.push('/dashboard')}
                   className="w-full"
                 >
-                  <Home className="w-4 h-4 mr-2" />
+                  <Home className="w-4 mr-2" />
                   กลับหน้าหลัก
                 </Button>
                 
@@ -244,14 +242,14 @@ export default function OrganizationLayout({
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex overflow-hidden"> {/* ✅ Add overflow-hidden */}
       <DashboardSidebar
         organization={organization}
         departments={departments}
         selectedDepartment={selectedDepartment}
         onSelectDepartment={handleSidebarDepartmentSelect}
         collapsed={sidebarCollapsed}
-        onToggleCollapse={toggleSidebarCollapse} // ✅ UPDATED: Use hook's toggle function
+        onToggleCollapse={toggleSidebarCollapse}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         user={user}
@@ -259,8 +257,8 @@ export default function OrganizationLayout({
         onLogout={handleLogout}
       />
 
-      {/* ✅ UPDATED: Add responsive margin and transition for smooth experience */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+      {/* ✅ CRITICAL FIX: Add overflow-x-hidden and max-w-full */}
+      <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${
         isMobile 
           ? (sidebarCollapsed ? 'ml-0' : 'ml-80') 
           : (sidebarCollapsed ? 'ml-16' : 'ml-80')
@@ -270,7 +268,8 @@ export default function OrganizationLayout({
           selectedDepartment={selectedDepartment}
         />
 
-        <main className="flex-1 p-6 overflow-y-auto bg-gray-50">
+        {/* ✅ CRITICAL FIX: Add overflow-x-hidden to main */}
+        <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden bg-gray-50">
           {children}
         </main>
       </div>

@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/products/route.ts
-// UPDATED: Remove isOwner reference
+// UPDATED: Support sorting by categories
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -66,9 +66,16 @@ export async function GET(
     if (category2) categoryFilters.push(category2);
     if (category3) categoryFilters.push(category3);
 
-    // Build orderBy
-    const orderBy: any = {};
-    orderBy[sortBy] = sortOrder;
+    // ✅ Build orderBy (handle category sorting)
+    let orderBy: any = {};
+    
+    // Check if sorting by category (category1, category2, category3)
+    if (sortBy.startsWith('category')) {
+      // Will sort in-memory after fetching
+      orderBy = { createdAt: sortOrder }; // Default sort for fetch
+    } else {
+      orderBy[sortBy] = sortOrder;
+    }
 
     // Fetch products with attributes
     let products = await prisma.product.findMany({
@@ -93,6 +100,23 @@ export async function GET(
       });
     }
 
+    // ✅ Sort by category if requested (in-memory)
+    if (sortBy.startsWith('category')) {
+      const categoryIndex = parseInt(sortBy.replace('category', '')) - 1;
+      
+      products.sort((a, b) => {
+        // Get category value for each product
+        const aAttr = a.attributes[categoryIndex];
+        const bAttr = b.attributes[categoryIndex];
+        
+        const aValue = aAttr ? (aAttr.option.label || aAttr.option.value) : '';
+        const bValue = bAttr ? (bAttr.option.label || bAttr.option.value) : '';
+        
+        const comparison = aValue.localeCompare(bValue, 'th');
+        return sortOrder === 'asc' ? comparison : -comparison;
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: products,
@@ -106,11 +130,12 @@ export async function GET(
   }
 }
 
-// ===== POST: Create new product with attributes =====
+// ===== POST: Create new product (keep unchanged) =====
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
 ) {
+  // ... (keep existing POST code unchanged)
   try {
     const { orgSlug } = await params;
 
@@ -130,7 +155,6 @@ export async function POST(
       );
     }
 
-    // ✅ แก้ไข: ลบ isOwner ออก
     console.log('🔍 User role check:', { 
       userId: user.userId, 
       role: access.role

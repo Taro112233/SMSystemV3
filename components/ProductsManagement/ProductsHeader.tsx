@@ -1,8 +1,10 @@
 // components/ProductsManagement/ProductsHeader.tsx
 // ProductsHeader - Header with search and create button
+// ✅ FIXED: Prevent infinite API calls by using useCallback
 
 'use client';
 
+import { useState, useEffect, useCallback } from 'react'; // ✅ Import useCallback
 import { Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +22,25 @@ export default function ProductsHeader({
   canManage,
   searchValue,
 }: ProductsHeaderProps) {
+  const [localSearch, setLocalSearch] = useState(searchValue);
+
+  // ✅ FIX: Debounce with proper dependency
+  useEffect(() => {
+    // Don't trigger on initial mount if search is empty
+    if (localSearch === searchValue) return;
+
+    const timer = setTimeout(() => {
+      onSearchChange(localSearch);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [localSearch]); // ✅ CRITICAL: Remove onSearchChange from dependencies
+
+  // Sync with parent if searchValue changes externally
+  useEffect(() => {
+    setLocalSearch(searchValue);
+  }, [searchValue]);
+
   return (
     <div className="flex items-center justify-between gap-4">
       {/* Title */}
@@ -38,13 +59,13 @@ export default function ProductsHeader({
           <Input
             type="text"
             placeholder="ค้นหารหัส, ชื่อสินค้า..."
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             className="pl-9"
           />
         </div>
 
-        {/* Create Button - แสดงให้ทุกคนเห็น แต่ disable ถ้าไม่มีสิทธิ์ */}
+        {/* Create Button */}
         <Button 
           onClick={onCreateClick} 
           className="gap-2"

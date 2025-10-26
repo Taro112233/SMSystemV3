@@ -284,6 +284,7 @@ export default function ProductsManagement({
       <ProductsTable
         products={products}
         categories={categories}
+        productUnits={productUnits}
         loading={loading}
         filters={filters}
         categoryFilters={categoryFilters}
