@@ -18,8 +18,7 @@ interface UnitFormFieldsProps {
 
 export const UnitFormFields = ({
   formData,
-  setFormData,
-  isEditing
+  setFormData
 }: UnitFormFieldsProps) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

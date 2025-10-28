@@ -19,8 +19,7 @@ export default function ProductsTableHeader({
   sortBy,
   sortOrder,
   categories,
-  onSort,
-  canManage,
+  onSort
 }: ProductsTableHeaderProps) {
   const SortIcon = ({ field }: { field: string }) => {
     if (sortBy !== field) {

@@ -25,7 +25,6 @@ interface UnitListProps {
 export const UnitList = ({
   units,
   organizationId,
-  organizationSlug,
   canManage,
   isLoading = false,
   onCreate,

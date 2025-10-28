@@ -28,7 +28,6 @@ interface CategoryListProps {
 export const CategoryList = ({
   categories,
   organizationId,
-  organizationSlug,
   canManage,
   isLoading = false,
   onCreate,

@@ -3,7 +3,6 @@
 
 import { Product, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { createUserSnapshot } from '@/lib/user-snapshot';
 
 // ===== TYPE EXTENSIONS =====
 
@@ -11,7 +10,7 @@ import { createUserSnapshot } from '@/lib/user-snapshot';
  * Product with JSON attributes (for legacy/flexible attributes)
  */
 export interface ProductWithJsonAttributes extends Product {
-  attributes?: Record<string, any>;
+  attributes?: Record<string, unknown>;
 }
 
 // ===== EXISTING FUNCTIONS (Keep compatibility with JSON attributes) =====
@@ -21,16 +20,16 @@ export function getProductAttribute(
   key: string
 ): string | number | boolean | null {
   if (!product.attributes) return null;
-  const attrs = product.attributes as Record<string, any>;
-  return attrs[key] ?? null;
+  const attrs = product.attributes as Record<string, unknown>;
+  return attrs[key] as string | number | boolean | null ?? null;
 }
 
 export function setProductAttribute(
   product: ProductWithJsonAttributes, 
   key: string, 
-  value: any
+  value: Prisma.InputJsonValue
 ): Prisma.InputJsonValue {
-  const attrs = (product.attributes as Record<string, any>) || {};
+  const attrs = (product.attributes as Prisma.JsonObject) || {};
   return {
     ...attrs,
     [key]: value
@@ -42,7 +41,7 @@ export function getAllAttributeKeys(products: ProductWithJsonAttributes[]): stri
   
   products.forEach(product => {
     if (product.attributes) {
-      const attrs = product.attributes as Record<string, any>;
+      const attrs = product.attributes as Record<string, unknown>;
       Object.keys(attrs).forEach(key => keys.add(key));
     }
   });

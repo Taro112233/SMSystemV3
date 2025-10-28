@@ -2,7 +2,6 @@
 // Stock quantity calculation helpers
 
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
 
 /**
  * Calculate total quantities for a stock (from all batches)
@@ -184,12 +183,14 @@ export async function releaseReservedQuantity(
 
 /**
  * Adjust batch quantity (for stock adjustments)
+ * @param batchId - The batch ID to adjust
+ * @param adjustment - The quantity adjustment (positive or negative)
+ * @param userId - The user making the adjustment
  */
 export async function adjustBatchQuantity(
   batchId: string,
   adjustment: number,
-  userId: string,
-  reason: string
+  userId: string
 ): Promise<void> {
   await prisma.stockBatch.update({
     where: { id: batchId },

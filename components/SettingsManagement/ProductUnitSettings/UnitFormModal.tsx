@@ -27,7 +27,6 @@ interface UnitFormModalProps {
 export const UnitFormModal = ({
   open,
   onOpenChange,
-  organizationId,
   unit,
   onSubmit,
 }: UnitFormModalProps) => {

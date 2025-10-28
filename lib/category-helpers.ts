@@ -17,6 +17,20 @@ export interface CategoryWithOptions {
   }[];
 }
 
+interface ProductAttribute {
+  categoryId: string;
+  optionId: string;
+  option: {
+    label: string | null;
+    value: string;
+  };
+}
+
+interface ProductWithAttributes {
+  attributes?: ProductAttribute[];
+  [key: string]: unknown;
+}
+
 /**
  * Get top 3 categories by display order
  */
@@ -64,7 +78,7 @@ export async function getAllCategories(organizationId: string): Promise<Category
  * Get category value from product attributes
  */
 export function getCategoryValue(
-  attributes: any[],
+  attributes: ProductAttribute[],
   categoryId: string
 ): string {
   const attr = attributes.find(a => a.categoryId === categoryId);
@@ -89,7 +103,7 @@ export function getCategoryOptionById(
 /**
  * Format attributes for form (array of {categoryId, optionId})
  */
-export function formatAttributesForForm(attributes: any[]): { categoryId: string; optionId: string }[] {
+export function formatAttributesForForm(attributes: ProductAttribute[]): { categoryId: string; optionId: string }[] {
   return attributes.map(attr => ({
     categoryId: attr.categoryId,
     optionId: attr.optionId,
@@ -100,13 +114,13 @@ export function formatAttributesForForm(attributes: any[]): { categoryId: string
  * Group products by category option
  */
 export function groupProductsByCategory(
-  products: any[],
+  products: ProductWithAttributes[],
   categoryId: string
-): Record<string, any[]> {
-  const groups: Record<string, any[]> = {};
+): Record<string, ProductWithAttributes[]> {
+  const groups: Record<string, ProductWithAttributes[]> = {};
   
   products.forEach(product => {
-    const attr = product.attributes?.find((a: any) => a.categoryId === categoryId);
+    const attr = product.attributes?.find((a) => a.categoryId === categoryId);
     const key = attr ? (attr.option.label || attr.option.value) : 'ไม่ระบุ';
     
     if (!groups[key]) {

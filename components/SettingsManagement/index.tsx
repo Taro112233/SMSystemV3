@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, UserCog, Building } from 'lucide-react';
+import { Building2, Users, Building } from 'lucide-react';
 
 import { OrganizationSettings } from './OrganizationSettings';
 import { DepartmentSettings } from './DepartmentSettings';

@@ -21,14 +21,33 @@ interface ProductUnit {
   isActive: boolean;
 }
 
+interface ProductAttribute {
+  categoryId: string;
+  optionId: string;
+  option: {
+    label: string | null;
+    value: string;
+  };
+}
+
+interface ProductData {
+  id: string;
+  code: string;
+  name: string;
+  genericName?: string | null;
+  baseUnit: string;
+  isActive: boolean;
+  attributes?: ProductAttribute[];
+}
+
 interface ProductsTableRowProps {
-  product: any;
+  product: ProductData;
   categories: CategoryWithOptions[];
-  productUnits: ProductUnit[]; // ✅ NEW: Pass units for conversion
-  onEditClick: (product: any) => void;
-  onViewClick: (product: any) => void;
-  onDeleteClick: (product: any) => void;
-  onToggleStatus: (product: any, newStatus: boolean) => void;
+  productUnits: ProductUnit[];
+  onEditClick: (product: ProductData) => void;
+  onViewClick: (product: ProductData) => void;
+  onDeleteClick: (product: ProductData) => void;
+  onToggleStatus: (product: ProductData, newStatus: boolean) => void;
   canManage: boolean;
   pendingStatusChanges?: Map<string, boolean>;
 }
@@ -36,12 +55,9 @@ interface ProductsTableRowProps {
 export default function ProductsTableRow({
   product,
   categories,
-  productUnits, // ✅ NEW: Receive units
-  onEditClick,
+  productUnits,
   onViewClick,
-  onDeleteClick,
   onToggleStatus,
-  canManage,
   pendingStatusChanges,
 }: ProductsTableRowProps) {
   // ✅ Mock data (replace with real data later)
@@ -98,10 +114,10 @@ export default function ProductsTableRow({
 
       {/* ชื่อสินค้า */}
       <td className="px-4 py-3">
-        <div className="space-y-0.5"> {/* ✅ Wrapper with vertical spacing */}
+        <div className="space-y-0.5">
           <TruncatedCell text={product.name} maxLength={40} />
           {product.genericName && (
-            <div className="text-xs text-gray-500"> {/* ✅ Separate line with smaller text */}
+            <div className="text-xs text-gray-500">
               <TruncatedCell text={`(${product.genericName})`} maxLength={40} />
             </div>
           )}
