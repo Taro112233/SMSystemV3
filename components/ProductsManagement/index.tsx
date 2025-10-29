@@ -4,34 +4,53 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Product } from '@prisma/client';
-import { ProductFilters } from '@/lib/product-helpers';
 import { CategoryWithOptions } from '@/lib/category-helpers';
-import { ProductUnit } from '@/types/product-unit'; // ✅ FIXED: Import from types file
+import { ProductUnit } from '@/types/product-unit';
 import ProductsHeader from './ProductsHeader';
-import ProductsTable from './ProductsTable';
-import ProductForm from './ProductForm';
 import ProductDetailDialog from './ProductDetailDialog';
 import DeleteProductDialog from './DeleteProductDialog';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { ProductFilters } from '@/lib/product-helpers';
+import ProductsTable from './ProductsTable';
+import ProductForm from './ProductForm';
 
-// ✅ REMOVED: Local ProductUnit interface - use imported type instead
+interface ProductAttribute {
+  categoryId: string;
+  optionId: string;
+}
+
+interface ProductData {
+  id: string;
+  code: string;
+  name: string;
+  genericName?: string;
+  description?: string;
+  baseUnit: string;
+  isActive: boolean;
+  attributes?: ProductAttribute[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface CategoryFiltersState {
+  category1?: string;
+  category2?: string;
+  category3?: string;
+}
 
 interface ProductsManagementProps {
-  organizationId: string;
   orgSlug: string;
   userRole: string;
 }
 
 export default function ProductsManagement({
-  organizationId,
   orgSlug,
   userRole,
 }: ProductsManagementProps) {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<ProductData[]>([]);
   const [categories, setCategories] = useState<CategoryWithOptions[]>([]);
-  const [productUnits, setProductUnits] = useState<ProductUnit[]>([]); // ✅ Now uses correct type
+  const [productUnits, setProductUnits] = useState<ProductUnit[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({
     search: '',
@@ -40,28 +59,22 @@ export default function ProductsManagement({
     sortOrder: 'desc',
   });
 
-  // Category filters
-  const [categoryFilters, setCategoryFilters] = useState<{
-    category1?: string;
-    category2?: string;
-    category3?: string;
-  }>({});
-
+  const [categoryFilters, setCategoryFilters] = useState<CategoryFiltersState>({});
   const [pendingStatusChanges, setPendingStatusChanges] = useState<Map<string, boolean>>(new Map());
 
   // Dialog states
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(null);
 
   const canManage: boolean = Boolean(
     userRole && ['ADMIN', 'OWNER'].includes(userRole)
   );
 
   useEffect(() => {
-    console.log('🔍 ProductsManagement - Role Check:', { 
-      userRole, 
+    console.log('🔍 ProductsManagement - Role Check:', {
+      userRole,
       canManage,
       roleType: typeof userRole,
       isAdmin: userRole === 'ADMIN',
@@ -74,7 +87,7 @@ export default function ProductsManagement({
     try {
       const response = await fetch(`/api/${orgSlug}/product-categories`);
       if (!response.ok) throw new Error('Failed to fetch categories');
-      
+
       const data = await response.json();
       setCategories(data.categories || []);
     } catch (error) {
@@ -82,14 +95,13 @@ export default function ProductsManagement({
     }
   }, [orgSlug]);
 
-  // Fetch product units (preload once)
+  // Fetch product units
   const fetchProductUnits = useCallback(async () => {
     try {
       const response = await fetch(`/api/${orgSlug}/product-units`);
       if (!response.ok) throw new Error('Failed to fetch product units');
-      
+
       const data = await response.json();
-      // Filter only active units
       const activeUnits = (data.units || []).filter((unit: ProductUnit) => unit.isActive);
       setProductUnits(activeUnits);
     } catch (error) {
@@ -102,7 +114,7 @@ export default function ProductsManagement({
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       const params = new URLSearchParams();
       if (filters.search) params.append('search', filters.search);
       if (filters.isActive !== null && filters.isActive !== undefined) {
@@ -110,21 +122,20 @@ export default function ProductsManagement({
       }
       if (filters.sortBy) params.append('sortBy', filters.sortBy);
       if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
-      
-      // Add category filters
+
       if (categoryFilters.category1) params.append('category1', categoryFilters.category1);
       if (categoryFilters.category2) params.append('category2', categoryFilters.category2);
       if (categoryFilters.category3) params.append('category3', categoryFilters.category3);
 
       const response = await fetch(`/api/${orgSlug}/products?${params.toString()}`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
 
       const data = await response.json();
       setProducts(data.data || []);
-      
+
       setPendingStatusChanges(new Map());
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -158,7 +169,7 @@ export default function ProductsManagement({
     setIsFormOpen(true);
   };
 
-  const handleEditClick = (product: any) => {
+  const handleEditClick = (product: ProductData | null) => {
     if (product) {
       if (!canManage) {
         toast.error('ไม่มีสิทธิ์', {
@@ -173,12 +184,12 @@ export default function ProductsManagement({
     }
   };
 
-  const handleViewClick = (product: any) => {
+  const handleViewClick = (product: ProductData) => {
     setSelectedProduct(product);
     setIsDetailOpen(true);
   };
 
-  const handleDeleteClick = (product: any) => {
+  const handleDeleteClick = (product: ProductData) => {
     if (!canManage) {
       toast.error('ไม่มีสิทธิ์', {
         description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่ลบได้',
@@ -189,9 +200,9 @@ export default function ProductsManagement({
     setIsDeleteOpen(true);
   };
 
-  const handleToggleStatus = async (product: any, newStatus: boolean) => {
+  const handleToggleStatus = async (product: ProductData, newStatus: boolean) => {
     console.log('🔍 Toggle status clicked:', { canManage, userRole, newStatus });
-    
+
     if (!canManage) {
       toast.error('ไม่มีสิทธิ์', {
         description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่เปลี่ยนสถานะได้',
@@ -232,14 +243,14 @@ export default function ProductsManagement({
 
       setPendingStatusChanges(new Map());
       fetchProducts();
-      
+
       toast.success('สำเร็จ', {
         description: `บันทึกการเปลี่ยนแปลงสถานะ ${updates.length} รายการเรียบร้อย`,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving status changes:', error);
       toast.error('เกิดข้อผิดพลาด', {
-        description: error.message || 'ไม่สามารถบันทึกการเปลี่ยนแปลงได้',
+        description: error instanceof Error ? error.message : 'ไม่สามารถบันทึกการเปลี่ยนแปลงได้',
       });
     }
   };
@@ -266,13 +277,12 @@ export default function ProductsManagement({
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
-  const handleCategoryFilterChange = (filters: any) => {
+  const handleCategoryFilterChange = (filters: CategoryFiltersState) => {
     setCategoryFilters(filters);
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <ProductsHeader
         onCreateClick={handleCreateClick}
         onSearchChange={(search: string) => handleFilterChange({ search })}
@@ -280,7 +290,6 @@ export default function ProductsManagement({
         searchValue={filters.search || ''}
       />
 
-      {/* Table */}
       <ProductsTable
         products={products}
         categories={categories}
@@ -299,11 +308,9 @@ export default function ProductsManagement({
         onSaveStatusChanges={handleSaveStatusChanges}
       />
 
-      {/* Create/Edit Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <ProductForm
-            organizationId={organizationId}
             orgSlug={orgSlug}
             categories={categories}
             productUnits={productUnits}
@@ -314,7 +321,6 @@ export default function ProductsManagement({
         </DialogContent>
       </Dialog>
 
-      {/* Product Detail Dialog */}
       <ProductDetailDialog
         product={selectedProduct}
         categories={categories}
@@ -326,7 +332,6 @@ export default function ProductsManagement({
         onEditClick={handleEditClick}
       />
 
-      {/* Delete Confirmation Dialog */}
       <DeleteProductDialog
         product={selectedProduct}
         orgSlug={orgSlug}

@@ -3,7 +3,6 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
 import { ProductFilters } from '@/lib/product-helpers';
 import { CategoryWithOptions } from '@/lib/category-helpers';
 import { Button } from '@/components/ui/button';
@@ -16,13 +15,18 @@ import {
 } from '@/components/ui/select';
 import { Filter, X, Save } from 'lucide-react';
 
+interface CategoryFiltersState {
+  category1?: string;
+  category2?: string;
+  category3?: string;
+}
+
 interface ProductsFiltersProps {
   filters: ProductFilters;
-  categoryFilters: any;
+  categoryFilters: CategoryFiltersState;
   categories: CategoryWithOptions[];
   onFilterChange: (filters: Partial<ProductFilters>) => void;
-  onCategoryFilterChange: (filters: any) => void;
-  pendingStatusChanges?: Map<string, boolean>;
+  onCategoryFilterChange: (filters: CategoryFiltersState) => void;
   onSaveStatusChanges?: () => void;
   hasPendingChanges?: boolean;
 }
@@ -33,23 +37,22 @@ export default function ProductsFilters({
   categories,
   onFilterChange,
   onCategoryFilterChange,
-  pendingStatusChanges,
   onSaveStatusChanges,
   hasPendingChanges = false,
 }: ProductsFiltersProps) {
   const hasActiveFilters = 
-    filters.isActive !== true || // เปลี่ยนจาก !== null เป็น !== true
+    filters.isActive !== true ||
     categoryFilters.category1 || 
     categoryFilters.category2 || 
     categoryFilters.category3;
 
   const handleReset = () => {
-    onFilterChange({ isActive: true }); // Reset เป็น true แทน null
+    onFilterChange({ isActive: true });
     onCategoryFilterChange({});
   };
 
   const handleCategoryChange = (categoryIndex: number, value: string) => {
-    const key = `category${categoryIndex}`;
+    const key = `category${categoryIndex}` as keyof CategoryFiltersState;
     onCategoryFilterChange({
       ...categoryFilters,
       [key]: value === 'all' ? undefined : value,
@@ -64,7 +67,7 @@ export default function ProductsFilters({
         <span>กรองข้อมูล:</span>
       </div>
 
-      {/* Status Filter - แสดงหัวข้อ "สถานะ:" และ default เป็น "ใช้งาน" */}
+      {/* Status Filter */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-600">สถานะ:</span>
         <Select
@@ -86,7 +89,7 @@ export default function ProductsFilters({
         </Select>
       </div>
 
-      {/* Category 1 Filter - แสดงหัวข้อ */}
+      {/* Category 1 Filter */}
       {categories[0] && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">{categories[0].label}:</span>
@@ -109,7 +112,7 @@ export default function ProductsFilters({
         </div>
       )}
 
-      {/* Category 2 Filter - แสดงหัวข้อ */}
+      {/* Category 2 Filter */}
       {categories[1] && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">{categories[1].label}:</span>
@@ -132,7 +135,7 @@ export default function ProductsFilters({
         </div>
       )}
 
-      {/* Category 3 Filter - แสดงหัวข้อ */}
+      {/* Category 3 Filter */}
       {categories[2] && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">{categories[2].label}:</span>
@@ -168,7 +171,7 @@ export default function ProductsFilters({
         </Button>
       )}
 
-      {/* Save Changes Button - แสดงเมื่อมีการเปลี่ยนแปลงสถานะที่ยังไม่บันทึก */}
+      {/* Save Changes Button */}
       {hasPendingChanges && onSaveStatusChanges && (
         <div className="ml-auto flex items-center gap-2">
           <Button

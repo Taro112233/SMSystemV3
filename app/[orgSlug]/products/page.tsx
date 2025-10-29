@@ -8,6 +8,21 @@ import { useParams, useRouter } from 'next/navigation';
 import ProductsManagement from '@/components/ProductsManagement';
 import { Loader2, AlertCircle } from 'lucide-react';
 
+interface UserData {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+}
+
+interface OrganizationData {
+  id: string;
+  name: string;
+  slug: string;
+  userRole: string;
+}
+
 export default function ProductsPage() {
   const params = useParams();
   const router = useRouter();
@@ -15,8 +30,8 @@ export default function ProductsPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
-  const [organizationData, setOrganizationData] = useState<any>(null);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [organizationData, setOrganizationData] = useState<OrganizationData | null>(null);
 
   useEffect(() => {
     const loadPageData = async () => {
@@ -24,7 +39,6 @@ export default function ProductsPage() {
         setLoading(true);
         setError(null);
 
-        // ✅ Direct API call to validate access
         console.log('🔍 Fetching user data from /api/auth/me...');
         const response = await fetch(`/api/auth/me?orgSlug=${orgSlug}`);
 
@@ -39,7 +53,6 @@ export default function ProductsPage() {
         const data = await response.json();
         console.log('✅ API Response:', data);
 
-        // Check organization access
         if (!data.data.currentOrganization || data.data.currentOrganization.slug !== orgSlug) {
           setError('No access to this organization');
           return;
@@ -48,15 +61,14 @@ export default function ProductsPage() {
         setUser(data.data.user);
         setOrganizationData(data.data.currentOrganization);
 
-        // ✅ Debug: แสดง role ที่ได้จาก API
         console.log('🔍 Organization Data:', {
           organizationName: data.data.currentOrganization.name,
           userRole: data.data.currentOrganization.userRole,
           permissions: data.data.permissions,
         });
-      } catch (error: any) {
-        console.error('❌ Error loading page data:', error);
-        setError(error.message || 'Failed to load page data');
+      } catch (err) {
+        console.error('❌ Error loading page data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load page data');
       } finally {
         setLoading(false);
       }
@@ -65,7 +77,6 @@ export default function ProductsPage() {
     loadPageData();
   }, [orgSlug, router]);
 
-  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -77,7 +88,6 @@ export default function ProductsPage() {
     );
   }
 
-  // Error state
   if (error || !user || !organizationData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -102,21 +112,16 @@ export default function ProductsPage() {
     );
   }
 
-  // ✅ Debug: แสดงค่าก่อนส่งไปยัง component
   console.log('🔍 Passing to ProductsManagement:', {
-    organizationId: organizationData.id,
     orgSlug: orgSlug,
     userRole: organizationData.userRole,
     userRoleType: typeof organizationData.userRole,
   });
 
-  // Main content - will be wrapped by layout.tsx
   return (
     <div className="space-y-6">
-      {/* ✅ Products Management Component - ตรวจสอบว่า userRole มีค่า */}
       {organizationData.userRole ? (
         <ProductsManagement
-          organizationId={organizationData.id}
           orgSlug={orgSlug}
           userRole={organizationData.userRole}
         />

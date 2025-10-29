@@ -1,11 +1,27 @@
 // app/api/[orgSlug]/products/route.ts
-// UPDATED: Support sorting by categories
+// UPDATED: Support sorting by categories + type-safe
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
+
+interface ProductAttribute {
+  categoryId: string;
+  optionId: string;
+}
+
+interface CreateProductRequest {
+  code: string;
+  name: string;
+  genericName?: string;
+  description?: string;
+  baseUnit: string;
+  isActive?: boolean;
+  attributes?: ProductAttribute[];
+}
 
 // ===== GET: List all products with attributes =====
 export async function GET(
@@ -44,7 +60,7 @@ export async function GET(
     const category3 = searchParams.get('category3');
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.ProductWhereInput = {
       organizationId: access.organizationId,
     };
 
@@ -66,15 +82,15 @@ export async function GET(
     if (category2) categoryFilters.push(category2);
     if (category3) categoryFilters.push(category3);
 
-    // ✅ Build orderBy (handle category sorting)
-    let orderBy: any = {};
+    // Build orderBy (handle category sorting)
+    let orderBy: Prisma.ProductOrderByWithRelationInput = {};
     
     // Check if sorting by category (category1, category2, category3)
     if (sortBy.startsWith('category')) {
       // Will sort in-memory after fetching
-      orderBy = { createdAt: sortOrder }; // Default sort for fetch
+      orderBy = { createdAt: sortOrder as 'asc' | 'desc' };
     } else {
-      orderBy[sortBy] = sortOrder;
+      orderBy = { [sortBy]: sortOrder as 'asc' | 'desc' };
     }
 
     // Fetch products with attributes
@@ -100,7 +116,7 @@ export async function GET(
       });
     }
 
-    // ✅ Sort by category if requested (in-memory)
+    // Sort by category if requested (in-memory)
     if (sortBy.startsWith('category')) {
       const categoryIndex = parseInt(sortBy.replace('category', '')) - 1;
       
@@ -130,12 +146,11 @@ export async function GET(
   }
 }
 
-// ===== POST: Create new product (keep unchanged) =====
+// ===== POST: Create new product =====
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
 ) {
-  // ... (keep existing POST code unchanged)
   try {
     const { orgSlug } = await params;
 
@@ -171,7 +186,7 @@ export async function POST(
       );
     }
 
-    const body = await request.json();
+    const body: CreateProductRequest = await request.json();
     const {
       code,
       name,
@@ -228,7 +243,7 @@ export async function POST(
       // Create attributes if provided
       if (attributes.length > 0) {
         await tx.productAttribute.createMany({
-          data: attributes.map((attr: any) => ({
+          data: attributes.map((attr) => ({
             productId: newProduct.id,
             categoryId: attr.categoryId,
             optionId: attr.optionId,

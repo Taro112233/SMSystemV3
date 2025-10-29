@@ -115,7 +115,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { key, label, description, options, displayOrder, isRequired, isActive } = body;
+    const { key, label, options } = body;
 
     if (!label) {
       return NextResponse.json(
@@ -157,22 +157,15 @@ export async function PATCH(
     }
 
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
-    const displayOrderInt = displayOrder !== undefined 
-      ? (typeof displayOrder === 'string' ? parseInt(displayOrder, 10) : displayOrder)
-      : existingCategory.displayOrder;
 
     // ✅ SAFE UPDATE: Update category and options
     const updatedCategory = await prisma.$transaction(async (tx) => {
-      // Update category basic info
-      const updated = await tx.productAttributeCategory.update({
+      // Update category basic info (only key and label)
+      await tx.productAttributeCategory.update({
         where: { id: categoryId },
         data: {
           key: key || existingCategory.key,
           label,
-          description: description ?? existingCategory.description,
-          displayOrder: displayOrderInt,
-          isRequired: isRequired ?? existingCategory.isRequired,
-          isActive: isActive ?? existingCategory.isActive,
           updatedBy: user.userId,
           updatedBySnapshot: userSnapshot,
         },

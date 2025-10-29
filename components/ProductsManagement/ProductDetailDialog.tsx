@@ -16,7 +16,6 @@ import { Package, Info } from 'lucide-react';
 import ProductInfoTab from './ProductDetailDialog/ProductInfoTab';
 import StockSummaryTab from './ProductDetailDialog/StockSummaryTab';
 
-// ✅ NEW: Add ProductUnit interface
 interface ProductUnit {
   id: string;
   name: string;
@@ -24,21 +23,37 @@ interface ProductUnit {
   isActive: boolean;
 }
 
+interface ProductAttribute {
+  categoryId: string;
+  optionId: string;
+}
+
+interface Product {
+  id: string;
+  code: string;
+  name: string;
+  genericName?: string;
+  description?: string;
+  baseUnit: string;
+  isActive: boolean;
+  attributes?: ProductAttribute[];
+}
+
 interface ProductDetailDialogProps {
-  product: any | null;
+  product: Product | null;
   categories: CategoryWithOptions[];
-  productUnits: ProductUnit[]; // ✅ NEW: Add productUnits prop
+  productUnits: ProductUnit[];
   orgSlug: string;
   canManage: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEditClick: (product: any) => void;
+  onEditClick: (product: Product) => void;
 }
 
 export default function ProductDetailDialog({
   product,
   categories,
-  productUnits, // ✅ NEW: Receive productUnits
+  productUnits,
   orgSlug,
   canManage,
   open,
@@ -47,7 +62,7 @@ export default function ProductDetailDialog({
 }: ProductDetailDialogProps) {
   const [activeTab, setActiveTab] = useState('stock');
 
-  const handleSaveComplete = (updatedProduct: any) => {
+  const handleSaveComplete = (updatedProduct: Product) => {
     onEditClick(updatedProduct);
     onOpenChange(false);
   };
@@ -79,19 +94,16 @@ export default function ProductDetailDialog({
           {/* Stock Summary Tab */}
           <TabsContent value="stock">
             <StockSummaryTab
-              productId={product.id}
-              productName={product.name}
               baseUnit={product.baseUnit}
-              orgSlug={orgSlug}
             />
           </TabsContent>
 
-          {/* Product Info Tab - ✅ UPDATED: Pass productUnits */}
+          {/* Product Info Tab */}
           <TabsContent value="info">
             <ProductInfoTab
               product={product}
               categories={categories}
-              productUnits={productUnits} // ✅ NEW: Pass preloaded units
+              productUnits={productUnits}
               orgSlug={orgSlug}
               canManage={canManage}
               onSaveComplete={handleSaveComplete}

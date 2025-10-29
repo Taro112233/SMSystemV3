@@ -33,22 +33,16 @@ interface DepartmentStock {
 }
 
 interface StockSummaryTabProps {
-  productId: string;
-  productName: string;
   baseUnit: string;  // เช่น "เม็ด"
   productUnit?: string;  // เช่น "กล่อง", "แผง"
   conversionRatio?: number;  // เช่น 1 กล่อง = 10 เม็ด
-  orgSlug: string;
   isLoading?: boolean;
 }
 
 export default function StockSummaryTab({
-  productId,
-  productName,
   baseUnit,
   productUnit = baseUnit,
   conversionRatio = 1,
-  orgSlug,
   isLoading = false,
 }: StockSummaryTabProps) {
   // TODO: Replace with real API call

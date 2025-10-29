@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/products/[id]/route.ts
-// UPDATED: Fix params await + role check
+// UPDATED: Fix params await + role check + type-safe
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -7,13 +7,37 @@ import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
 
+interface ProductAttribute {
+  categoryId: string;
+  optionId: string;
+}
+
+interface UpdateProductRequest {
+  code?: string;
+  name?: string;
+  genericName?: string;
+  description?: string;
+  baseUnit?: string;
+  isActive?: boolean;
+  attributes?: ProductAttribute[];
+}
+
+interface ProductChanges {
+  code?: { from: string; to: string };
+  name?: { from: string; to: string };
+  genericName?: { from: string | null; to: string | null };
+  baseUnit?: { from: string; to: string };
+  isActive?: { from: boolean; to: boolean };
+  attributes?: { from: number; to: number };
+}
+
 // ===== GET: Get single product =====
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string; id: string }> }
 ) {
   try {
-    const { orgSlug, id } = await params; // ✅ แก้ไข
+    const { orgSlug, id } = await params;
 
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -72,7 +96,7 @@ export async function PATCH(
   { params }: { params: Promise<{ orgSlug: string; id: string }> }
 ) {
   try {
-    const { orgSlug, id } = await params; // ✅ แก้ไข
+    const { orgSlug, id } = await params;
 
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -90,7 +114,6 @@ export async function PATCH(
       );
     }
 
-    // ✅ แก้ไข: ใช้ access.role
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { 
@@ -123,7 +146,7 @@ export async function PATCH(
       );
     }
 
-    const body = await request.json();
+    const body: UpdateProductRequest = await request.json();
     const {
       code,
       name,
@@ -156,7 +179,7 @@ export async function PATCH(
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
 
     // Track changes for audit
-    const changes: any = {};
+    const changes: ProductChanges = {};
     if (code && code !== existingProduct.code) changes.code = { from: existingProduct.code, to: code };
     if (name && name !== existingProduct.name) changes.name = { from: existingProduct.name, to: name };
     if (genericName !== undefined && genericName !== existingProduct.genericName) {
@@ -196,7 +219,7 @@ export async function PATCH(
         // Create new attributes
         if (attributes.length > 0) {
           await tx.productAttribute.createMany({
-            data: attributes.map((attr: any) => ({
+            data: attributes.map((attr) => ({
               productId: id,
               categoryId: attr.categoryId,
               optionId: attr.optionId,
@@ -231,7 +254,7 @@ export async function PATCH(
         payload: {
           productCode: updatedProduct.code,
           productName: updatedProduct.name,
-          changes,
+          changes: JSON.parse(JSON.stringify(changes)),
         },
         ipAddress,
         userAgent,
@@ -270,7 +293,7 @@ export async function PUT(
   { params }: { params: Promise<{ orgSlug: string; id: string }> }
 ) {
   try {
-    const { orgSlug, id } = await params; // ✅ แก้ไข
+    const { orgSlug, id } = await params;
 
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -288,7 +311,6 @@ export async function PUT(
       );
     }
 
-    // ✅ แก้ไข: ใช้ access.role
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { 
@@ -379,7 +401,7 @@ export async function DELETE(
   { params }: { params: Promise<{ orgSlug: string; id: string }> }
 ) {
   try {
-    const { orgSlug, id } = await params; // ✅ แก้ไข
+    const { orgSlug, id } = await params;
 
     const user = getUserFromHeaders(request.headers);
     if (!user) {
@@ -397,7 +419,6 @@ export async function DELETE(
       );
     }
 
-    // ✅ แก้ไข: ใช้ access.role
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { 

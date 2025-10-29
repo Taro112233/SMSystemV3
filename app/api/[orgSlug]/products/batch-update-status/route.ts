@@ -1,11 +1,11 @@
 // app/api/[orgSlug]/products/batch-update-status/route.ts
 // Batch update product status API endpoint
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
-import { prisma } from '@/lib/prisma';
-import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
-import { createUserSnapshot } from '@/lib/user-snapshot';
+import { NextRequest, NextResponse } from "next/server";
+import { getUserFromHeaders, getUserOrgRole } from "@/lib/auth-server";
+import { prisma } from "@/lib/prisma";
+import { createAuditLog, getRequestMetadata } from "@/lib/audit-logger";
+import { createUserSnapshot } from "@/lib/user-snapshot";
 
 interface BatchUpdateRequest {
   updates: Array<{
@@ -24,7 +24,7 @@ export async function PUT(
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: "Authentication required" },
         { status: 401 }
       );
     }
@@ -32,15 +32,15 @@ export async function PUT(
     const access = await getUserOrgRole(user.userId, orgSlug);
     if (!access) {
       return NextResponse.json(
-        { error: 'No access to organization' },
+        { error: "No access to organization" },
         { status: 403 }
       );
     }
 
     // Check permissions - only ADMIN and OWNER can update product status
-    if (!access.role || !['ADMIN', 'OWNER'].includes(access.role)) {
+    if (!access.role || !["ADMIN", "OWNER"].includes(access.role)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions' },
+        { error: "Insufficient permissions" },
         { status: 403 }
       );
     }
@@ -50,13 +50,13 @@ export async function PUT(
 
     if (!updates || !Array.isArray(updates) || updates.length === 0) {
       return NextResponse.json(
-        { error: 'No updates provided' },
+        { error: "No updates provided" },
         { status: 400 }
       );
     }
 
     // Validate all product IDs belong to the organization
-    const productIds = updates.map(update => update.productId);
+    const productIds = updates.map((update) => update.productId);
     const existingProducts = await prisma.product.findMany({
       where: {
         id: { in: productIds },
@@ -67,18 +67,23 @@ export async function PUT(
 
     if (existingProducts.length !== productIds.length) {
       return NextResponse.json(
-        { error: 'Some products not found or access denied' },
+        { error: "Some products not found or access denied" },
         { status: 404 }
       );
     }
 
     // Create user snapshot for audit
-    const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
+    const userSnapshot = await createUserSnapshot(
+      user.userId,
+      access.organizationId
+    );
 
     // Perform batch update
     const updateResults = await Promise.all(
       updates.map(async (update) => {
-        const existingProduct = existingProducts.find(p => p.id === update.productId);
+        const existingProduct = existingProducts.find(
+          (p) => p.id === update.productId
+        );
         if (!existingProduct) return null;
 
         // Skip if no change needed
@@ -87,7 +92,7 @@ export async function PUT(
         }
 
         // Update the product
-        const updatedProduct = await prisma.product.update({
+        await prisma.product.update({
           where: { id: update.productId },
           data: {
             isActive: update.isActive,
@@ -108,8 +113,10 @@ export async function PUT(
     );
 
     // Filter out null results and create audit logs
-    const successfulUpdates = updateResults.filter(result => result && result.updated);
-    
+    const successfulUpdates = updateResults.filter(
+      (result) => result && result.updated
+    );
+
     // Get request metadata for audit
     const { ipAddress, userAgent } = getRequestMetadata(request);
 
@@ -117,17 +124,19 @@ export async function PUT(
     await Promise.all(
       successfulUpdates.map(async (result) => {
         if (!result) return;
-        
+
         await createAuditLog({
           organizationId: access.organizationId,
           userId: user.userId,
           userSnapshot,
-          action: 'products.status_change',
-          category: 'PRODUCT',
-          severity: 'INFO',
-          description: `${result.newStatus ? 'เปิด' : 'ปิด'}ใช้งานสินค้า ${result.productName} (${result.productCode})`,
+          action: "products.status_change",
+          category: "PRODUCT",
+          severity: "INFO",
+          description: `${result.newStatus ? "เปิด" : "ปิด"}ใช้งานสินค้า ${
+            result.productName
+          } (${result.productCode})`,
           resourceId: result.productId,
-          resourceType: 'Product',
+          resourceType: "Product",
           payload: {
             productCode: result.productCode,
             productName: result.productName,
@@ -146,14 +155,14 @@ export async function PUT(
       organizationId: access.organizationId,
       userId: user.userId,
       userSnapshot,
-      action: 'products.batch_status_update',
-      category: 'PRODUCT',
-      severity: 'INFO',
+      action: "products.batch_status_update",
+      category: "PRODUCT",
+      severity: "INFO",
       description: `อัปเดตสถานะสินค้าจำนวน ${successfulUpdates.length} รายการ`,
       payload: {
         totalRequested: updates.length,
         totalUpdated: successfulUpdates.length,
-        totalSkipped: updateResults.filter(r => r && r.skipped).length,
+        totalSkipped: updateResults.filter((r) => r && r.skipped).length,
       },
       ipAddress,
       userAgent,
@@ -164,15 +173,14 @@ export async function PUT(
       data: {
         totalRequested: updates.length,
         totalUpdated: successfulUpdates.length,
-        totalSkipped: updateResults.filter(r => r && r.skipped).length,
+        totalSkipped: updateResults.filter((r) => r && r.skipped).length,
         updates: successfulUpdates,
       },
     });
-
   } catch (error) {
-    console.error('Error in batch update status:', error);
+    console.error("Error in batch update status:", error);
     return NextResponse.json(
-      { error: 'Failed to update product status' },
+      { error: "Failed to update product status" },
       { status: 500 }
     );
   }

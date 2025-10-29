@@ -24,12 +24,27 @@ import { toast } from 'sonner';
 
 const EMPTY_SELECTION_VALUE = "none";
 
+interface ProductAttribute {
+  categoryId: string;
+  optionId: string;
+}
+
+interface Product {
+  id: string;
+  code: string;
+  name: string;
+  genericName?: string;
+  description?: string;
+  baseUnit: string;
+  isActive: boolean;
+  attributes?: ProductAttribute[];
+}
+
 interface ProductFormProps {
-  organizationId: string;
   orgSlug: string;
   categories: CategoryWithOptions[];
   productUnits: ProductUnit[];
-  product: any | null;
+  product: Product | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -45,7 +60,6 @@ interface FormData {
 }
 
 export default function ProductForm({
-  organizationId,
   orgSlug,
   categories,
   productUnits,
@@ -69,7 +83,7 @@ export default function ProductForm({
   useEffect(() => {
     if (product) {
       const attributesMap: { [categoryId: string]: string } = {};
-      product.attributes?.forEach((attr: any) => {
+      product.attributes?.forEach((attr) => {
         attributesMap[attr.categoryId] = attr.optionId;
       });
 
@@ -118,7 +132,7 @@ export default function ProductForm({
       const method = product ? 'PATCH' : 'POST';
 
       const attributesArray = Object.entries(formData.attributes)
-        .filter(([_, optionId]) => optionId && optionId !== EMPTY_SELECTION_VALUE)
+        .filter(([, optionId]) => optionId && optionId !== EMPTY_SELECTION_VALUE)
         .map(([categoryId, optionId]) => ({ categoryId, optionId }));
 
       const response = await fetch(url, {
@@ -139,17 +153,18 @@ export default function ProductForm({
       }
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'ไม่สามารถบันทึกข้อมูลได้';
       console.error('Error saving product:', error);
       toast.error('เกิดข้อผิดพลาด', {
-        description: error.message || 'ไม่สามารถบันทึกข้อมูลได้',
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (field: keyof FormData, value: any) => {
+  const handleChange = (field: keyof FormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

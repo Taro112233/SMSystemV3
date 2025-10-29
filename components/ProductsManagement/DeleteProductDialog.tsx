@@ -4,7 +4,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Product } from '@prisma/client';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -17,8 +16,14 @@ import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface Product {
+  id: string;
+  code: string;
+  name: string;
+}
+
 interface DeleteProductDialogProps {
-  product: any | null;
+  product: Product | null;
   orgSlug: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -51,10 +56,11 @@ export default function DeleteProductDialog({
       }
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'ไม่สามารถลบสินค้าได้';
       console.error('Error deleting product:', error);
       toast.error('เกิดข้อผิดพลาด', {
-        description: error.message || 'ไม่สามารถลบสินค้าได้',
+        description: errorMessage,
       });
     } finally {
       setLoading(false);

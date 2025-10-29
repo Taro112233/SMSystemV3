@@ -1,10 +1,9 @@
 // components/ProductsManagement/ProductsHeader.tsx
 // ProductsHeader - Header with search and create button
-// ✅ FIXED: Prevent infinite API calls by using useCallback
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react'; // ✅ Import useCallback
+import { useState, useEffect } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,9 +23,8 @@ export default function ProductsHeader({
 }: ProductsHeaderProps) {
   const [localSearch, setLocalSearch] = useState(searchValue);
 
-  // ✅ FIX: Debounce with proper dependency
+  // Debounce search input
   useEffect(() => {
-    // Don't trigger on initial mount if search is empty
     if (localSearch === searchValue) return;
 
     const timer = setTimeout(() => {
@@ -34,7 +32,7 @@ export default function ProductsHeader({
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [localSearch]); // ✅ CRITICAL: Remove onSearchChange from dependencies
+  }, [localSearch, onSearchChange, searchValue]);
 
   // Sync with parent if searchValue changes externally
   useEffect(() => {

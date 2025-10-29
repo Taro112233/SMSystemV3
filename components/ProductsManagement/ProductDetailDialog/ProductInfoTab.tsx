@@ -40,6 +40,22 @@ interface CategoryWithOptions {
   }[];
 }
 
+interface ProductAttribute {
+  categoryId: string;
+  optionId: string;
+}
+
+interface Product {
+  id: string;
+  code: string;
+  name: string;
+  genericName?: string;
+  description?: string;
+  baseUnit: string;
+  isActive: boolean;
+  attributes?: ProductAttribute[];
+}
+
 interface FormData {
   code: string;
   name: string;
@@ -51,25 +67,23 @@ interface FormData {
 }
 
 interface ProductInfoTabProps {
-  product: any;
+  product: Product;
   categories: CategoryWithOptions[];
-  productUnits: ProductUnit[]; // ✅ NEW: Receive preloaded units
+  productUnits: ProductUnit[];
   orgSlug: string;
   canManage: boolean;
-  onSaveComplete: (updatedProduct: any) => void;
+  onSaveComplete: (updatedProduct: Product) => void;
 }
 
 export default function ProductInfoTab({
   product,
   categories,
-  productUnits, // ✅ NEW: Use preloaded units
+  productUnits,
   orgSlug,
   canManage,
   onSaveComplete,
 }: ProductInfoTabProps) {
   const [loading, setLoading] = useState(false);
-  // ✅ REMOVED: unitsLoading state - no longer needed
-  // ✅ REMOVED: productUnits state - now comes from props
   const [formData, setFormData] = useState<FormData>({
     code: '',
     name: '',
@@ -80,13 +94,11 @@ export default function ProductInfoTab({
     attributes: {},
   });
 
-  // ✅ REMOVED: Fetch product units useEffect - no longer needed
-
   // Load product data into form
   useEffect(() => {
     if (product) {
       const attributesMap: { [categoryId: string]: string } = {};
-      product.attributes?.forEach((attr: any) => {
+      product.attributes?.forEach((attr) => {
         attributesMap[attr.categoryId] = attr.optionId;
       });
 
@@ -102,7 +114,7 @@ export default function ProductInfoTab({
     }
   }, [product]);
 
-  const handleChange = (field: keyof FormData, value: any) => {
+  const handleChange = (field: keyof FormData, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -144,7 +156,7 @@ export default function ProductInfoTab({
     try {
       // Convert attributes map to array
       const attributesArray = Object.entries(formData.attributes)
-        .filter(([_, optionId]) => optionId)
+        .filter(([, optionId]) => optionId)
         .map(([categoryId, optionId]) => ({ categoryId, optionId }));
 
       const response = await fetch(`/api/${orgSlug}/products/${product.id}`, {
@@ -169,10 +181,11 @@ export default function ProductInfoTab({
       });
 
       onSaveComplete(data.product);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'ไม่สามารถบันทึกข้อมูลได้';
       console.error('Error saving product:', error);
       toast.error('เกิดข้อผิดพลาด', {
-        description: error.message || 'ไม่สามารถบันทึกข้อมูลได้',
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -219,7 +232,7 @@ export default function ProductInfoTab({
             />
           </div>
 
-          {/* Base Unit - ✅ UPDATED: Remove loading state, simplify logic */}
+          {/* Base Unit */}
           <div className="space-y-2">
             <Label htmlFor="baseUnit">
               หน่วยนับ <span className="text-red-500">*</span>
@@ -376,7 +389,7 @@ export default function ProductInfoTab({
         </div>
       )}
 
-      {/* Save Button - Show only when user can manage - ✅ UPDATED: Remove unitsLoading */}
+      {/* Save Button - Show only when user can manage */}
       {canManage && (
         <div className="flex justify-end pt-4 border-t">
           <Button

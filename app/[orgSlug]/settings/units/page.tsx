@@ -10,12 +10,23 @@ import { toast } from 'sonner';
 import { ProductUnitSettings } from '@/components/SettingsManagement/ProductUnitSettings';
 import type { ProductUnit, UnitFormData } from '@/types/product-unit';
 
+interface OrganizationData {
+  currentOrganization: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  permissions: {
+    currentRole: 'MEMBER' | 'ADMIN' | 'OWNER';
+  };
+}
+
 export default function ProductUnitsSettingsPage() {
   const params = useParams();
   const orgSlug = params.orgSlug as string;
 
   const [units, setUnits] = useState<ProductUnit[]>([]);
-  const [organizationData, setOrganizationData] = useState<any>(null);
+  const [organizationData, setOrganizationData] = useState<OrganizationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load organization data and units
@@ -164,7 +175,7 @@ export default function ProductUnitsSettingsPage() {
     );
   }
 
-  const userRole = organizationData.permissions.currentRole as 'MEMBER' | 'ADMIN' | 'OWNER';
+  const userRole = organizationData.permissions.currentRole;
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
