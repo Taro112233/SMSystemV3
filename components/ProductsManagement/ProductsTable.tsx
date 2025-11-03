@@ -7,6 +7,7 @@
 import { ProductFilters, SortableProductField, SortOrder } from '@/lib/product-helpers';
 import { CategoryWithOptions } from '@/lib/category-helpers';
 import { ProductUnit } from '@/types/product-unit';
+import { ProductData, CategoryFiltersState } from '@/types/product';
 import ProductsTableHeader from './ProductsTableHeader';
 import ProductsTableRow from './ProductsTableRow';
 import ProductsFilters from './ProductsFilters';
@@ -14,38 +15,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Loader2 } from 'lucide-react';
 
-interface ProductAttribute {
-  categoryId: string;
-  optionId: string;
-  option: {
-    label: string | null;
-    value: string;
-  };
-}
-
-interface ProductData {
-  id: string;
-  code: string;
-  name: string;
-  genericName?: string | null;
-  baseUnit: string;
-  isActive: boolean;
-  attributes?: ProductAttribute[];
-}
-
-interface CategoryFilter {
-  [categoryId: string]: string;
-}
-
 interface ProductsTableProps {
   products: ProductData[];
   categories: CategoryWithOptions[];
   productUnits: ProductUnit[];
   loading: boolean;
   filters: ProductFilters;
-  categoryFilters: CategoryFilter;
+  categoryFilters: CategoryFiltersState;
   onFilterChange: (filters: Partial<ProductFilters>) => void;
-  onCategoryFilterChange: (filters: CategoryFilter) => void;
+  onCategoryFilterChange: (filters: CategoryFiltersState) => void;
   onEditClick: (product: ProductData) => void;
   onViewClick: (product: ProductData) => void;
   onDeleteClick: (product: ProductData) => void;
@@ -82,23 +60,23 @@ export default function ProductsTable({
   };
 
   const top3Categories = categories.slice(0, 3);
+  const hasPendingChanges = pendingStatusChanges && pendingStatusChanges.size > 0;
 
   return (
     <Card className="w-full">
       <CardContent className="p-6">
-        {/* Filters */}
+        {/* Filters - ✅ FIXED: Remove pendingStatusChanges prop */}
         <ProductsFilters
           filters={filters}
           categoryFilters={categoryFilters}
           categories={top3Categories}
           onFilterChange={onFilterChange}
           onCategoryFilterChange={onCategoryFilterChange}
-          pendingStatusChanges={pendingStatusChanges}
           onSaveStatusChanges={onSaveStatusChanges}
-          hasPendingChanges={!!pendingStatusChanges && pendingStatusChanges.size > 0}
+          hasPendingChanges={hasPendingChanges}
         />
 
-        {/* ✅ CRITICAL FIX: Proper ScrollArea implementation */}
+        {/* Table */}
         <div className="mt-4 -mx-6">
           <ScrollArea className="w-full whitespace-nowrap">
             <div className="px-6">

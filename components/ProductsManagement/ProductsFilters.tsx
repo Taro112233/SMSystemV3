@@ -5,6 +5,7 @@
 
 import { ProductFilters } from '@/lib/product-helpers';
 import { CategoryWithOptions } from '@/lib/category-helpers';
+import { CategoryFiltersState } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -14,12 +15,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Filter, X, Save } from 'lucide-react';
-
-interface CategoryFiltersState {
-  category1?: string;
-  category2?: string;
-  category3?: string;
-}
 
 interface ProductsFiltersProps {
   filters: ProductFilters;
@@ -61,13 +56,11 @@ export default function ProductsFilters({
 
   return (
     <div className="flex items-center gap-3 pb-4 border-b border-gray-200 flex-wrap">
-      {/* Filter Icon */}
       <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <Filter className="h-4 w-4" />
         <span>กรองข้อมูล:</span>
       </div>
 
-      {/* Status Filter */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-600">สถานะ:</span>
         <Select
@@ -89,7 +82,6 @@ export default function ProductsFilters({
         </Select>
       </div>
 
-      {/* Category 1 Filter */}
       {categories[0] && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">{categories[0].label}:</span>
@@ -112,7 +104,6 @@ export default function ProductsFilters({
         </div>
       )}
 
-      {/* Category 2 Filter */}
       {categories[1] && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">{categories[1].label}:</span>
@@ -135,7 +126,6 @@ export default function ProductsFilters({
         </div>
       )}
 
-      {/* Category 3 Filter */}
       {categories[2] && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">{categories[2].label}:</span>
@@ -158,7 +148,6 @@ export default function ProductsFilters({
         </div>
       )}
 
-      {/* Reset Button */}
       {hasActiveFilters && (
         <Button
           variant="ghost"
@@ -171,7 +160,6 @@ export default function ProductsFilters({
         </Button>
       )}
 
-      {/* Save Changes Button */}
       {hasPendingChanges && onSaveStatusChanges && (
         <div className="ml-auto flex items-center gap-2">
           <Button

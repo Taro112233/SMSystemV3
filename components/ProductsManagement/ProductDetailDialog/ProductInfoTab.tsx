@@ -4,6 +4,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ProductData } from '@/types/product'; // ✅ Import centralized type
+import { CategoryWithOptions } from '@/lib/category-helpers';
+import { ProductUnit } from '@/types/product-unit';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,43 +22,6 @@ import {
 import { Loader2, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface ProductUnit {
-  id: string;
-  name: string;
-  conversionRatio: number;
-  isActive: boolean;
-}
-
-interface CategoryWithOptions {
-  id: string;
-  key: string;
-  label: string;
-  displayOrder: number;
-  isRequired: boolean;
-  options: {
-    id: string;
-    value: string;
-    label: string | null;
-    sortOrder: number;
-  }[];
-}
-
-interface ProductAttribute {
-  categoryId: string;
-  optionId: string;
-}
-
-interface Product {
-  id: string;
-  code: string;
-  name: string;
-  genericName?: string;
-  description?: string;
-  baseUnit: string;
-  isActive: boolean;
-  attributes?: ProductAttribute[];
-}
-
 interface FormData {
   code: string;
   name: string;
@@ -67,12 +33,12 @@ interface FormData {
 }
 
 interface ProductInfoTabProps {
-  product: Product;
+  product: ProductData; // ✅ Changed from Product to ProductData
   categories: CategoryWithOptions[];
   productUnits: ProductUnit[];
   orgSlug: string;
   canManage: boolean;
-  onSaveComplete: (updatedProduct: Product) => void;
+  onSaveComplete: (updatedProduct: ProductData) => void; // ✅ Changed from Product to ProductData
 }
 
 export default function ProductInfoTab({

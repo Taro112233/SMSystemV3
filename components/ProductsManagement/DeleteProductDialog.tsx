@@ -4,6 +4,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ProductData } from '@/types/product';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -16,14 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface Product {
-  id: string;
-  code: string;
-  name: string;
-}
-
 interface DeleteProductDialogProps {
-  product: Product | null;
+  product: ProductData | null;
   orgSlug: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;

@@ -5,6 +5,8 @@
 
 import { useState } from 'react';
 import { CategoryWithOptions } from '@/lib/category-helpers';
+import { ProductUnit } from '@/types/product-unit';
+import { ProductData } from '@/types/product';
 import {
   Dialog,
   DialogContent,
@@ -16,38 +18,15 @@ import { Package, Info } from 'lucide-react';
 import ProductInfoTab from './ProductDetailDialog/ProductInfoTab';
 import StockSummaryTab from './ProductDetailDialog/StockSummaryTab';
 
-interface ProductUnit {
-  id: string;
-  name: string;
-  conversionRatio: number;
-  isActive: boolean;
-}
-
-interface ProductAttribute {
-  categoryId: string;
-  optionId: string;
-}
-
-interface Product {
-  id: string;
-  code: string;
-  name: string;
-  genericName?: string;
-  description?: string;
-  baseUnit: string;
-  isActive: boolean;
-  attributes?: ProductAttribute[];
-}
-
 interface ProductDetailDialogProps {
-  product: Product | null;
+  product: ProductData | null;
   categories: CategoryWithOptions[];
   productUnits: ProductUnit[];
   orgSlug: string;
   canManage: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEditClick: (product: Product) => void;
+  onEditClick: (product: ProductData) => void;
 }
 
 export default function ProductDetailDialog({
@@ -62,7 +41,7 @@ export default function ProductDetailDialog({
 }: ProductDetailDialogProps) {
   const [activeTab, setActiveTab] = useState('stock');
 
-  const handleSaveComplete = (updatedProduct: Product) => {
+  const handleSaveComplete = (updatedProduct: ProductData) => {
     onEditClick(updatedProduct);
     onOpenChange(false);
   };
@@ -91,14 +70,12 @@ export default function ProductDetailDialog({
             </TabsTrigger>
           </TabsList>
 
-          {/* Stock Summary Tab */}
           <TabsContent value="stock">
             <StockSummaryTab
               baseUnit={product.baseUnit}
             />
           </TabsContent>
 
-          {/* Product Info Tab */}
           <TabsContent value="info">
             <ProductInfoTab
               product={product}

@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { CategoryWithOptions } from '@/lib/category-helpers';
 import { ProductUnit } from '@/types/product-unit';
+import { ProductData } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,27 +25,11 @@ import { toast } from 'sonner';
 
 const EMPTY_SELECTION_VALUE = "none";
 
-interface ProductAttribute {
-  categoryId: string;
-  optionId: string;
-}
-
-interface Product {
-  id: string;
-  code: string;
-  name: string;
-  genericName?: string;
-  description?: string;
-  baseUnit: string;
-  isActive: boolean;
-  attributes?: ProductAttribute[];
-}
-
 interface ProductFormProps {
   orgSlug: string;
   categories: CategoryWithOptions[];
   productUnits: ProductUnit[];
-  product: Product | null;
+  product: ProductData | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -79,7 +64,6 @@ export default function ProductForm({
     attributes: {},
   });
 
-  // Load existing product data
   useEffect(() => {
     if (product) {
       const attributesMap: { [categoryId: string]: string } = {};
@@ -102,7 +86,6 @@ export default function ProductForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (!formData.code || !formData.name || !formData.baseUnit) {
       toast.error('ข้อมูลไม่ครบถ้วน', {
         description: 'กรุณากรอกรหัสสินค้า ชื่อสินค้า และหน่วยนับ',
@@ -110,7 +93,6 @@ export default function ProductForm({
       return;
     }
 
-    // Check required categories
     const missingCategories = categories
       .filter(cat => cat.isRequired && !formData.attributes[cat.id])
       .map(cat => cat.label);
@@ -192,12 +174,10 @@ export default function ProductForm({
       </DialogHeader>
 
       <div className="space-y-4 mt-6">
-        {/* Basic Information Section */}
         <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
           <h3 className="font-medium text-gray-900">ข้อมูลพื้นฐาน</h3>
           
           <div className="grid grid-cols-2 gap-4">
-            {/* Code */}
             <div className="space-y-2">
               <Label htmlFor="code">
                 รหัสสินค้า <span className="text-red-500">*</span>
@@ -212,7 +192,6 @@ export default function ProductForm({
               />
             </div>
 
-            {/* ✅ UPDATED: Base Unit - แสดงอัตราส่วนเหมือน ProductInfoTab */}
             <div className="space-y-2">
               <Label htmlFor="baseUnit">
                 หน่วยนับ <span className="text-red-500">*</span>
@@ -247,7 +226,6 @@ export default function ProductForm({
             </div>
           </div>
 
-          {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="name">
               ชื่อสินค้า <span className="text-red-500">*</span>
@@ -262,7 +240,6 @@ export default function ProductForm({
             />
           </div>
 
-          {/* Generic Name */}
           <div className="space-y-2">
             <Label htmlFor="genericName">ชื่อสามัญ</Label>
             <Input
@@ -274,7 +251,6 @@ export default function ProductForm({
             />
           </div>
 
-          {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">รายละเอียด</Label>
             <Textarea
@@ -288,7 +264,6 @@ export default function ProductForm({
             />
           </div>
 
-          {/* Active Status */}
           <div className="flex items-center justify-between p-4 bg-white rounded-lg">
             <div className="space-y-1">
               <div className="font-medium">สถานะการใช้งาน</div>
@@ -305,7 +280,6 @@ export default function ProductForm({
           </div>
         </div>
 
-        {/* Category Attributes Section */}
         {categories.length > 0 && (
           <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
             <h3 className="font-medium text-gray-900">คุณสมบัติสินค้า</h3>
@@ -343,7 +317,6 @@ export default function ProductForm({
         )}
       </div>
 
-      {/* Actions */}
       <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t">
         <Button
           type="button"

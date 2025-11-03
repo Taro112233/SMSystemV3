@@ -1,11 +1,12 @@
 // components/ProductsManagement/ProductsTableRow.tsx
 // ProductsTableRow - Individual table row with category columns
-// ✅ UPDATED: Show base unit calculation below stock quantity
 
 'use client';
 
 import { getCategoryValue } from '@/lib/category-helpers';
 import { CategoryWithOptions } from '@/lib/category-helpers';
+import { ProductUnit } from '@/types/product-unit';
+import { ProductData } from '@/types/product';
 import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
@@ -13,32 +14,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-
-interface ProductUnit {
-  id: string;
-  name: string;
-  conversionRatio: number;
-  isActive: boolean;
-}
-
-interface ProductAttribute {
-  categoryId: string;
-  optionId: string;
-  option: {
-    label: string | null;
-    value: string;
-  };
-}
-
-interface ProductData {
-  id: string;
-  code: string;
-  name: string;
-  genericName?: string | null;
-  baseUnit: string;
-  isActive: boolean;
-  attributes?: ProductAttribute[];
-}
 
 interface ProductsTableRowProps {
   product: ProductData;
@@ -60,23 +35,19 @@ export default function ProductsTableRow({
   onToggleStatus,
   pendingStatusChanges,
 }: ProductsTableRowProps) {
-  // ✅ Mock data (replace with real data later)
-  const mockStockQuantity = Math.floor(Math.random() * 200) + 1; // 1-200 units
-  const mockUnitPrice = Math.floor(Math.random() * 500) + 50; // ราคาต่อหน่วย 50-550 บาท
+  const mockStockQuantity = Math.floor(Math.random() * 200) + 1;
+  const mockUnitPrice = Math.floor(Math.random() * 500) + 50;
 
-  // ✅ NEW: Calculate base unit quantity
   const currentUnit = productUnits.find(u => u.name === product.baseUnit);
   const conversionRatio = currentUnit?.conversionRatio || 1;
   const baseUnitQuantity = Math.round(mockStockQuantity * conversionRatio);
 
-  const mockTotalValue = baseUnitQuantity * mockUnitPrice; // ใช้ base unit คำนวณมูลค่า
+  const mockTotalValue = baseUnitQuantity * mockUnitPrice;
 
-  // Check pending status from Map
   const pendingStatusChange = pendingStatusChanges?.get(product.id);
   const currentStatus = pendingStatusChange !== undefined ? pendingStatusChange : product.isActive;
   const hasPendingChange = pendingStatusChange !== undefined;
 
-  // Helper: Truncate text with tooltip
   const TruncatedCell = ({ text, maxLength = 30 }: { text: string; maxLength?: number }) => {
     const shouldTruncate = text && text.length > maxLength;
 
@@ -105,14 +76,12 @@ export default function ProductsTableRow({
       className="hover:bg-gray-50 transition-colors cursor-pointer"
       onClick={() => onViewClick(product)}
     >
-      {/* รหัสสินค้า */}
       <td className="px-4 py-3">
         <div className="text-sm font-medium text-blue-600">
           {product.code}
         </div>
       </td>
 
-      {/* ชื่อสินค้า */}
       <td className="px-4 py-3">
         <div className="space-y-0.5">
           <TruncatedCell text={product.name} maxLength={40} />
@@ -124,7 +93,6 @@ export default function ProductsTableRow({
         </div>
       </td>
 
-      {/* Category Columns (Dynamic) */}
       {categories.map((category) => {
         const value = getCategoryValue(product.attributes || [], category.id);
         return (
@@ -134,7 +102,6 @@ export default function ProductsTableRow({
         );
       })}
 
-      {/* ✅ NEW: จำนวนคงเหลือ + หน่วยฐาน */}
       <td className="px-4 py-3">
         <div className="text-sm font-medium text-gray-900">
           {mockStockQuantity.toLocaleString('th-TH')} {product.baseUnit}
@@ -144,14 +111,12 @@ export default function ProductsTableRow({
         </div>
       </td>
 
-      {/* มูลค่า */}
       <td className="px-4 py-3">
         <div className="text-sm text-gray-900">
           ฿{mockTotalValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
       </td>
 
-      {/* สถานะ (Switch) */}
       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <Switch

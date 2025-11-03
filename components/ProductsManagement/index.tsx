@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CategoryWithOptions } from '@/lib/category-helpers';
 import { ProductUnit } from '@/types/product-unit';
+import { ProductData, CategoryFiltersState } from '@/types/product';
 import ProductsHeader from './ProductsHeader';
 import ProductDetailDialog from './ProductDetailDialog';
 import DeleteProductDialog from './DeleteProductDialog';
@@ -14,30 +15,6 @@ import { toast } from 'sonner';
 import { ProductFilters } from '@/lib/product-helpers';
 import ProductsTable from './ProductsTable';
 import ProductForm from './ProductForm';
-
-interface ProductAttribute {
-  categoryId: string;
-  optionId: string;
-}
-
-interface ProductData {
-  id: string;
-  code: string;
-  name: string;
-  genericName?: string;
-  description?: string;
-  baseUnit: string;
-  isActive: boolean;
-  attributes?: ProductAttribute[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface CategoryFiltersState {
-  category1?: string;
-  category2?: string;
-  category3?: string;
-}
 
 interface ProductsManagementProps {
   orgSlug: string;
@@ -169,19 +146,15 @@ export default function ProductsManagement({
     setIsFormOpen(true);
   };
 
-  const handleEditClick = (product: ProductData | null) => {
-    if (product) {
-      if (!canManage) {
-        toast.error('ไม่มีสิทธิ์', {
-          description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่แก้ไขได้',
-        });
-        return;
-      }
-      setSelectedProduct(product);
-      setIsFormOpen(true);
-    } else {
-      fetchProducts();
+  const handleEditClick = (product: ProductData) => {
+    if (!canManage) {
+      toast.error('ไม่มีสิทธิ์', {
+        description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่แก้ไขได้',
+      });
+      return;
     }
+    setSelectedProduct(product);
+    setIsFormOpen(true);
   };
 
   const handleViewClick = (product: ProductData) => {
@@ -281,6 +254,11 @@ export default function ProductsManagement({
     setCategoryFilters(filters);
   };
 
+  const handleFormClose = () => {
+    setIsFormOpen(false);
+    setSelectedProduct(null);
+  };
+
   return (
     <div className="space-y-6">
       <ProductsHeader
@@ -316,7 +294,7 @@ export default function ProductsManagement({
             productUnits={productUnits}
             product={selectedProduct}
             onSuccess={handleFormSuccess}
-            onCancel={() => setIsFormOpen(false)}
+            onCancel={handleFormClose}
           />
         </DialogContent>
       </Dialog>
