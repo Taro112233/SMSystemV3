@@ -272,4 +272,5 @@ Directory structure:
         ├── auth.d.ts
         ├── cookie.d.ts
         ├── product-category.ts
-        └── product-unit.ts
+        ├── product-unit.ts
+        └── product.ts
