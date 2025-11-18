@@ -2,6 +2,7 @@
 // DepartmentView/DepartmentActions - Department management action buttons
 
 import React from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -12,12 +13,18 @@ import {
 } from 'lucide-react';
 
 export const DepartmentActions = () => {
+  const params = useParams();
+  const router = useRouter();
+  
+  const orgSlug = params.orgSlug as string;
+  const deptSlug = params.deptSlug as string;
+
   const actionGroups = [
     {
       title: 'การจัดการสต็อก',
       icon: ClipboardList,
       actions: [
-        { icon: Eye, label: 'รายการสต็อกสินค้า', onClick: () => console.log('Stock inventory') },
+        { icon: Eye, label: 'รายการสต็อกสินค้า', onClick: () => router.push(`/${orgSlug}/${deptSlug}/stocks`) },
         { icon: Calendar, label: 'รายการสินค้าใกล้หมดอายุ', onClick: () => console.log('Expiring items') },
         { icon: Package, label: 'จัดการสต็อกการ์ด', onClick: () => console.log('Manage stock cards') }
       ]
