@@ -1,8 +1,9 @@
 // components/ProductsManagement/ProductDetailDialog/StockSummaryTab.tsx
-// StockSummaryTab - FIXED: Show base unit quantity instead of product unit quantity
+// StockSummaryTab - UPDATED: Fetch real data from API
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, AlertTriangle, Coins } from 'lucide-react';
@@ -15,126 +16,109 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { toast } from 'sonner';
 
 interface StockBatch {
   id: string;
   lotNumber: string;
-  quantity: number;  // จำนวนในหน่วยย่อย (base unit) เช่น เม็ด
-  expiryDate: string;
-  costPrice?: number;  // ราคาต่อ package (เช่น ฿150 ต่อกล่อง)
+  quantity: number;
+  availableQuantity: number;
+  reservedQuantity: number;
+  incomingQuantity: number;
+  expiryDate: Date | null;
+  manufactureDate: Date | null;
+  supplier: string | null;
+  costPrice: number | null;
+  sellingPrice: number | null;
+  location: string | null;
+  status: string;
 }
 
 interface DepartmentStock {
   departmentId: string;
   departmentName: string;
   departmentSlug: string;
+  totalQuantity: number;
+  availableQuantity: number;
   batches: StockBatch[];
-  totalQuantity: number;  // รวมจำนวนในหน่วยย่อย
 }
 
 interface StockSummaryTabProps {
-  baseUnit: string;  // เช่น "เม็ด"
-  productUnit?: string;  // เช่น "กล่อง", "แผง"
-  conversionRatio?: number;  // เช่น 1 กล่อง = 10 เม็ด
-  isLoading?: boolean;
+  productId: string;
+  orgSlug: string;
+  baseUnit: string;
 }
 
 export default function StockSummaryTab({
+  productId,
+  orgSlug,
   baseUnit,
-  productUnit = baseUnit,
-  conversionRatio = 1,
-  isLoading = false,
 }: StockSummaryTabProps) {
-  // TODO: Replace with real API call
-  const mockStockData: DepartmentStock[] = [
-    {
-      departmentId: 'dept-001',
-      departmentName: 'คลังยาหลัก',
-      departmentSlug: 'main-pharmacy',
-      totalQuantity: 800,  // 800 เม็ด
-      batches: [
-        {
-          id: 'batch-001',
-          lotNumber: 'LOT001',
-          quantity: 500,  // 500 เม็ด
-          expiryDate: '2025-12-31',
-          costPrice: 150,  // ฿150 ต่อกล่อง (1 กล่อง = 10 เม็ด)
-        },
-        {
-          id: 'batch-002',
-          lotNumber: 'LOT002',
-          quantity: 300,  // 300 เม็ด
-          expiryDate: '2026-03-15',
-          costPrice: 160,  // ฿160 ต่อกล่อง
-        },
-      ],
-    },
-    {
-      departmentId: 'dept-002',
-      departmentName: 'OPD',
-      departmentSlug: 'opd',
-      totalQuantity: 100,
-      batches: [
-        {
-          id: 'batch-003',
-          lotNumber: 'LOT001',
-          quantity: 100,
-          expiryDate: '2025-12-31',
-          costPrice: 150,
-        },
-      ],
-    },
-    {
-      departmentId: 'dept-003',
-      departmentName: 'IPD',
-      departmentSlug: 'ipd',
-      totalQuantity: 150,
-      batches: [
-        {
-          id: 'batch-004',
-          lotNumber: 'LOT002',
-          quantity: 150,
-          expiryDate: '2026-03-15',
-          costPrice: 160,
-        },
-      ],
-    },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [departmentStocks, setDepartmentStocks] = useState<DepartmentStock[]>([]);
+
+  useEffect(() => {
+    const fetchStocks = async () => {
+      try {
+        setLoading(true);
+
+        const response = await fetch(`/api/${orgSlug}/products/${productId}/stocks`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch stocks');
+        }
+
+        const data = await response.json();
+        setDepartmentStocks(data.data.departments || []);
+      } catch (error) {
+        console.error('Error fetching stocks:', error);
+        toast.error('เกิดข้อผิดพลาด', {
+          description: 'ไม่สามารถโหลดข้อมูลสต็อกได้',
+        });
+        setDepartmentStocks([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (productId && orgSlug) {
+      fetchStocks();
+    }
+  }, [productId, orgSlug]);
 
   const today = new Date();
   const ninetyDaysFromNow = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
 
-  // ✅ Calculate price per base unit (หน่วย)
-  // costPrice (per package) ÷ conversionRatio = price per base unit
-  // Example: ฿150 per กล่อง ÷ 10 = ฿15 per เม็ด
-  const calculatePricePerBaseUnit = (costPrice: number): number => {
-    return costPrice / conversionRatio;
-  };
-
-  // ✅ Calculate batch value
-  // Value = quantity (in base units) × (costPrice ÷ conversionRatio)
-  // Example: 500 เม็ด × ฿15 = ฿7,500
-  const calculateBatchValue = (quantity: number, costPrice: number): number => {
-    const pricePerBaseUnit = calculatePricePerBaseUnit(costPrice);
-    return quantity * pricePerBaseUnit;
+  const calculateBatchValue = (quantity: number, costPrice: number | null): number => {
+    if (!costPrice) return 0;
+    return quantity * costPrice;
   };
 
   // Calculate grand totals
-  const grandTotalQuantity = mockStockData.reduce((sum, dept) => sum + dept.totalQuantity, 0);
-  
-  const grandTotalValue = mockStockData.reduce(
+  const grandTotalQuantity = departmentStocks.reduce(
+    (sum, dept) => sum + dept.totalQuantity,
+    0
+  );
+
+  const grandTotalAvailable = departmentStocks.reduce(
+    (sum, dept) => sum + dept.availableQuantity,
+    0
+  );
+
+  const grandTotalValue = departmentStocks.reduce(
     (sum, dept) =>
       sum +
       dept.batches.reduce(
-        (batchSum, batch) => 
-          batchSum + calculateBatchValue(batch.quantity, batch.costPrice || 0),
+        (batchSum, batch) =>
+          batchSum + calculateBatchValue(batch.quantity, batch.costPrice),
         0
       ),
     0
   );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('th-TH', {
+  const formatDate = (date: Date | null) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('th-TH', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -148,19 +132,57 @@ export default function StockSummaryTab({
     }).format(amount);
   };
 
-  const checkExpiryStatus = (expiryDate: string) => {
+  const checkExpiryStatus = (expiryDate: Date | null) => {
+    if (!expiryDate) return { isExpired: false, isExpiringSoon: false };
+    
     const expiry = new Date(expiryDate);
     const isExpired = expiry < today;
     const isExpiringSoon = expiry <= ninetyDaysFromNow && expiry > today;
     return { isExpired, isExpiringSoon };
   };
 
-  if (isLoading) {
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      AVAILABLE: { label: 'พร้อมใช้', className: 'bg-green-100 text-green-800 border-green-200' },
+      RESERVED: { label: 'จองแล้ว', className: 'bg-orange-100 text-orange-800 border-orange-200' },
+      QUARANTINE: { label: 'กักกัน', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+      DAMAGED: { label: 'เสียหาย', className: 'bg-red-100 text-red-800 border-red-200' },
+      EXPIRED: { label: 'หมดอายุ', className: 'bg-gray-100 text-gray-800 border-gray-200' },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || {
+      label: status,
+      className: 'bg-gray-100 text-gray-800',
+    };
+
+    return (
+      <Badge variant="outline" className={config.className}>
+        {config.label}
+      </Badge>
+    );
+  };
+
+  if (loading) {
     return (
       <div className="space-y-4 mt-4">
-        <Skeleton className="h-32 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (departmentStocks.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+        <p className="text-gray-600 font-medium">ยังไม่มีสต็อกในระบบ</p>
+        <p className="text-sm text-gray-500 mt-1">
+          เริ่มต้นโดยการเพิ่มสินค้าเข้าสู่หน่วยงานต่าง ๆ
+        </p>
       </div>
     );
   }
@@ -182,7 +204,7 @@ export default function StockSummaryTab({
                   <span className="text-lg text-gray-600">{baseUnit}</span>
                 </div>
                 <p className="text-sm text-gray-600">
-                  {mockStockData.length} หน่วยงาน
+                  {departmentStocks.length} หน่วยงาน • ใช้ได้ {grandTotalAvailable.toLocaleString('th-TH')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
@@ -204,7 +226,11 @@ export default function StockSummaryTab({
                   </span>
                 </div>
                 <p className="text-sm text-gray-600">
-                  ราคาเฉลี่ย ฿{formatCurrency(grandTotalQuantity > 0 ? grandTotalValue / grandTotalQuantity : 0)}/{baseUnit}
+                  ราคาเฉลี่ย ฿
+                  {formatCurrency(
+                    grandTotalQuantity > 0 ? grandTotalValue / grandTotalQuantity : 0
+                  )}
+                  /{baseUnit}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
@@ -216,19 +242,14 @@ export default function StockSummaryTab({
       </div>
 
       {/* Department Cards with Detailed Tables */}
-      {mockStockData.map((dept) => {
-        // Calculate department totals
+      {departmentStocks.map((dept) => {
         const deptTotalValue = dept.batches.reduce(
-          (sum, batch) => sum + calculateBatchValue(batch.quantity, batch.costPrice || 0),
+          (sum, batch) => sum + calculateBatchValue(batch.quantity, batch.costPrice),
           0
         );
 
-        // ✅ Calculate weighted average cost prices
-        const avgCostPerBaseUnit = dept.totalQuantity > 0 
-          ? deptTotalValue / dept.totalQuantity 
-          : 0;
-        
-        const avgCostPerProductUnit = avgCostPerBaseUnit * conversionRatio;
+        const avgCostPerBaseUnit =
+          dept.totalQuantity > 0 ? deptTotalValue / dept.totalQuantity : 0;
 
         return (
           <Card key={dept.departmentId} className="border-gray-200">
@@ -239,9 +260,14 @@ export default function StockSummaryTab({
                   <Package className="w-5 h-5 text-blue-600" />
                   <h4 className="font-semibold text-gray-900">{dept.departmentName}</h4>
                 </div>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                  {dept.batches.length} Lot
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    {dept.batches.length} Lot
+                  </Badge>
+                  <span className="text-sm text-gray-600">
+                    รวม {dept.totalQuantity.toLocaleString('th-TH')} {baseUnit}
+                  </span>
+                </div>
               </div>
 
               {/* Batch Table */}
@@ -250,63 +276,64 @@ export default function StockSummaryTab({
                   <TableRow className="bg-gray-50">
                     <TableHead className="w-[100px]">Lot</TableHead>
                     <TableHead className="w-[130px]">Exp</TableHead>
-                    <TableHead className="text-right w-[130px]">
-                      ราคาต่อ{productUnit}
-                    </TableHead>
-                    <TableHead className="text-right w-[130px]">
-                      ราคาต่อ{baseUnit}
-                    </TableHead>
-                    <TableHead className="text-right w-[130px]">
-                      คงเหลือ ({baseUnit})
-                    </TableHead>
-                    <TableHead className="text-right w-[140px]">มูลค่า</TableHead>
+                    <TableHead className="text-center w-[100px]">สถานะ</TableHead>
+                    <TableHead className="text-right w-[100px]">ราคาต่อ{baseUnit}</TableHead>
+                    <TableHead className="text-right w-[100px]">คงเหลือ</TableHead>
+                    <TableHead className="text-right w-[100px]">ใช้ได้</TableHead>
+                    <TableHead className="text-right w-[120px]">มูลค่า</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {dept.batches.map((batch) => {
                     const { isExpired, isExpiringSoon } = checkExpiryStatus(batch.expiryDate);
-                    const batchValue = calculateBatchValue(batch.quantity, batch.costPrice || 0);
-                    const pricePerBaseUnit = calculatePricePerBaseUnit(batch.costPrice || 0);
+                    const batchValue = calculateBatchValue(batch.quantity, batch.costPrice);
 
                     return (
                       <TableRow
                         key={batch.id}
-                        className={isExpired ? 'bg-red-50' : isExpiringSoon ? 'bg-amber-50' : ''}
+                        className={
+                          isExpired ? 'bg-red-50' : isExpiringSoon ? 'bg-amber-50' : ''
+                        }
                       >
                         <TableCell className="font-medium">{batch.lotNumber}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            <span
-                              className={
-                                isExpired
-                                  ? 'text-red-600 font-medium text-sm'
-                                  : isExpiringSoon
-                                  ? 'text-amber-600 font-medium text-sm'
-                                  : 'text-sm'
-                              }
-                            >
-                              {formatDate(batch.expiryDate)}
-                            </span>
-                            {isExpired && (
-                              <Badge variant="destructive" className="text-xs ml-1">
-                                หมดอายุ
-                              </Badge>
-                            )}
-                            {isExpiringSoon && !isExpired && (
-                              <AlertTriangle className="w-3 h-3 text-amber-600 ml-1" />
-                            )}
-                          </div>
+                          {batch.expiryDate ? (
+                            <div className="flex items-center gap-1">
+                              <span
+                                className={
+                                  isExpired
+                                    ? 'text-red-600 font-medium text-sm'
+                                    : isExpiringSoon
+                                    ? 'text-amber-600 font-medium text-sm'
+                                    : 'text-sm'
+                                }
+                              >
+                                {formatDate(batch.expiryDate)}
+                              </span>
+                              {isExpired && (
+                                <Badge variant="destructive" className="text-xs ml-1">
+                                  หมดอายุ
+                                </Badge>
+                              )}
+                              {isExpiringSoon && !isExpired && (
+                                <AlertTriangle className="w-3 h-3 text-amber-600 ml-1" />
+                              )}
+                            </div>
+                          ) : (
+                            '-'
+                          )}
                         </TableCell>
-                        <TableCell className="text-right font-medium text-gray-900">
-                          {batch.costPrice
-                            ? `฿${formatCurrency(batch.costPrice)}`
-                            : '-'}
+                        <TableCell className="text-center">
+                          {getStatusBadge(batch.status)}
                         </TableCell>
                         <TableCell className="text-right text-gray-600">
-                          {batch.costPrice ? `฿${formatCurrency(pricePerBaseUnit)}` : '-'}
+                          {batch.costPrice ? `฿${formatCurrency(batch.costPrice)}` : '-'}
                         </TableCell>
-                        <TableCell className="text-right font-semibold text-gray-900">
+                        <TableCell className="text-right font-medium text-gray-900">
                           {batch.quantity.toLocaleString('th-TH')}
+                        </TableCell>
+                        <TableCell className="text-right text-green-700 font-medium">
+                          {batch.availableQuantity.toLocaleString('th-TH')}
                         </TableCell>
                         <TableCell className="text-right font-semibold text-green-700">
                           {batch.costPrice ? `฿${formatCurrency(batchValue)}` : '-'}
@@ -317,17 +344,17 @@ export default function StockSummaryTab({
 
                   {/* Department Summary Row */}
                   <TableRow className="bg-blue-50 font-semibold border-t-2">
-                    <TableCell colSpan={2} className="text-gray-900">
-                      เฉลี่ย/รวม
-                    </TableCell>
-                    <TableCell className="text-right text-blue-700">
-                      ฿{formatCurrency(avgCostPerProductUnit)}
+                    <TableCell colSpan={3} className="text-gray-900">
+                      รวม/เฉลี่ย
                     </TableCell>
                     <TableCell className="text-right text-blue-700">
                       ฿{formatCurrency(avgCostPerBaseUnit)}
                     </TableCell>
                     <TableCell className="text-right text-blue-700">
                       {dept.totalQuantity.toLocaleString('th-TH')}
+                    </TableCell>
+                    <TableCell className="text-right text-blue-700">
+                      {dept.availableQuantity.toLocaleString('th-TH')}
                     </TableCell>
                     <TableCell className="text-right text-blue-700">
                       ฿{formatCurrency(deptTotalValue)}

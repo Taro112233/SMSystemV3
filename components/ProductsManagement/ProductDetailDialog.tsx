@@ -1,5 +1,5 @@
 // components/ProductsManagement/ProductDetailDialog.tsx
-// ProductDetailDialog - Main dialog with stock and info tabs
+// UPDATED: Pass productId and orgSlug to StockSummaryTab
 
 'use client';
 
@@ -50,7 +50,7 @@ export default function ProductDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -72,6 +72,8 @@ export default function ProductDetailDialog({
 
           <TabsContent value="stock">
             <StockSummaryTab
+              productId={product.id}
+              orgSlug={orgSlug}
               baseUnit={product.baseUnit}
             />
           </TabsContent>
