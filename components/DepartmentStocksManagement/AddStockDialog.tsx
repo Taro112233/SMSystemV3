@@ -1,5 +1,5 @@
 // components/DepartmentStocksManagement/AddStockDialog.tsx
-// AddStockDialog - Select product and initialize stock configuration
+// UPDATED: Change to searchable input
 
 'use client';
 
@@ -14,15 +14,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 interface Product {
   id: string;
@@ -52,8 +59,8 @@ export default function AddStockDialog({
   const [loading, setLoading] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [openCombobox, setOpenCombobox] = useState(false);
   const [formData, setFormData] = useState({
     location: '',
     minStockLevel: '',
@@ -72,9 +79,6 @@ export default function AddStockDialog({
         
         const params = new URLSearchParams();
         params.append('isActive', 'true');
-        if (searchTerm) {
-          params.append('search', searchTerm);
-        }
 
         const response = await fetch(`/api/${orgSlug}/products?${params.toString()}`);
         
@@ -105,13 +109,12 @@ export default function AddStockDialog({
     };
 
     fetchProducts();
-  }, [open, orgSlug, deptSlug, searchTerm]);
+  }, [open, orgSlug, deptSlug]);
 
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
       setSelectedProductId('');
-      setSearchTerm('');
       setFormData({
         location: '',
         minStockLevel: '',
@@ -180,60 +183,81 @@ export default function AddStockDialog({
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 mt-4">
-            {/* Product Selection */}
+            {/* Product Selection - Combobox as Input */}
             <div className="space-y-2">
-              <Label htmlFor="product">
+              <Label>
                 เลือกสินค้า <span className="text-red-500">*</span>
               </Label>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Select
-                    value={selectedProductId}
-                    onValueChange={setSelectedProductId}
+              <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openCombobox}
+                    className="w-full justify-between h-10 font-normal"
                     disabled={loading || loadingProducts}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="เลือกสินค้า" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {loadingProducts ? (
-                        <div className="p-2 text-center">
-                          <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                        </div>
-                      ) : products.length === 0 ? (
-                        <div className="p-2 text-center text-sm text-gray-500">
-                          ไม่พบสินค้าที่พร้อมใช้งาน
-                        </div>
-                      ) : (
-                        products.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{product.code}</span>
-                              <span>-</span>
-                              <span>{product.name}</span>
-                              {product.genericName && (
-                                <span className="text-xs text-gray-500">
-                                  ({product.genericName})
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="relative w-48">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="ค้นหาสินค้า..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
+                    {selectedProduct ? (
+                      <span className="flex items-center gap-2 text-sm">
+                        <span className="font-medium">{selectedProduct.code}</span>
+                        <span>-</span>
+                        <span>{selectedProduct.name}</span>
+                        {selectedProduct.genericName && (
+                          <span className="text-xs text-gray-500">
+                            ({selectedProduct.genericName})
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">ค้นหาและเลือกสินค้า...</span>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[600px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="ค้นหาสินค้า..." />
+                    <CommandList>
+                      <CommandEmpty>ไม่พบสินค้า</CommandEmpty>
+                      <CommandGroup>
+                        {loadingProducts ? (
+                          <div className="p-2 text-center">
+                            <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                          </div>
+                        ) : (
+                          products.map((product) => (
+                            <CommandItem
+                              key={product.id}
+                              value={`${product.code} ${product.name} ${product.genericName || ''}`}
+                              onSelect={() => {
+                                setSelectedProductId(product.id);
+                                setOpenCombobox(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  selectedProductId === product.id ? 'opacity-100' : 'opacity-0'
+                                )}
+                              />
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{product.code}</span>
+                                <span>-</span>
+                                <span>{product.name}</span>
+                                {product.genericName && (
+                                  <span className="text-xs text-gray-500">
+                                    ({product.genericName})
+                                  </span>
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))
+                        )}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               {selectedProduct && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-sm">
                   <div className="flex items-center gap-2">

@@ -1,20 +1,20 @@
 // app/api/[orgSlug]/[deptSlug]/stocks/[stockId]/batches/route.ts
-// Stock Batches API - List and Create
+// Batch Management API - Add and list batches for a stock
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
+import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
 
-// ===== GET: List all batches for a stock =====
+// GET - List all batches for a stock
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string; deptSlug: string; stockId: string }> }
 ) {
   try {
     const { orgSlug, deptSlug, stockId } = await params;
-
+    
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -47,12 +47,14 @@ export async function GET(
       );
     }
 
-    // Verify stock exists in this department
+    // Get stock
     const stock = await prisma.stock.findFirst({
       where: {
         id: stockId,
         departmentId: department.id,
-        organizationId: access.organizationId,
+      },
+      include: {
+        product: true,
       },
     });
 
@@ -63,7 +65,7 @@ export async function GET(
       );
     }
 
-    // Get all batches
+    // Get batches
     const batches = await prisma.stockBatch.findMany({
       where: {
         stockId,
@@ -71,31 +73,36 @@ export async function GET(
       },
       orderBy: [
         { expiryDate: 'asc' },
-        { createdAt: 'asc' },
+        { createdAt: 'desc' },
       ],
     });
 
     return NextResponse.json({
       success: true,
       data: batches,
+      stock: {
+        id: stock.id,
+        product: stock.product,
+        location: stock.location,
+      },
     });
   } catch (error) {
-    console.error('Error fetching batches:', error);
+    console.error('Get batches failed:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch batches' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
-// ===== POST: Create new batch =====
+// POST - Add new batch
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string; deptSlug: string; stockId: string }> }
 ) {
   try {
     const { orgSlug, deptSlug, stockId } = await params;
-
+    
     const user = getUserFromHeaders(request.headers);
     if (!user) {
       return NextResponse.json(
@@ -108,6 +115,14 @@ export async function POST(
     if (!access) {
       return NextResponse.json(
         { error: 'No access to organization' },
+        { status: 403 }
+      );
+    }
+
+    // Check permissions
+    if (!['MEMBER', 'ADMIN', 'OWNER'].includes(access.role)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
         { status: 403 }
       );
     }
@@ -128,12 +143,11 @@ export async function POST(
       );
     }
 
-    // Get stock with product
+    // Get stock
     const stock = await prisma.stock.findFirst({
       where: {
         id: stockId,
         departmentId: department.id,
-        organizationId: access.organizationId,
       },
       include: {
         product: true,
@@ -162,23 +176,24 @@ export async function POST(
     // Validation
     if (!lotNumber || !quantity || quantity <= 0) {
       return NextResponse.json(
-        { error: 'Lot number and valid quantity are required' },
+        { error: 'Lot number and quantity are required' },
         { status: 400 }
       );
     }
 
-    // Check for duplicate lot number in same stock
-    const existingBatch = await prisma.stockBatch.findFirst({
+    // Check if lot number already exists for this stock
+    const existingBatch = await prisma.stockBatch.findUnique({
       where: {
-        stockId,
-        lotNumber,
-        isActive: true,
+        stockId_lotNumber: {
+          stockId,
+          lotNumber: lotNumber.trim(),
+        },
       },
     });
 
     if (existingBatch) {
       return NextResponse.json(
-        { error: 'Batch with this lot number already exists' },
+        { error: 'Lot number already exists for this stock' },
         { status: 409 }
       );
     }
@@ -190,40 +205,42 @@ export async function POST(
     const batch = await prisma.stockBatch.create({
       data: {
         stockId,
-        lotNumber,
+        lotNumber: lotNumber.trim(),
         expiryDate: expiryDate ? new Date(expiryDate) : null,
         manufactureDate: manufactureDate ? new Date(manufactureDate) : null,
-        supplier: supplier || null,
-        costPrice: costPrice ? parseFloat(costPrice.toString()) : null,
-        sellingPrice: sellingPrice ? parseFloat(sellingPrice.toString()) : null,
+        supplier: supplier?.trim() || null,
+        costPrice: costPrice || null,
+        sellingPrice: sellingPrice || null,
         totalQuantity: quantity,
         availableQuantity: quantity,
         reservedQuantity: 0,
         incomingQuantity: 0,
-        location: location || stock.location || null,
+        location: location?.trim() || stock.location || null,
         status: 'AVAILABLE',
         isActive: true,
         createdBy: user.userId,
         createdBySnapshot: userSnapshot,
-        receivedAt: new Date(),
       },
     });
 
     // Update stock lastMovement
     await prisma.stock.update({
       where: { id: stockId },
-      data: { lastMovement: new Date() },
+      data: {
+        lastMovement: new Date(),
+        updatedBy: user.userId,
+        updatedBySnapshot: userSnapshot,
+      },
     });
 
-    // Create audit log
+    // Audit log
     const { ipAddress, userAgent } = getRequestMetadata(request);
-
     await createAuditLog({
       organizationId: access.organizationId,
       userId: user.userId,
       userSnapshot,
       departmentId: department.id,
-      action: 'stocks.batch_create',
+      action: 'stocks.batch_add',
       category: 'STOCK',
       severity: 'INFO',
       description: `เพิ่ม Batch ${lotNumber} สินค้า ${stock.product.name} จำนวน ${quantity} ${stock.product.baseUnit}`,
@@ -232,12 +249,9 @@ export async function POST(
       payload: {
         productCode: stock.product.code,
         productName: stock.product.name,
-        departmentName: department.name,
         lotNumber,
         quantity,
         expiryDate,
-        costPrice,
-        sellingPrice,
       },
       ipAddress,
       userAgent,
@@ -246,12 +260,12 @@ export async function POST(
     return NextResponse.json({
       success: true,
       data: batch,
-      message: 'Batch created successfully',
+      message: 'Batch added successfully',
     });
   } catch (error) {
-    console.error('Error creating batch:', error);
+    console.error('Add batch failed:', error);
     return NextResponse.json(
-      { error: 'Failed to create batch' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

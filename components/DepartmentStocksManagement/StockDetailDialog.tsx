@@ -1,5 +1,5 @@
 // components/DepartmentStocksManagement/StockDetailDialog.tsx
-// StockDetailDialog - Main dialog with batch management and product info tabs
+// FIXED: Pass entire stock object to ProductInfoTab
 
 'use client';
 
@@ -72,7 +72,13 @@ export default function StockDetailDialog({
           </TabsContent>
 
           <TabsContent value="info">
-            <ProductInfoTab product={stock.product} />
+            <ProductInfoTab
+              stock={stock}
+              orgSlug={orgSlug}
+              deptSlug={deptSlug}
+              canManage={canManage}
+              onUpdateSuccess={onUpdateSuccess}
+            />
           </TabsContent>
         </Tabs>
       </DialogContent>
