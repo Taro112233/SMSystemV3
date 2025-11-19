@@ -68,7 +68,9 @@ Directory structure:
     │   │   │   ├── products/
     │   │   │   │   ├── route.ts
     │   │   │   │   ├── [id]/
-    │   │   │   │   │   └── route.ts
+    │   │   │   │   │   ├── route.ts
+    │   │   │   │   │   └── stocks/
+    │   │   │   │   │       └── route.ts
     │   │   │   │   └── batch-update-status/
     │   │   │   │       └── route.ts
     │   │   │   └── settings/
