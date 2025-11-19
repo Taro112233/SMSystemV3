@@ -22,7 +22,9 @@ Directory structure:
     │   │   ├── layout.tsx
     │   │   ├── page.tsx
     │   │   ├── [deptSlug]/
-    │   │   │   └── page.tsx
+    │   │   │   ├── page.tsx
+    │   │   │   └── stocks/
+    │   │   │       └── page.tsx
     │   │   ├── products/
     │   │   │   └── page.tsx
     │   │   └── settings/
@@ -34,6 +36,15 @@ Directory structure:
     │   ├── api/
     │   │   ├── [orgSlug]/
     │   │   │   ├── route.ts
+    │   │   │   ├── [deptSlug]/
+    │   │   │   │   └── stocks/
+    │   │   │   │       ├── route.ts
+    │   │   │   │       └── [stockId]/
+    │   │   │   │           ├── route.ts
+    │   │   │   │           └── batches/
+    │   │   │   │               ├── route.ts
+    │   │   │   │               └── [batchId]/
+    │   │   │   │                   └── route.ts
     │   │   │   ├── audit-logs/
     │   │   │   │   └── route.ts
     │   │   │   ├── departments/
@@ -106,6 +117,19 @@ Directory structure:
     │   │   ├── DepartmentInfo.tsx
     │   │   ├── DepartmentStats.tsx
     │   │   └── index.tsx
+    │   ├── DepartmentStocksManagement/
+    │   │   ├── AddStockDialog.tsx
+    │   │   ├── index.tsx
+    │   │   ├── StockDetailDialog.tsx
+    │   │   ├── StocksFilters.tsx
+    │   │   ├── StocksHeader.tsx
+    │   │   ├── StocksTable.tsx
+    │   │   ├── StocksTableHeader.tsx
+    │   │   ├── StocksTableRow.tsx
+    │   │   └── StockDetailDialog/
+    │   │       ├── BatchFormModal.tsx
+    │   │       ├── BatchManagementTab.tsx
+    │   │       └── ProductInfoTab.tsx
     │   ├── OrganizationDashboard/
     │   │   ├── DepartmentOverview.tsx
     │   │   ├── index.tsx
@@ -273,4 +297,5 @@ Directory structure:
         ├── cookie.d.ts
         ├── product-category.ts
         ├── product-unit.ts
-        └── product.ts
+        ├── product.ts
+        └── stock.ts
