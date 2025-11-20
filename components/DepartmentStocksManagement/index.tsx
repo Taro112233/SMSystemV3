@@ -1,5 +1,5 @@
 // components/DepartmentStocksManagement/index.tsx
-// UPDATED: Add "เพิ่มสินค้าเข้าสต็อก" button
+// UPDATED: Remove departmentId prop (not needed for API)
 
 'use client';
 
@@ -14,7 +14,6 @@ import { toast } from 'sonner';
 interface DepartmentStocksManagementProps {
   orgSlug: string;
   deptSlug: string;
-  departmentId: string;
   departmentName: string;
   userRole: string;
 }
@@ -22,7 +21,6 @@ interface DepartmentStocksManagementProps {
 export default function DepartmentStocksManagement({
   orgSlug,
   deptSlug,
-  departmentId,
   departmentName,
   userRole,
 }: DepartmentStocksManagementProps) {
@@ -142,7 +140,6 @@ export default function DepartmentStocksManagement({
       <AddStockDialog
         orgSlug={orgSlug}
         deptSlug={deptSlug}
-        departmentId={departmentId}
         open={isAddStockOpen}
         onOpenChange={setIsAddStockOpen}
         onSuccess={handleAddStockSuccess}

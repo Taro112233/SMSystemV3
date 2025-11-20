@@ -94,10 +94,7 @@ export default function DepartmentStocksPage() {
 
         setDepartmentData(department);
 
-        console.log('🔍 Department Data:', {
-          departmentName: department.name,
-          departmentId: department.id,
-        });
+        console.log('✅ Department found:', department.name);
       } catch (err) {
         console.error('❌ Error loading page data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load page data');
@@ -144,21 +141,12 @@ export default function DepartmentStocksPage() {
     );
   }
 
-  console.log('🔍 Passing to DepartmentStocksManagement:', {
-    orgSlug: orgSlug,
-    deptSlug: deptSlug,
-    departmentId: departmentData.id,
-    departmentName: departmentData.name,
-    userRole: organizationData.userRole,
-  });
-
   return (
     <div className="space-y-6">
       {organizationData.userRole ? (
         <DepartmentStocksManagement
           orgSlug={orgSlug}
           deptSlug={deptSlug}
-          departmentId={departmentData.id}
           departmentName={departmentData.name}
           userRole={organizationData.userRole}
         />
