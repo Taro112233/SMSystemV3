@@ -1,5 +1,5 @@
 // components/DepartmentStocksManagement/StocksTableRow.tsx
-// StocksTableRow - UPDATED: Calculate total value instead of average price
+// StocksTableRow - UPDATED: Add expired batch detection with red color
 
 'use client';
 
@@ -36,13 +36,21 @@ export default function StocksTableRow({
         new Date(a.expiryDate!).getTime() - new Date(b.expiryDate!).getTime()
     )[0];
 
+  // ✅ Check if expired (past today)
+  const isExpired = 
+    nearestExpiryBatch &&
+    nearestExpiryBatch.expiryDate &&
+    new Date(nearestExpiryBatch.expiryDate).getTime() < Date.now();
+
+  // ✅ Check if expiring soon (within 90 days but not expired yet)
   const isExpiringSoon =
     nearestExpiryBatch &&
     nearestExpiryBatch.expiryDate &&
+    !isExpired &&
     new Date(nearestExpiryBatch.expiryDate).getTime() < 
       Date.now() + 90 * 24 * 60 * 60 * 1000;
 
-  // ✅ Calculate total value (จำนวนคงเหลือ × ราคาทุนเฉลี่ย)
+  // Calculate total value
   const totalValue = stock.batches.reduce((sum, batch) => {
     if (batch.costPrice && batch.totalQuantity > 0) {
       return sum + (Number(batch.costPrice) * batch.totalQuantity);
@@ -177,7 +185,7 @@ export default function StocksTableRow({
         </div>
       </td>
 
-      {/* Nearest Expiry */}
+      {/* Nearest Expiry - ✅ UPDATED: Red for expired, amber for expiring soon */}
       <td className="px-4 py-3">
         {nearestExpiryBatch ? (
           <div className="space-y-0.5">
@@ -185,11 +193,17 @@ export default function StocksTableRow({
               {nearestExpiryBatch.lotNumber}
             </div>
             <div
-              className={`text-xs ${
-                isExpiringSoon ? 'text-amber-600 font-medium' : 'text-gray-500'
+              className={`text-xs font-medium ${
+                isExpired 
+                  ? 'text-red-600'        // ✅ หมดอายุแล้ว
+                  : isExpiringSoon 
+                  ? 'text-amber-600'      // กำลังจะหมดอายุ (ภายใน 90 วัน)
+                  : 'text-gray-500'       // ยังไกล
               }`}
             >
               {formatDate(nearestExpiryBatch.expiryDate!)}
+              {isExpired && ' (หมดอายุแล้ว)'}
+              {isExpiringSoon && !isExpired && ' (ใกล้หมดอายุ)'}
             </div>
           </div>
         ) : (

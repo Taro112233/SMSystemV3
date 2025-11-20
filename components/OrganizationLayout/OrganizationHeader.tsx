@@ -1,5 +1,5 @@
 // components/OrganizationLayout/OrganizationHeader.tsx
-// DashboardHeader - Enhanced Breadcrumb with Reserved Pages Support
+// DashboardHeader - Enhanced Breadcrumb with Reserved Pages and Department Sub-pages Support
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
@@ -13,7 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Home, Calendar, Bell, Settings, Users, BarChart3 } from 'lucide-react';
+import { Home, Calendar, Bell, Settings, Users, BarChart3, Package, ArrowRightLeft } from 'lucide-react';
 import type { FrontendDepartment } from '@/lib/department-helpers';
 
 interface OrganizationData {
@@ -31,13 +31,19 @@ interface DashboardHeaderProps {
   selectedDepartment?: FrontendDepartment | null;
 }
 
-// ✅ Reserved org-level pages (from middleware.ts)
+// ✅ Reserved org-level pages
 const RESERVED_ORG_PAGES = {
   'settings': { label: 'ตั้งค่า', icon: Settings },
   'members': { label: 'จัดการสมาชิก', icon: Users },
   'reports': { label: 'รายงาน', icon: BarChart3 },
-  'products': { label: 'สินค้า', icon: null },
-  'transfers': { label: 'โอนย้าย', icon: null },
+  'products': { label: 'สินค้า', icon: Package },
+  'transfers': { label: 'โอนย้าย', icon: ArrowRightLeft },
+};
+
+// ✅ Department sub-pages
+const DEPARTMENT_SUBPAGES = {
+  'stocks': { label: 'สต็อกสินค้า', icon: Package },
+  'transfers': { label: 'โอนย้าย', icon: ArrowRightLeft },
 };
 
 export const DashboardHeader = ({ 
@@ -46,12 +52,18 @@ export const DashboardHeader = ({
 }: DashboardHeaderProps) => {
   const pathname = usePathname();
 
-  // ✅ Detect if current page is a reserved org page
+  // Parse URL segments: /{orgSlug}/{deptSlug}/{subpage}
   const pathSegments = pathname.split('/').filter(Boolean);
-  const currentPageSlug = pathSegments[1]; // Second segment: /{orgSlug}/{pageSlug}
+  const currentPageSlug = pathSegments[1]; // Second segment
+  const subPageSlug = pathSegments[2]; // Third segment (if exists)
   
+  // Check if org-level reserved page
   const isReservedPage = currentPageSlug && RESERVED_ORG_PAGES[currentPageSlug as keyof typeof RESERVED_ORG_PAGES];
   const reservedPageConfig = isReservedPage ? RESERVED_ORG_PAGES[currentPageSlug as keyof typeof RESERVED_ORG_PAGES] : null;
+
+  // Check if department sub-page
+  const isDepartmentSubpage = selectedDepartment && subPageSlug && DEPARTMENT_SUBPAGES[subPageSlug as keyof typeof DEPARTMENT_SUBPAGES];
+  const subpageConfig = isDepartmentSubpage ? DEPARTMENT_SUBPAGES[subPageSlug as keyof typeof DEPARTMENT_SUBPAGES] : null;
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
@@ -98,7 +110,26 @@ export const DashboardHeader = ({
               <>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>{selectedDepartment.name}</BreadcrumbPage>
+                  {isDepartmentSubpage ? (
+                    <BreadcrumbLink href={`/${organization.slug}/${selectedDepartment.slug}`}>
+                      {selectedDepartment.name}
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage>{selectedDepartment.name}</BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+              </>
+            )}
+
+            {/* ✅ Department Sub-page (stocks, transfers) */}
+            {isDepartmentSubpage && subpageConfig && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="flex items-center gap-2">
+                    {subpageConfig.icon && <subpageConfig.icon className="w-4 h-4" />}
+                    {subpageConfig.label}
+                  </BreadcrumbPage>
                 </BreadcrumbItem>
               </>
             )}
