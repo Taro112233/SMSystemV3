@@ -1,5 +1,5 @@
 // components/ProductsManagement/index.tsx
-// ProductsManagement - Main orchestrator component with category support and batch status save
+// ProductsManagement - UPDATED: Pass orgSlug to ProductsTable
 
 'use client';
 
@@ -272,6 +272,7 @@ export default function ProductsManagement({
         products={products}
         categories={categories}
         productUnits={productUnits}
+        orgSlug={orgSlug}
         loading={loading}
         filters={filters}
         categoryFilters={categoryFilters}

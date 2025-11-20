@@ -1,5 +1,5 @@
 // components/DepartmentStocksManagement/StocksTableHeader.tsx
-// StocksTableHeader - Table header with sortable columns
+// StocksTableHeader - UPDATED: Change from "ราคาเฉลี่ย" to "มูลค่ารวม"
 
 'use client';
 
@@ -61,7 +61,7 @@ export default function StocksTableHeader({
         <HeaderCell label="จอง" sortable={false} />
         <HeaderCell label="รอรับ" sortable={false} />
         <HeaderCell field="expiryDate" label="Lot/Exp ใกล้สุด" />
-        <HeaderCell label="ราคาเฉลี่ย" sortable={false} />
+        <HeaderCell label="มูลค่ารวม" sortable={false} />
         <HeaderCell label="สถานะ" sortable={false} />
       </tr>
     </thead>

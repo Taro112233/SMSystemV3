@@ -1,5 +1,5 @@
 // components/DepartmentStocksManagement/StocksTableRow.tsx
-// StocksTableRow - Individual table row
+// StocksTableRow - UPDATED: Calculate total value instead of average price
 
 'use client';
 
@@ -39,14 +39,16 @@ export default function StocksTableRow({
   const isExpiringSoon =
     nearestExpiryBatch &&
     nearestExpiryBatch.expiryDate &&
-    new Date(nearestExpiryBatch.expiryDate).getTime() 
+    new Date(nearestExpiryBatch.expiryDate).getTime() < 
       Date.now() + 90 * 24 * 60 * 60 * 1000;
 
-  // Calculate average cost price
-  const avgCostPrice = stock.batches.length
-    ? stock.batches.reduce((sum, b) => sum + (b.costPrice || 0), 0) /
-      stock.batches.length
-    : 0;
+  // ✅ Calculate total value (จำนวนคงเหลือ × ราคาทุนเฉลี่ย)
+  const totalValue = stock.batches.reduce((sum, batch) => {
+    if (batch.costPrice && batch.totalQuantity > 0) {
+      return sum + (Number(batch.costPrice) * batch.totalQuantity);
+    }
+    return sum;
+  }, 0);
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('th-TH', {
@@ -195,11 +197,11 @@ export default function StocksTableRow({
         )}
       </td>
 
-      {/* Average Price */}
+      {/* Total Value */}
       <td className="px-4 py-3">
-        <div className="text-sm text-gray-900">
-          {avgCostPrice > 0
-            ? `฿${avgCostPrice.toLocaleString('th-TH', {
+        <div className="text-sm font-medium text-green-700">
+          {totalValue > 0
+            ? `฿${totalValue.toLocaleString('th-TH', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}`

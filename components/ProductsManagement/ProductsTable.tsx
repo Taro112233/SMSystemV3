@@ -1,6 +1,5 @@
 // components/ProductsManagement/ProductsTable.tsx
-// ProductsTable - Main table component with category columns
-// ✅ UPDATED: Fix horizontal scroll to work properly within card
+// ProductsTable - UPDATED: Pass orgSlug to ProductsTableRow
 
 'use client';
 
@@ -19,6 +18,7 @@ interface ProductsTableProps {
   products: ProductData[];
   categories: CategoryWithOptions[];
   productUnits: ProductUnit[];
+  orgSlug: string;
   loading: boolean;
   filters: ProductFilters;
   categoryFilters: CategoryFiltersState;
@@ -37,6 +37,7 @@ export default function ProductsTable({
   products,
   categories,
   productUnits,
+  orgSlug,
   loading,
   filters,
   categoryFilters,
@@ -65,7 +66,7 @@ export default function ProductsTable({
   return (
     <Card className="w-full">
       <CardContent className="p-6">
-        {/* Filters - ✅ FIXED: Remove pendingStatusChanges prop */}
+        {/* Filters */}
         <ProductsFilters
           filters={filters}
           categoryFilters={categoryFilters}
@@ -109,6 +110,7 @@ export default function ProductsTable({
                         product={product}
                         categories={top3Categories}
                         productUnits={productUnits}
+                        orgSlug={orgSlug}
                         onEditClick={onEditClick}
                         onViewClick={onViewClick}
                         onDeleteClick={onDeleteClick}
