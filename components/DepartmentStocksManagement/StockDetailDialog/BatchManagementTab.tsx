@@ -1,10 +1,10 @@
 // components/DepartmentStocksManagement/StockDetailDialog/BatchManagementTab.tsx
-// BatchManagementTab - Batch/Lot management with add, edit, status change
+// UPDATED: Remove unused import
 
 'use client';
 
 import { useState } from 'react';
-import { DepartmentStock, StockBatch, BatchFormData } from '@/types/stock';
+import { DepartmentStock, StockBatch } from '@/types/stock';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {

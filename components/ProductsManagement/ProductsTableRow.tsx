@@ -1,5 +1,5 @@
 // components/ProductsManagement/ProductsTableRow.tsx
-// ProductsTableRow - UPDATED: Use real stock data from API
+// UPDATED: Fix lint errors
 
 'use client';
 
@@ -21,6 +21,15 @@ interface StockSummary {
   totalQuantity: number;
   totalValue: number;
   departmentCount: number;
+}
+
+interface DepartmentStockData {
+  batches: BatchData[];
+}
+
+interface BatchData {
+  quantity: number;
+  costPrice: number | null;
 }
 
 interface ProductsTableRowProps {
@@ -59,14 +68,14 @@ export default function ProductsTableRow({
         }
 
         const data = await response.json();
-        const departments = data.data.departments || [];
+        const departments: DepartmentStockData[] = data.data.departments || [];
 
         // Calculate totals
         let totalQuantity = 0;
         let totalValue = 0;
 
-        departments.forEach((dept: any) => {
-          dept.batches.forEach((batch: any) => {
+        departments.forEach((dept) => {
+          dept.batches.forEach((batch) => {
             totalQuantity += batch.quantity;
             if (batch.costPrice) {
               totalValue += batch.quantity * batch.costPrice;

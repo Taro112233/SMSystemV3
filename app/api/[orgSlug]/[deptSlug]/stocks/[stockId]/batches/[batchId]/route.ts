@@ -6,6 +6,7 @@ import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
+import { Prisma } from '@prisma/client';
 
 // GET - Get specific batch
 export async function GET(
@@ -171,8 +172,8 @@ export async function PATCH(
       status,
     } = body;
 
-    // Build update data
-    const updateData: any = {};
+    // Build update data with proper typing
+    const updateData: Prisma.StockBatchUpdateInput = {};
 
     if (lotNumber !== undefined && lotNumber.trim() !== existingBatch.lotNumber) {
       // Check if new lot number already exists
@@ -232,7 +233,7 @@ export async function PATCH(
     // Create user snapshot
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
     updateData.updatedBy = user.userId;
-    updateData.updatedBySnapshot = userSnapshot;
+    updateData.updatedBySnapshot = userSnapshot as Prisma.InputJsonValue;
 
     // Update batch
     const updatedBatch = await prisma.stockBatch.update({
@@ -246,7 +247,7 @@ export async function PATCH(
       data: {
         lastMovement: new Date(),
         updatedBy: user.userId,
-        updatedBySnapshot: userSnapshot,
+        updatedBySnapshot: userSnapshot as Prisma.InputJsonValue,
       },
     });
 
@@ -270,7 +271,7 @@ export async function PATCH(
           status: existingBatch.status,
         },
         after: updateData,
-      },
+      } as Prisma.InputJsonValue,
       ipAddress,
       userAgent,
     });
@@ -378,7 +379,7 @@ export async function DELETE(
       data: {
         isActive: false,
         updatedBy: user.userId,
-        updatedBySnapshot: userSnapshot,
+        updatedBySnapshot: userSnapshot as Prisma.InputJsonValue,
       },
     });
 
@@ -398,7 +399,7 @@ export async function DELETE(
       payload: {
         lotNumber: batch.lotNumber,
         quantity: batch.totalQuantity,
-      },
+      } as Prisma.InputJsonValue,
       ipAddress,
       userAgent,
     });

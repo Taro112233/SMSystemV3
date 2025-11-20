@@ -1,5 +1,5 @@
 // components/DepartmentStocksManagement/AddStockDialog.tsx
-// UPDATED: Change to searchable input
+// UPDATED: Fix lint errors
 
 'use client';
 
@@ -39,10 +39,13 @@ interface Product {
   baseUnit: string;
 }
 
+interface StockData {
+  productId: string;
+}
+
 interface AddStockDialogProps {
   orgSlug: string;
   deptSlug: string;
-  departmentId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
@@ -51,7 +54,6 @@ interface AddStockDialogProps {
 export default function AddStockDialog({
   orgSlug,
   deptSlug,
-  departmentId,
   open,
   onOpenChange,
   onSuccess,
@@ -91,7 +93,7 @@ export default function AddStockDialog({
         // Filter out products that already have stock in this department
         const existingStocksResponse = await fetch(`/api/${orgSlug}/${deptSlug}/stocks`);
         const existingStocksData = await existingStocksResponse.json();
-        const existingProductIds = existingStocksData.data?.map((s: any) => s.productId) || [];
+        const existingProductIds = (existingStocksData.data as StockData[] || []).map((s) => s.productId);
         
         const availableProducts = (data.data || []).filter(
           (p: Product) => !existingProductIds.includes(p.id)

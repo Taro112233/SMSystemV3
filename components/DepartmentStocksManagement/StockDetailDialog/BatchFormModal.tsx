@@ -1,5 +1,5 @@
 // components/DepartmentStocksManagement/StockDetailDialog/BatchFormModal.tsx
-// UPDATED: Move delete button to footer
+// UPDATED: Fix lint error
 
 'use client';
 
@@ -64,8 +64,8 @@ export default function BatchFormModal({
     if (batch) {
       setFormData({
         lotNumber: batch.lotNumber,
-        expiryDate: batch.expiryDate,
-        manufactureDate: batch.manufactureDate,
+        expiryDate: batch.expiryDate || undefined,
+        manufactureDate: batch.manufactureDate || undefined,
         supplier: batch.supplier || '',
         costPrice: batch.costPrice ? Number(batch.costPrice) : undefined,
         sellingPrice: batch.sellingPrice ? Number(batch.sellingPrice) : undefined,
@@ -167,7 +167,7 @@ export default function BatchFormModal({
     }
   };
 
-  const handleChange = (field: keyof BatchFormData, value: any) => {
+  const handleChange = <K extends keyof BatchFormData>(field: K, value: BatchFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 

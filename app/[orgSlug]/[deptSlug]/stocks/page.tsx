@@ -29,6 +29,14 @@ interface DepartmentData {
   slug: string;
 }
 
+interface DepartmentResponse {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  isActive: boolean;
+}
+
 export default function DepartmentStocksPage() {
   const params = useParams();
   const router = useRouter();
@@ -77,7 +85,7 @@ export default function DepartmentStocksPage() {
         }
 
         const deptData = await deptResponse.json();
-        const department = deptData.departments?.find((d: any) => d.slug === deptSlug);
+        const department = deptData.departments?.find((d: DepartmentResponse) => d.slug === deptSlug);
         
         if (!department) {
           setError('Department not found');

@@ -138,10 +138,10 @@ export async function GET(
       });
     }
 
-    // Sort stocks
+    // Sort stocks with proper typing
     filteredStocks.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number;
+      let bValue: string | number;
 
       switch (sortBy) {
         case 'productCode':
@@ -304,7 +304,7 @@ export async function POST(
         reorderPoint: reorderPoint || null,
         defaultWithdrawalQty: defaultWithdrawalQty || null,
         createdBy: user.userId,
-        createdBySnapshot: userSnapshot,
+        createdBySnapshot: userSnapshot as Prisma.InputJsonValue,
       },
       include: {
         product: true,
@@ -335,7 +335,7 @@ export async function POST(
         minStockLevel,
         maxStockLevel,
         reorderPoint,
-      },
+      } as Prisma.InputJsonValue,
       ipAddress,
       userAgent,
     });
