@@ -1,17 +1,16 @@
 // components/DepartmentStocksManagement/StocksTableRow.tsx
-// StocksTableRow - UPDATED: Add expired batch detection with red color
+// StocksTableRow - UPDATED: Remove batch count, split date and time into 2 lines
 
-'use client';
+"use client";
 
-import { DepartmentStock } from '@/types/stock';
-import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Package } from 'lucide-react';
+import { DepartmentStock } from "@/types/stock";
+import { AlertTriangle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 
 interface StocksTableRowProps {
   stock: DepartmentStock;
@@ -30,39 +29,65 @@ export default function StocksTableRow({
 
   // Get nearest expiry batch
   const nearestExpiryBatch = stock.batches
-    .filter((b) => b.expiryDate && b.status === 'AVAILABLE')
+    .filter((b) => b.expiryDate && b.status === "AVAILABLE")
     .sort(
       (a, b) =>
         new Date(a.expiryDate!).getTime() - new Date(b.expiryDate!).getTime()
     )[0];
 
-  // ✅ Check if expired (past today)
-  const isExpired = 
+  // Check if expired (past today)
+  const isExpired =
     nearestExpiryBatch &&
     nearestExpiryBatch.expiryDate &&
     new Date(nearestExpiryBatch.expiryDate).getTime() < Date.now();
 
-  // ✅ Check if expiring soon (within 90 days but not expired yet)
+  // Check if expiring soon (within 90 days but not expired yet)
   const isExpiringSoon =
     nearestExpiryBatch &&
     nearestExpiryBatch.expiryDate &&
     !isExpired &&
-    new Date(nearestExpiryBatch.expiryDate).getTime() < 
+    new Date(nearestExpiryBatch.expiryDate).getTime() <
       Date.now() + 90 * 24 * 60 * 60 * 1000;
+
+  // Get first updated batch
+  const firstUpdatedBatch =
+    stock.batches.length > 0
+      ? stock.batches.reduce((oldest, batch) => {
+          return new Date(batch.updatedAt).getTime() <
+            new Date(oldest.updatedAt).getTime()
+            ? batch
+            : oldest;
+        })
+      : null;
 
   // Calculate total value
   const totalValue = stock.batches.reduce((sum, batch) => {
     if (batch.costPrice && batch.totalQuantity > 0) {
-      return sum + (Number(batch.costPrice) * batch.totalQuantity);
+      return sum + Number(batch.costPrice) * batch.totalQuantity;
     }
     return sum;
   }, 0);
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(date).toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatOnlyDate = (date: Date) => {
+    return new Date(date).toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatOnlyTime = (date: Date) => {
+    return new Date(date).toLocaleTimeString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -76,7 +101,7 @@ export default function StocksTableRow({
     const shouldTruncate = text && text.length > maxLength;
 
     if (!shouldTruncate) {
-      return <span className="text-sm text-gray-900">{text || '-'}</span>;
+      return <span className="text-sm text-gray-900">{text || "-"}</span>;
     }
 
     return (
@@ -124,25 +149,25 @@ export default function StocksTableRow({
 
       {/* Location */}
       <td className="px-4 py-3">
-        <div className="text-sm text-gray-900">
-          {stock.location || '-'}
-        </div>
+        <div className="text-sm text-gray-900">{stock.location || "-"}</div>
       </td>
 
       {/* Available Quantity */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="text-sm font-medium text-gray-900">
-            {stock.availableQuantity.toLocaleString('th-TH')}
+            {stock.availableQuantity.toLocaleString("th-TH")}
           </div>
-          <span className="text-xs text-gray-500">{stock.product.baseUnit}</span>
+          <span className="text-xs text-gray-500">
+            {stock.product.baseUnit}
+          </span>
           {(isLowStock || needsReorder) && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
                   <AlertTriangle
                     className={`h-4 w-4 ${
-                      needsReorder ? 'text-red-600' : 'text-amber-600'
+                      needsReorder ? "text-red-600" : "text-amber-600"
                     }`}
                   />
                 </TooltipTrigger>
@@ -164,10 +189,10 @@ export default function StocksTableRow({
         <div className="text-sm text-gray-600">
           {stock.reservedQuantity > 0 ? (
             <span className="text-orange-600 font-medium">
-              {stock.reservedQuantity.toLocaleString('th-TH')}
+              {stock.reservedQuantity.toLocaleString("th-TH")}
             </span>
           ) : (
-            '-'
+            "-"
           )}
         </div>
       </td>
@@ -177,15 +202,15 @@ export default function StocksTableRow({
         <div className="text-sm text-gray-600">
           {stock.incomingQuantity > 0 ? (
             <span className="text-green-600 font-medium">
-              {stock.incomingQuantity.toLocaleString('th-TH')}
+              {stock.incomingQuantity.toLocaleString("th-TH")}
             </span>
           ) : (
-            '-'
+            "-"
           )}
         </div>
       </td>
 
-      {/* Nearest Expiry - ✅ UPDATED: Red for expired, amber for expiring soon */}
+      {/* Nearest Expiry */}
       <td className="px-4 py-3">
         {nearestExpiryBatch ? (
           <div className="space-y-0.5">
@@ -194,16 +219,16 @@ export default function StocksTableRow({
             </div>
             <div
               className={`text-xs font-medium ${
-                isExpired 
-                  ? 'text-red-600'        // ✅ หมดอายุแล้ว
-                  : isExpiringSoon 
-                  ? 'text-amber-600'      // กำลังจะหมดอายุ (ภายใน 90 วัน)
-                  : 'text-gray-500'       // ยังไกล
+                isExpired
+                  ? "text-red-600"
+                  : isExpiringSoon
+                  ? "text-amber-600"
+                  : "text-gray-500"
               }`}
             >
               {formatDate(nearestExpiryBatch.expiryDate!)}
-              {isExpired && ' (หมดอายุแล้ว)'}
-              {isExpiringSoon && !isExpired && ' (ใกล้หมดอายุ)'}
+              {isExpired && " (หมดอายุแล้ว)"}
+              {isExpiringSoon && !isExpired && " (ใกล้หมดอายุ)"}
             </div>
           </div>
         ) : (
@@ -215,30 +240,28 @@ export default function StocksTableRow({
       <td className="px-4 py-3">
         <div className="text-sm font-medium text-green-700">
           {totalValue > 0
-            ? `฿${totalValue.toLocaleString('th-TH', {
+            ? `฿${totalValue.toLocaleString("th-TH", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}`
-            : '-'}
+            : "-"}
         </div>
       </td>
 
-      {/* Status */}
+      {/* Last Update */}
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          {stock.batches.length > 0 ? (
-            <>
-              <Package className="h-4 w-4 text-green-600" />
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                {stock.batches.length} Lot
-              </Badge>
-            </>
-          ) : (
-            <Badge variant="outline" className="bg-gray-50 text-gray-600">
-              ไม่มีสต็อก
-            </Badge>
-          )}
-        </div>
+        {firstUpdatedBatch ? (
+          <div className="space-y-0.5">
+            <div className="text-sm text-gray-900">
+              {formatOnlyDate(firstUpdatedBatch.updatedAt)}
+            </div>
+            <div className="text-xs text-gray-500">
+              {formatOnlyTime(firstUpdatedBatch.updatedAt)}
+            </div>
+          </div>
+        ) : (
+          <span className="text-sm text-gray-500">-</span>
+        )}
       </td>
     </tr>
   );

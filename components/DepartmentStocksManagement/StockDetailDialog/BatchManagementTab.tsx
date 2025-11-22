@@ -1,12 +1,11 @@
 // components/DepartmentStocksManagement/StockDetailDialog/BatchManagementTab.tsx
-// UPDATED: Remove unused import
+// UPDATED: Remove batch.status, split date and time into 2 lines
 
 'use client';
 
 import { useState } from 'react';
 import { DepartmentStock, StockBatch } from '@/types/stock';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -15,13 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Plus, Edit, AlertTriangle, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import BatchFormModal from './BatchFormModal';
@@ -54,41 +46,6 @@ export default function BatchManagementTab({
     setIsFormOpen(true);
   };
 
-  const handleStatusChange = async (batchId: string, newStatus: string) => {
-    if (!canManage) {
-      toast.error('ไม่มีสิทธิ์', {
-        description: 'คุณไม่มีสิทธิ์แก้ไขสถานะ batch',
-      });
-      return;
-    }
-
-    try {
-      console.log('📡 API Call (Not Implemented):', {
-        url: `/api/${orgSlug}/${deptSlug}/stocks/${stock.id}/batches/${batchId}`,
-        method: 'PATCH',
-        body: { status: newStatus },
-      });
-
-      // TODO: Implement API call
-      // await fetch(`/api/${orgSlug}/${deptSlug}/stocks/${stock.id}/batches/${batchId}`, {
-      //   method: 'PATCH',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ status: newStatus }),
-      // });
-
-      toast.success('สำเร็จ', {
-        description: 'เปลี่ยนสถานะ batch เรียบร้อย',
-      });
-
-      onUpdateSuccess();
-    } catch (error) {
-      console.error('Error changing batch status:', error);
-      toast.error('เกิดข้อผิดพลาด', {
-        description: 'ไม่สามารถเปลี่ยนสถานะได้',
-      });
-    }
-  };
-
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('th-TH', {
       year: 'numeric',
@@ -97,38 +54,19 @@ export default function BatchManagementTab({
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'AVAILABLE':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'RESERVED':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'QUARANTINE':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'DAMAGED':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'EXPIRED':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const formatOnlyDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'AVAILABLE':
-        return 'พร้อมใช้';
-      case 'RESERVED':
-        return 'จองแล้ว';
-      case 'QUARANTINE':
-        return 'กักกัน';
-      case 'DAMAGED':
-        return 'เสียหาย';
-      case 'EXPIRED':
-        return 'หมดอายุ';
-      default:
-        return status;
-    }
+  const formatOnlyTime = (date: Date) => {
+    return new Date(date).toLocaleTimeString('th-TH', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   const today = new Date();
@@ -198,7 +136,7 @@ export default function BatchManagementTab({
               <TableHead className="text-right">คงเหลือ</TableHead>
               <TableHead className="text-right">ใช้ได้</TableHead>
               <TableHead>ตำแหน่ง</TableHead>
-              <TableHead>สถานะ</TableHead>
+              <TableHead>อัพเดท</TableHead>
               {canManage && <TableHead className="text-center">จัดการ</TableHead>}
             </TableRow>
           </TableHeader>
@@ -285,32 +223,14 @@ export default function BatchManagementTab({
                     </TableCell>
                     <TableCell className="text-sm">{batch.location || '-'}</TableCell>
                     <TableCell>
-                      {canManage ? (
-                        <Select
-                          value={batch.status}
-                          onValueChange={(value) =>
-                            handleStatusChange(batch.id, value)
-                          }
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="AVAILABLE">พร้อมใช้</SelectItem>
-                            <SelectItem value="RESERVED">จองแล้ว</SelectItem>
-                            <SelectItem value="QUARANTINE">กักกัน</SelectItem>
-                            <SelectItem value="DAMAGED">เสียหาย</SelectItem>
-                            <SelectItem value="EXPIRED">หมดอายุ</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className={getStatusColor(batch.status)}
-                        >
-                          {getStatusLabel(batch.status)}
-                        </Badge>
-                      )}
+                      <div className="space-y-0.5">
+                        <div className="text-sm text-gray-900">
+                          {formatOnlyDate(batch.updatedAt)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatOnlyTime(batch.updatedAt)}
+                        </div>
+                      </div>
                     </TableCell>
                     {canManage && (
                       <TableCell className="text-center">

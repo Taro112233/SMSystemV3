@@ -3,33 +3,33 @@
 
 model AuditLog {
   id             String        @id @default(cuid())
-  organizationId String?       // ✅ FIXED: Made optional for user-level actions
+  organizationId String?
   
-  // ✅ Actor (ผู้ทำ) - Snapshot + Optional Relation
-  userId         String?       // User ID (for relation/query)
-  userSnapshot   Json?         // ✅ User info ณ ขณะนั้น
+  // Actor (ผู้ทำ)
+  userId         String?
+  userSnapshot   Json?
   
-  // ✅ Target (ผู้ถูกกระทำ) - Snapshot + Optional Relation
-  targetUserId   String?       // Target User ID
-  targetSnapshot Json?         // ✅ Target user info ณ ขณะนั้น
+  // Target (ผู้ถูกกระทำ)
+  targetUserId   String?
+  targetSnapshot Json?
   
   // Department Context
   departmentId   String?
   
   // Action Classification
-  action         String        // "products.create", "user.profile_updated"
-  category       AuditCategory // PRODUCT, STOCK, TRANSFER, USER, ORG
+  action         String
+  category       AuditCategory
   severity       AuditSeverity @default(INFO)
   
   // Human-Readable Description
-  description    String        // "สมชาย สร้างสินค้า Paracetamol ที่คลังยา"
+  description    String
   
   // Resource Tracking
-  resourceId     String?       // ID ของ record
-  resourceType   String?       // "Product", "Stock", "Transfer", "User"
+  resourceId     String?
+  resourceType   String?
   
-  // Detailed Data (before/after comparison)
-  payload        Json?         // { before, after, metadata }
+  // Detailed Data
+  payload        Json?
   
   // Request Context
   ipAddress      String?
@@ -38,7 +38,7 @@ model AuditLog {
   // Timestamp
   createdAt      DateTime @default(now())
   
-  // ✅ Relations (ยังคงไว้สำหรับ query/join) - Made optional
+  // Relations
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User? @relation("AuditLogUser", fields: [userId], references: [id], onDelete: SetNull)
   targetUser     User? @relation("AuditLogTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
@@ -54,20 +54,19 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// Enums (ไม่เปลี่ยนแปลง)
 enum AuditCategory {
-  PRODUCT       // สินค้า
-  STOCK         // สต็อก
-  TRANSFER      // การโอนย้าย
-  USER          // ผู้ใช้
-  ORGANIZATION  // องค์กร
-  DEPARTMENT    // หน่วยงาน
-  AUTH          // Authentication
-  SYSTEM        // ระบบ
+  PRODUCT
+  STOCK
+  TRANSFER
+  USER
+  ORGANIZATION
+  DEPARTMENT
+  AUTH
+  SYSTEM
 }
 
 enum AuditSeverity {
-  INFO          // ปกติ (90%)
-  WARNING       // สำคัญ (8%)
-  CRITICAL      // วิกฤติ (2%)
+  INFO
+  WARNING
+  CRITICAL
 }

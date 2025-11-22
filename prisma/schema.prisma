@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-11-20T10:01:27.336Z
+// Last generated: 2025-11-21T05:05:30.255Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -183,11 +183,14 @@ model Organization {
   departments Department[]
   auditLogs   AuditLog[]
   
-  // ✅ Product-related relations
+  // Product-related relations
   products              Product[]
   productAttributeCategories ProductAttributeCategory[]
-  productUnits          ProductUnit[]  // ✅ เพิ่มบรรทัดนี้
+  productUnits          ProductUnit[]
   stocks                Stock[]
+  
+  // Transfer relations
+  transfers             Transfer[]
   
   @@index([slug])
   @@index([status])
@@ -220,7 +223,7 @@ model OrganizationUser {
   @@map("organization_users")
 }
 
-// ✅ UPDATED: Department with User Snapshots + Stock relation
+// Department with User Snapshots + Transfer relations
 model Department {
   id             String       @id @default(cuid())
   organizationId String
@@ -236,7 +239,7 @@ model Department {
   // Status
   isActive       Boolean      @default(true)
   
-  // ✅ USER TRACKING
+  // User Tracking
   createdBy         String
   createdBySnapshot Json?
   updatedBy         String?
@@ -252,6 +255,10 @@ model Department {
   children       Department[] @relation("DepartmentHierarchy")
   auditLogs      AuditLog[]
   stocks         Stock[]
+  
+  // Transfer relations
+  outgoingTransfers Transfer[] @relation("TransferSupplying")
+  incomingTransfers Transfer[] @relation("TransferRequesting")
   
   @@unique([organizationId, slug])
   @@index([parentId])
@@ -399,6 +406,7 @@ model Product {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   attributes     ProductAttribute[]
   stocks         Stock[]
+  transferItems  TransferItem[]
   
   @@unique([organizationId, code])
   @@index([organizationId, isActive])
@@ -524,33 +532,33 @@ enum BatchStatus {
 
 model AuditLog {
   id             String        @id @default(cuid())
-  organizationId String?       // ✅ FIXED: Made optional for user-level actions
+  organizationId String?
   
-  // ✅ Actor (ผู้ทำ) - Snapshot + Optional Relation
-  userId         String?       // User ID (for relation/query)
-  userSnapshot   Json?         // ✅ User info ณ ขณะนั้น
+  // Actor (ผู้ทำ)
+  userId         String?
+  userSnapshot   Json?
   
-  // ✅ Target (ผู้ถูกกระทำ) - Snapshot + Optional Relation
-  targetUserId   String?       // Target User ID
-  targetSnapshot Json?         // ✅ Target user info ณ ขณะนั้น
+  // Target (ผู้ถูกกระทำ)
+  targetUserId   String?
+  targetSnapshot Json?
   
   // Department Context
   departmentId   String?
   
   // Action Classification
-  action         String        // "products.create", "user.profile_updated"
-  category       AuditCategory // PRODUCT, STOCK, TRANSFER, USER, ORG
+  action         String
+  category       AuditCategory
   severity       AuditSeverity @default(INFO)
   
   // Human-Readable Description
-  description    String        // "สมชาย สร้างสินค้า Paracetamol ที่คลังยา"
+  description    String
   
   // Resource Tracking
-  resourceId     String?       // ID ของ record
-  resourceType   String?       // "Product", "Stock", "Transfer", "User"
+  resourceId     String?
+  resourceType   String?
   
-  // Detailed Data (before/after comparison)
-  payload        Json?         // { before, after, metadata }
+  // Detailed Data
+  payload        Json?
   
   // Request Context
   ipAddress      String?
@@ -559,7 +567,7 @@ model AuditLog {
   // Timestamp
   createdAt      DateTime @default(now())
   
-  // ✅ Relations (ยังคงไว้สำหรับ query/join) - Made optional
+  // Relations
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User? @relation("AuditLogUser", fields: [userId], references: [id], onDelete: SetNull)
   targetUser     User? @relation("AuditLogTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
@@ -575,20 +583,208 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// Enums (ไม่เปลี่ยนแปลง)
 enum AuditCategory {
-  PRODUCT       // สินค้า
-  STOCK         // สต็อก
-  TRANSFER      // การโอนย้าย
-  USER          // ผู้ใช้
-  ORGANIZATION  // องค์กร
-  DEPARTMENT    // หน่วยงาน
-  AUTH          // Authentication
-  SYSTEM        // ระบบ
+  PRODUCT
+  STOCK
+  TRANSFER
+  USER
+  ORGANIZATION
+  DEPARTMENT
+  AUTH
+  SYSTEM
 }
 
 enum AuditSeverity {
-  INFO          // ปกติ (90%)
-  WARNING       // สำคัญ (8%)
-  CRITICAL      // วิกฤติ (2%)
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// ==========================================
+// TRANSFER SCHEMA - ADDITIONAL
+// ==========================================
+
+// prisma/schemas/transfer.prisma
+// ===== TRANSFER SYSTEM - Department to Department =====
+
+// ===== TRANSFER REQUEST (Organization Level) =====
+model Transfer {
+  id             String   @id @default(cuid())
+  organizationId String
+  
+  // Transfer Reference
+  transferCode   String   // "REQ-2024-0001"
+  title          String   // "ขอเบิกยาฉุกเฉิน OPD"
+  
+  // Department Context
+  requestingDepartmentId String  // หน่วยงานที่ขอเบิก (destination)
+  supplyingDepartmentId  String  // หน่วยงานที่จ่าย (source)
+  
+  // Request Info
+  requestReason  String?  // เหตุผลในการขอเบิก
+  notes          String?  // หมายเหตุเพิ่มเติม
+  priority       TransferPriority @default(NORMAL)
+  
+  // Transfer-Level Status
+  overallStatus  TransferOverallStatus @default(PENDING)
+  
+  // Timeline
+  requestedDate  DateTime  @default(now())
+  approvedDate   DateTime?
+  completedDate  DateTime?
+  cancelledDate  DateTime?
+  
+  // Cancellation
+  cancelReason   String?
+  
+  // User Tracking
+  requestedBy         String
+  requestedBySnapshot Json?
+  
+  approvedBy          String?
+  approvedBySnapshot  Json?
+  
+  cancelledBy         String?
+  cancelledBySnapshot Json?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestingDepartment Department  @relation("TransferRequesting", fields: [requestingDepartmentId], references: [id], onDelete: Restrict)
+  supplyingDepartment  Department  @relation("TransferSupplying", fields: [supplyingDepartmentId], references: [id], onDelete: Restrict)
+  
+  items          TransferItem[]
+  statusHistory  TransferStatusHistory[]
+  
+  // Indexes
+  @@unique([organizationId, transferCode])
+  @@index([organizationId, overallStatus])
+  @@index([requestingDepartmentId, overallStatus])
+  @@index([supplyingDepartmentId, overallStatus])
+  @@index([requestedDate])
+  @@index([overallStatus, priority])
+  @@map("transfers")
+}
+
+// ===== TRANSFER ITEMS (Item-Level Status) =====
+model TransferItem {
+  id             String   @id @default(cuid())
+  transferId     String
+  
+  // Product Info
+  productId      String
+  productCode    String
+  productName    String
+  baseUnit       String
+  
+  // Item-Level Status
+  status         TransferItemStatus @default(PENDING)
+  
+  // Quantity Tracking
+  requestedQuantity Int
+  approvedQuantity  Int?
+  preparedQuantity  Int?
+  receivedQuantity  Int?
+  
+  // Batch Selection
+  selectedBatches   Json?
+  
+  // Notes
+  notes          String?
+  rejectReason   String?
+  
+  // Timeline
+  approvedAt     DateTime?
+  preparedAt     DateTime?
+  deliveredAt    DateTime?
+  cancelledAt    DateTime?
+  
+  // User Tracking
+  approvedBy          String?
+  approvedBySnapshot  Json?
+  
+  preparedBy          String?
+  preparedBySnapshot  Json?
+  
+  deliveredBy         String?
+  deliveredBySnapshot Json?
+  
+  cancelledBy         String?
+  cancelledBySnapshot Json?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  transfer       Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  
+  // Indexes
+  @@index([transferId])
+  @@index([productId])
+  @@index([status])
+  @@index([transferId, status])
+  @@map("transfer_items")
+}
+
+// ===== TRANSFER STATUS HISTORY (Audit Trail) =====
+model TransferStatusHistory {
+  id             String   @id @default(cuid())
+  transferId     String
+  itemId         String?
+  
+  // Status Change
+  changeType     String
+  fromStatus     String?
+  toStatus       String
+  
+  // Who & Why
+  changedBy         String
+  changedBySnapshot Json?
+  reason         String?
+  notes          String?
+  
+  // Additional Data
+  metadata       Json?
+  
+  // Request Context
+  ipAddress      String?
+  userAgent      String?
+  
+  // Timestamp
+  createdAt      DateTime @default(now())
+  
+  // Relations
+  transfer       Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  
+  // Indexes
+  @@index([transferId, createdAt(sort: Desc)])
+  @@index([itemId])
+  @@map("transfer_status_history")
+}
+
+// ===== ENUMS =====
+enum TransferOverallStatus {
+  PENDING
+  PARTIAL
+  COMPLETED
+  CANCELLED
+}
+
+enum TransferItemStatus {
+  PENDING
+  APPROVED
+  PREPARED
+  DELIVERED
+  CANCELLED
+}
+
+enum TransferPriority {
+  NORMAL
+  URGENT
+  CRITICAL
 }

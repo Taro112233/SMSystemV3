@@ -62,7 +62,7 @@ export default function StocksTableHeader({
         <HeaderCell label="รอรับ" sortable={false} />
         <HeaderCell field="expiryDate" label="Lot/Exp ใกล้สุด" />
         <HeaderCell label="มูลค่ารวม" sortable={false} />
-        <HeaderCell label="สถานะ" sortable={false} />
+        <HeaderCell label="อัพเดท" sortable={false} />
       </tr>
     </thead>
   );

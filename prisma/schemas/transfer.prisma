@@ -1,0 +1,184 @@
+// prisma/schemas/transfer.prisma
+// ===== TRANSFER SYSTEM - Department to Department =====
+
+// ===== TRANSFER REQUEST (Organization Level) =====
+model Transfer {
+  id             String   @id @default(cuid())
+  organizationId String
+  
+  // Transfer Reference
+  transferCode   String   // "REQ-2024-0001"
+  title          String   // "ขอเบิกยาฉุกเฉิน OPD"
+  
+  // Department Context
+  requestingDepartmentId String  // หน่วยงานที่ขอเบิก (destination)
+  supplyingDepartmentId  String  // หน่วยงานที่จ่าย (source)
+  
+  // Request Info
+  requestReason  String?  // เหตุผลในการขอเบิก
+  notes          String?  // หมายเหตุเพิ่มเติม
+  priority       TransferPriority @default(NORMAL)
+  
+  // Transfer-Level Status
+  overallStatus  TransferOverallStatus @default(PENDING)
+  
+  // Timeline
+  requestedDate  DateTime  @default(now())
+  approvedDate   DateTime?
+  completedDate  DateTime?
+  cancelledDate  DateTime?
+  
+  // Cancellation
+  cancelReason   String?
+  
+  // User Tracking
+  requestedBy         String
+  requestedBySnapshot Json?
+  
+  approvedBy          String?
+  approvedBySnapshot  Json?
+  
+  cancelledBy         String?
+  cancelledBySnapshot Json?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestingDepartment Department  @relation("TransferRequesting", fields: [requestingDepartmentId], references: [id], onDelete: Restrict)
+  supplyingDepartment  Department  @relation("TransferSupplying", fields: [supplyingDepartmentId], references: [id], onDelete: Restrict)
+  
+  items          TransferItem[]
+  statusHistory  TransferStatusHistory[]
+  
+  // Indexes
+  @@unique([organizationId, transferCode])
+  @@index([organizationId, overallStatus])
+  @@index([requestingDepartmentId, overallStatus])
+  @@index([supplyingDepartmentId, overallStatus])
+  @@index([requestedDate])
+  @@index([overallStatus, priority])
+  @@map("transfers")
+}
+
+// ===== TRANSFER ITEMS (Item-Level Status) =====
+model TransferItem {
+  id             String   @id @default(cuid())
+  transferId     String
+  
+  // Product Info
+  productId      String
+  productCode    String
+  productName    String
+  baseUnit       String
+  
+  // Item-Level Status
+  status         TransferItemStatus @default(PENDING)
+  
+  // Quantity Tracking
+  requestedQuantity Int
+  approvedQuantity  Int?
+  preparedQuantity  Int?
+  receivedQuantity  Int?
+  
+  // Batch Selection
+  selectedBatches   Json?
+  
+  // Notes
+  notes          String?
+  rejectReason   String?
+  
+  // Timeline
+  approvedAt     DateTime?
+  preparedAt     DateTime?
+  deliveredAt    DateTime?
+  cancelledAt    DateTime?
+  
+  // User Tracking
+  approvedBy          String?
+  approvedBySnapshot  Json?
+  
+  preparedBy          String?
+  preparedBySnapshot  Json?
+  
+  deliveredBy         String?
+  deliveredBySnapshot Json?
+  
+  cancelledBy         String?
+  cancelledBySnapshot Json?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  transfer       Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  
+  // Indexes
+  @@index([transferId])
+  @@index([productId])
+  @@index([status])
+  @@index([transferId, status])
+  @@map("transfer_items")
+}
+
+// ===== TRANSFER STATUS HISTORY (Audit Trail) =====
+model TransferStatusHistory {
+  id             String   @id @default(cuid())
+  transferId     String
+  itemId         String?
+  
+  // Status Change
+  changeType     String
+  fromStatus     String?
+  toStatus       String
+  
+  // Who & Why
+  changedBy         String
+  changedBySnapshot Json?
+  reason         String?
+  notes          String?
+  
+  // Additional Data
+  metadata       Json?
+  
+  // Request Context
+  ipAddress      String?
+  userAgent      String?
+  
+  // Timestamp
+  createdAt      DateTime @default(now())
+  
+  // Relations
+  transfer       Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  
+  // Indexes
+  @@index([transferId, createdAt(sort: Desc)])
+  @@index([itemId])
+  @@map("transfer_status_history")
+}
+
+// ===== ENUMS =====
+enum TransferOverallStatus {
+  PENDING
+  PARTIAL
+  COMPLETED
+  CANCELLED
+}
+
+enum TransferItemStatus {
+  PENDING
+  APPROVED
+  PREPARED
+  DELIVERED
+  CANCELLED
+}
+
+enum TransferPriority {
+  NORMAL
+  URGENT
+  CRITICAL
+}

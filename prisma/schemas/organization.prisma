@@ -32,11 +32,14 @@ model Organization {
   departments Department[]
   auditLogs   AuditLog[]
   
-  // ✅ Product-related relations
+  // Product-related relations
   products              Product[]
   productAttributeCategories ProductAttributeCategory[]
-  productUnits          ProductUnit[]  // ✅ เพิ่มบรรทัดนี้
+  productUnits          ProductUnit[]
   stocks                Stock[]
+  
+  // Transfer relations
+  transfers             Transfer[]
   
   @@index([slug])
   @@index([status])
@@ -69,7 +72,7 @@ model OrganizationUser {
   @@map("organization_users")
 }
 
-// ✅ UPDATED: Department with User Snapshots + Stock relation
+// Department with User Snapshots + Transfer relations
 model Department {
   id             String       @id @default(cuid())
   organizationId String
@@ -85,7 +88,7 @@ model Department {
   // Status
   isActive       Boolean      @default(true)
   
-  // ✅ USER TRACKING
+  // User Tracking
   createdBy         String
   createdBySnapshot Json?
   updatedBy         String?
@@ -101,6 +104,10 @@ model Department {
   children       Department[] @relation("DepartmentHierarchy")
   auditLogs      AuditLog[]
   stocks         Stock[]
+  
+  // Transfer relations
+  outgoingTransfers Transfer[] @relation("TransferSupplying")
+  incomingTransfers Transfer[] @relation("TransferRequesting")
   
   @@unique([organizationId, slug])
   @@index([parentId])
