@@ -1,13 +1,23 @@
 // components/TransferManagement/CreateTransfer/ProductSelectionTable.tsx
-// ProductSelectionTable - Product table for selection
+// ProductSelectionTable - Product table with stock info and filters
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Search } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatDistanceToNow } from 'date-fns';
+import { th } from 'date-fns/locale';
+
+interface ProductStock {
+  stockId?: string;
+  availableQuantity: number;
+  lastUpdated: Date;
+}
 
 interface Product {
   id: string;
@@ -15,10 +25,14 @@ interface Product {
   name: string;
   genericName?: string;
   baseUnit: string;
+  defaultWithdrawalQty?: number;
+  requestingStock?: ProductStock; // Stock in requesting dept
+  supplyingStock?: ProductStock;  // Stock in supplying dept
 }
 
 interface SelectedProduct extends Product {
   quantity: number;
+  requestingCurrentStock: number; // Editable field
   notes?: string;
 }
 
@@ -26,67 +40,141 @@ interface ProductSelectionTableProps {
   products: Product[];
   selectedProducts: SelectedProduct[];
   onSelectionChange: (selected: SelectedProduct[]) => void;
+  onRefreshStock: () => Promise<void>;
+  isRefreshing?: boolean;
 }
 
 export default function ProductSelectionTable({
   products,
   selectedProducts,
   onSelectionChange,
+  onRefreshStock,
+  isRefreshing = false,
 }: ProductSelectionTableProps) {
   const [search, setSearch] = useState('');
+  const [filterTab, setFilterTab] = useState<'all' | 'requesting' | 'supplying'>('all');
 
-  const filteredProducts = products.filter(
-    (p) =>
-      p.code.toLowerCase().includes(search.toLowerCase()) ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.genericName?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filter products based on tab
+  const filteredProducts = useMemo(() => {
+    let filtered = products;
+
+    // Apply tab filter
+    if (filterTab === 'requesting') {
+      filtered = filtered.filter(p => p.requestingStock !== undefined);
+    } else if (filterTab === 'supplying') {
+      filtered = filtered.filter(p => p.supplyingStock !== undefined);
+    }
+
+    // Apply search filter
+    if (search) {
+      filtered = filtered.filter(p =>
+        p.code.toLowerCase().includes(search.toLowerCase()) ||
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.genericName?.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    return filtered;
+  }, [products, filterTab, search]);
 
   const isSelected = (productId: string) => {
-    return selectedProducts.some((p) => p.id === productId);
+    return selectedProducts.some(p => p.id === productId);
   };
 
   const handleToggle = (product: Product) => {
     if (isSelected(product.id)) {
-      onSelectionChange(selectedProducts.filter((p) => p.id !== product.id));
+      onSelectionChange(selectedProducts.filter(p => p.id !== product.id));
     } else {
       onSelectionChange([
         ...selectedProducts,
-        { ...product, quantity: 1, notes: '' },
+        {
+          ...product,
+          quantity: product.defaultWithdrawalQty || 1,
+          requestingCurrentStock: product.requestingStock?.availableQuantity || 0,
+          notes: '',
+        },
       ]);
     }
   };
 
   const handleQuantityChange = (productId: string, quantity: number) => {
     onSelectionChange(
-      selectedProducts.map((p) =>
+      selectedProducts.map(p =>
         p.id === productId ? { ...p, quantity: Math.max(1, quantity) } : p
+      )
+    );
+  };
+
+  const handleRequestingStockChange = (productId: string, stock: number) => {
+    onSelectionChange(
+      selectedProducts.map(p =>
+        p.id === productId ? { ...p, requestingCurrentStock: Math.max(0, stock) } : p
       )
     );
   };
 
   const handleNotesChange = (productId: string, notes: string) => {
     onSelectionChange(
-      selectedProducts.map((p) => (p.id === productId ? { ...p, notes } : p))
+      selectedProducts.map(p => (p.id === productId ? { ...p, notes } : p))
     );
+  };
+
+  const formatTimeAgo = (date: Date | undefined) => {
+    if (!date) return '-';
+    try {
+      return formatDistanceToNow(new Date(date), { 
+        addSuffix: true, 
+        locale: th 
+      });
+    } catch {
+      return '-';
+    }
   };
 
   return (
     <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          type="text"
-          placeholder="ค้นหารหัส, ชื่อสินค้า..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search & Filter */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="ค้นหารหัส, ชื่อสินค้า..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        <Tabs value={filterTab} onValueChange={(v) => setFilterTab(v as any)}>
+          <TabsList>
+            <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
+            <TabsTrigger value="requesting">แผนกตัวเอง</TabsTrigger>
+            <TabsTrigger value="supplying">แผนกที่เบิก</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRefreshStock}
+          disabled={isRefreshing}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          รีเฟรช
+        </Button>
       </div>
 
-      <ScrollArea className="h-[400px] w-full rounded-md border">
+      {/* Results Count */}
+      <div className="text-sm text-gray-600">
+        แสดง {filteredProducts.length} รายการ
+      </div>
+
+      {/* Table */}
+      <ScrollArea className="h-[500px] w-full rounded-md border">
         <table className="w-full">
-          <thead className="bg-gray-50 sticky top-0">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="w-12 px-4 py-3 text-left">
                 <span className="sr-only">Select</span>
@@ -101,7 +189,13 @@ export default function ProductSelectionTable({
                 หน่วย
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-32">
-                จำนวน
+                คงเหลือ<br />แผนกตัวเอง
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-32">
+                คงเหลือ<br />แผนกที่เบิก
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-32">
+                จำนวนเบิก
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
                 หมายเหตุ
@@ -110,7 +204,10 @@ export default function ProductSelectionTable({
           </thead>
           <tbody className="divide-y divide-gray-200">
             {filteredProducts.map((product) => {
-              const selected = selectedProducts.find((p) => p.id === product.id);
+              const selected = selectedProducts.find(p => p.id === product.id);
+              const requestingStock = product.requestingStock;
+              const supplyingStock = product.supplyingStock;
+
               return (
                 <tr key={product.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
@@ -137,6 +234,64 @@ export default function ProductSelectionTable({
                   <td className="px-4 py-3">
                     <span className="text-sm text-gray-600">{product.baseUnit}</span>
                   </td>
+
+                  {/* Requesting Dept Stock (Editable when selected) */}
+                  <td className="px-4 py-3">
+                    {selected ? (
+                      <div className="space-y-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          value={selected.requestingCurrentStock}
+                          onChange={(e) =>
+                            handleRequestingStockChange(
+                              product.id,
+                              parseInt(e.target.value) || 0
+                            )
+                          }
+                          className="w-24 h-8 text-sm"
+                        />
+                        {requestingStock && (
+                          <div className="text-xs text-gray-500">
+                            {formatTimeAgo(requestingStock.lastUpdated)}
+                          </div>
+                        )}
+                      </div>
+                    ) : requestingStock ? (
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {requestingStock.availableQuantity.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatTimeAgo(requestingStock.lastUpdated)}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+
+                  {/* Supplying Dept Stock (Read-only) */}
+                  <td className="px-4 py-3">
+                    {supplyingStock ? (
+                      <div className="space-y-1">
+                        <div className={`text-sm font-medium ${
+                          supplyingStock.availableQuantity > 0 
+                            ? 'text-green-600' 
+                            : 'text-red-600'
+                        }`}>
+                          {supplyingStock.availableQuantity.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatTimeAgo(supplyingStock.lastUpdated)}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+
+                  {/* Quantity Input */}
                   <td className="px-4 py-3">
                     {selected && (
                       <Input
@@ -146,10 +301,13 @@ export default function ProductSelectionTable({
                         onChange={(e) =>
                           handleQuantityChange(product.id, parseInt(e.target.value) || 1)
                         }
-                        className="w-24"
+                        className="w-24 h-8 text-sm"
+                        placeholder={product.defaultWithdrawalQty?.toString()}
                       />
                     )}
                   </td>
+
+                  {/* Notes */}
                   <td className="px-4 py-3">
                     {selected && (
                       <Input
@@ -157,13 +315,21 @@ export default function ProductSelectionTable({
                         placeholder="หมายเหตุ (ถ้ามี)"
                         value={selected.notes || ''}
                         onChange={(e) => handleNotesChange(product.id, e.target.value)}
-                        className="w-48"
+                        className="w-48 h-8 text-sm"
                       />
                     )}
                   </td>
                 </tr>
               );
             })}
+
+            {filteredProducts.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  ไม่พบสินค้า
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
         <ScrollBar orientation="horizontal" />

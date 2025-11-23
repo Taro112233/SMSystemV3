@@ -1,9 +1,10 @@
 // lib/transfer-helpers.ts
-// ===== TRANSFER SYSTEM BUSINESS LOGIC =====
+// ===== TRANSFER SYSTEM BUSINESS LOGIC - UPDATED =====
 
 import { prisma } from '@/lib/prisma';
 import { createUserSnapshot } from '@/lib/user-snapshot';
 import { createAuditLog } from '@/lib/audit-logger';
+import { Prisma } from '@prisma/client';
 
 // ===== TYPE DEFINITIONS =====
 
@@ -91,46 +92,44 @@ export async function createTransfer(data: CreateTransferRequest) {
     const newTransfer = await tx.transfer.create({
       data: {
         organizationId,
-        transferCode,
+        code: transferCode,  // ✅ FIXED: transferCode → code
         title: data.title,
         requestingDepartmentId,
         supplyingDepartmentId,
         requestReason: data.requestReason,
         notes: data.notes,
         priority: data.priority || 'NORMAL',
-        overallStatus: 'PENDING',
+        status: 'PENDING',  // ✅ FIXED: overallStatus → status
         requestedBy,
-        requestedBySnapshot,
+        requestedBySnapshot: requestedBySnapshot as Prisma.InputJsonValue,
         items: {
-          create: items.map(item => {
-            const product = products.find(p => p.id === item.productId)!;
-            return {
-              productId: item.productId,
-              productCode: product.code,
-              productName: product.name,
-              baseUnit: product.baseUnit,
-              requestedQuantity: item.requestedQuantity,
-              status: 'PENDING',
-              notes: item.notes,
-            };
-          })
+          create: items.map(item => ({
+            productId: item.productId,  // ✅ FIXED: ลบ snapshot fields
+            requestedQuantity: item.requestedQuantity,
+            status: 'PENDING',
+            notes: item.notes,
+          }))
         }
       },
       include: {
-        items: true,
+        items: {
+          include: {
+            product: true  // ✅ FIXED: join Product table
+          }
+        },
         requestingDepartment: true,
         supplyingDepartment: true,
       }
     });
 
-    await tx.transferStatusHistory.create({
+    await tx.transferHistory.create({  // ✅ FIXED: transferStatusHistory → transferHistory
       data: {
         transferId: newTransfer.id,
-        changeType: 'TRANSFER_STATUS',
+        action: 'CREATED',  // ✅ FIXED: changeType → action
         toStatus: 'PENDING',
         changedBy: requestedBy,
-        changedBySnapshot: requestedBySnapshot,
-        reason: 'Transfer request created',
+        changedBySnapshot: requestedBySnapshot as Prisma.InputJsonValue,
+        notes: 'Transfer request created',  // ✅ FIXED: reason → notes
       }
     });
 
@@ -153,7 +152,7 @@ export async function createTransfer(data: CreateTransferRequest) {
       toDept: requestingDept.name,
       itemCount: items.length,
       totalQuantity: items.reduce((sum, i) => sum + i.requestedQuantity, 0),
-    }
+    } as Prisma.InputJsonValue
   });
 
   return transfer;
@@ -198,43 +197,41 @@ export async function approveTransferItem(data: ApproveItemRequest) {
         status: 'APPROVED',
         approvedQuantity,
         approvedAt: new Date(),
-        approvedBy,
-        approvedBySnapshot,
+        // ✅ FIXED: ลบ approvedBy, approvedBySnapshot (ใช้ History แทน)
         notes: notes || item.notes,
       }
     });
 
-    const transfer = await tx.transfer.findUnique({
-      where: { id: item.transferId },
-      include: { items: true }
+    // ✅ FIXED: Check if all items approved → update Transfer status
+    const allItems = await tx.transferItem.findMany({
+      where: { transferId: item.transferId }
     });
 
-    if (transfer && !transfer.approvedAt) {
+    const allApproved = allItems.every(i => 
+      i.status === 'APPROVED' || i.status === 'PREPARED' || i.status === 'DELIVERED'
+    );
+
+    if (!item.transfer.approvedAt) {
       await tx.transfer.update({
-        where: { id: transfer.id },
+        where: { id: item.transferId },
         data: {
+          status: allApproved ? 'APPROVED' : 'PARTIAL',  // ✅ FIXED: overallStatus → status
           approvedAt: new Date(),
-          approvedBy,
-          approvedBySnapshot,
-          overallStatus: 'PARTIAL',
+          // ✅ FIXED: ลบ approvedBy, approvedBySnapshot
         }
       });
     }
 
-    await tx.transferStatusHistory.create({
+    await tx.transferHistory.create({  // ✅ FIXED: transferStatusHistory → transferHistory
       data: {
         transferId: item.transferId,
         itemId,
-        changeType: 'ITEM_STATUS',
+        action: 'APPROVED',  // ✅ FIXED: changeType → action
         fromStatus: 'PENDING',
         toStatus: 'APPROVED',
         changedBy: approvedBy,
-        changedBySnapshot: approvedBySnapshot,
-        reason: notes,
-        metadata: {
-          requestedQuantity: item.requestedQuantity,
-          approvedQuantity,
-        }
+        changedBySnapshot: approvedBySnapshot as Prisma.InputJsonValue,
+        notes,  // ✅ FIXED: reason → notes
       }
     });
 
@@ -249,15 +246,15 @@ export async function approveTransferItem(data: ApproveItemRequest) {
     action: 'transfers.approve_item',
     category: 'TRANSFER',
     severity: 'INFO',
-    description: `อนุมัติรายการ ${item.productName} จำนวน ${approvedQuantity} ${item.baseUnit}`,
+    description: `อนุมัติรายการ ${item.product.name} จำนวน ${approvedQuantity} ${item.product.baseUnit}`,  // ✅ FIXED: use product.name
     resourceId: itemId,
     resourceType: 'TransferItem',
     payload: {
-      transferCode: item.transfer.transferCode,
-      productCode: item.productCode,
+      transferCode: item.transfer.code,  // ✅ FIXED: transferCode → code
+      productCode: item.product.code,  // ✅ FIXED: use product.code
       requestedQuantity: item.requestedQuantity,
       approvedQuantity,
-    }
+    } as Prisma.InputJsonValue
   });
 
   return updatedItem;
@@ -335,19 +332,45 @@ export async function prepareTransferItem(data: PrepareItemRequest) {
         status: 'PREPARED',
         preparedQuantity,
         preparedAt: new Date(),
-        preparedBy,
-        preparedBySnapshot,
-        selectedBatches: selectedBatches,
+        // ✅ FIXED: ลบ preparedBy, preparedBySnapshot, selectedBatches (JSON)
         notes: notes || item.notes,
       }
     });
 
+    // ✅ FIXED: Create TransferBatch records (separate table)
     for (const selectedBatch of selectedBatches) {
+      await tx.transferBatch.create({
+        data: {
+          transferItemId: itemId,
+          batchId: selectedBatch.batchId,
+          quantity: selectedBatch.quantity,
+        }
+      });
+
       await tx.stockBatch.update({
         where: { id: selectedBatch.batchId },
         data: {
           availableQuantity: { decrement: selectedBatch.quantity },
           reservedQuantity: { increment: selectedBatch.quantity },
+        }
+      });
+    }
+
+    // ✅ FIXED: Check if all items prepared → update Transfer status
+    const allItems = await tx.transferItem.findMany({
+      where: { transferId: item.transferId }
+    });
+
+    const allPrepared = allItems.every(i => 
+      i.status === 'PREPARED' || i.status === 'DELIVERED'
+    );
+
+    if (allPrepared) {
+      await tx.transfer.update({
+        where: { id: item.transferId },
+        data: {
+          status: 'PREPARED',
+          preparedAt: new Date(),
         }
       });
     }
@@ -368,20 +391,16 @@ export async function prepareTransferItem(data: PrepareItemRequest) {
       });
     }
 
-    await tx.transferStatusHistory.create({
+    await tx.transferHistory.create({
       data: {
         transferId: item.transferId,
         itemId,
-        changeType: 'ITEM_STATUS',
+        action: 'PREPARED',
         fromStatus: 'APPROVED',
         toStatus: 'PREPARED',
         changedBy: preparedBy,
-        changedBySnapshot: preparedBySnapshot,
-        reason: notes,
-        metadata: {
-          preparedQuantity,
-          selectedBatches,
-        }
+        changedBySnapshot: preparedBySnapshot as Prisma.InputJsonValue,
+        notes,
       }
     });
 
@@ -396,15 +415,15 @@ export async function prepareTransferItem(data: PrepareItemRequest) {
     action: 'transfers.prepare_item',
     category: 'TRANSFER',
     severity: 'INFO',
-    description: `จัดเตรียมสินค้า ${item.productName} จำนวน ${preparedQuantity} ${item.baseUnit}`,
+    description: `จัดเตรียมสินค้า ${item.product.name} จำนวน ${preparedQuantity} ${item.product.baseUnit}`,
     resourceId: itemId,
     resourceType: 'TransferItem',
     payload: {
-      transferCode: item.transfer.transferCode,
-      productCode: item.productCode,
+      transferCode: item.transfer.code,
+      productCode: item.product.code,
       preparedQuantity,
       batchCount: selectedBatches.length,
-    }
+    } as Prisma.InputJsonValue
   });
 
   return updatedItem;
@@ -425,6 +444,11 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
         }
       },
       product: true,
+      batches: {  // ✅ FIXED: Join TransferBatch
+        include: {
+          batch: true
+        }
+      }
     }
   });
 
@@ -444,13 +468,8 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
     throw new Error('Invalid received quantity');
   }
 
-  const selectedBatches = item.selectedBatches as Array<{
-    batchId: string;
-    lotNumber: string;
-    quantity: number;
-  }>;
-
-  if (!selectedBatches || selectedBatches.length === 0) {
+  // ✅ FIXED: Get batches from TransferBatch table
+  if (!item.batches || item.batches.length === 0) {
     throw new Error('No batches selected');
   }
 
@@ -463,28 +482,22 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
         status: 'DELIVERED',
         receivedQuantity,
         deliveredAt: new Date(),
-        deliveredBy,
-        deliveredBySnapshot,
+        // ✅ FIXED: ลบ deliveredBy, deliveredBySnapshot
         notes: notes || item.notes,
       }
     });
 
-    for (const selectedBatch of selectedBatches) {
-      const sourceBatch = await tx.stockBatch.findUnique({
-        where: { id: selectedBatch.batchId },
-        include: { stock: true }
-      });
-
-      if (!sourceBatch) continue;
+    for (const transferBatch of item.batches) {
+      const sourceBatch = transferBatch.batch;
 
       const proportion = receivedQuantity / item.preparedQuantity!;
-      const actualQuantity = Math.floor(selectedBatch.quantity * proportion);
+      const actualQuantity = Math.floor(transferBatch.quantity * proportion);
 
       await tx.stockBatch.update({
-        where: { id: selectedBatch.batchId },
+        where: { id: sourceBatch.id },
         data: {
           totalQuantity: { decrement: actualQuantity },
-          reservedQuantity: { decrement: selectedBatch.quantity },
+          reservedQuantity: { decrement: transferBatch.quantity },
         }
       });
 
@@ -502,7 +515,7 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
             departmentId: item.transfer.requestingDepartmentId,
             productId: item.productId,
             createdBy: deliveredBy,
-            createdBySnapshot: deliveredBySnapshot,
+            createdBySnapshot: deliveredBySnapshot as Prisma.InputJsonValue,
           }
         });
       }
@@ -510,7 +523,7 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
       const destBatch = await tx.stockBatch.findFirst({
         where: {
           stockId: destStock.id,
-          lotNumber: selectedBatch.lotNumber,
+          lotNumber: sourceBatch.lotNumber,
         }
       });
 
@@ -526,7 +539,7 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
         await tx.stockBatch.create({
           data: {
             stockId: destStock.id,
-            lotNumber: selectedBatch.lotNumber,
+            lotNumber: sourceBatch.lotNumber,
             expiryDate: sourceBatch.expiryDate,
             manufactureDate: sourceBatch.manufactureDate,
             supplier: sourceBatch.supplier,
@@ -540,7 +553,7 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
             status: 'AVAILABLE',
             isActive: true,
             createdBy: deliveredBy,
-            createdBySnapshot: deliveredBySnapshot,
+            createdBySnapshot: deliveredBySnapshot as Prisma.InputJsonValue,
             receivedAt: new Date(),
           }
         });
@@ -551,44 +564,40 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
         data: {
           lastMovement: new Date(),
           updatedBy: deliveredBy,
-          updatedBySnapshot: deliveredBySnapshot,
+          updatedBySnapshot: deliveredBySnapshot as Prisma.InputJsonValue,
         }
       });
     }
 
+    // ✅ FIXED: Check if all items delivered → update Transfer status
     const allItems = await tx.transferItem.findMany({
       where: { transferId: item.transferId }
     });
 
-    const allCompleted = allItems.every(i => 
+    const allDelivered = allItems.every(i => 
       i.status === 'DELIVERED' || i.status === 'CANCELLED'
     );
 
-    if (allCompleted) {
+    if (allDelivered) {
       await tx.transfer.update({
         where: { id: item.transferId },
         data: {
-          overallStatus: 'COMPLETED',
-          completedAt: new Date(),
+          status: 'DELIVERED',  // ✅ FIXED: overallStatus → status, COMPLETED → DELIVERED
+          deliveredAt: new Date(),  // ✅ FIXED: completedAt → deliveredAt
         }
       });
     }
 
-    await tx.transferStatusHistory.create({
+    await tx.transferHistory.create({
       data: {
         transferId: item.transferId,
         itemId,
-        changeType: 'ITEM_STATUS',
+        action: 'DELIVERED',
         fromStatus: 'PREPARED',
         toStatus: 'DELIVERED',
         changedBy: deliveredBy,
-        changedBySnapshot: deliveredBySnapshot,
-        reason: notes,
-        metadata: {
-          preparedQuantity: item.preparedQuantity,
-          receivedQuantity,
-          batches: selectedBatches,
-        }
+        changedBySnapshot: deliveredBySnapshot as Prisma.InputJsonValue,
+        notes,
       }
     });
 
@@ -603,15 +612,15 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
     action: 'transfers.deliver_item',
     category: 'TRANSFER',
     severity: 'INFO',
-    description: `รับสินค้า ${item.productName} จำนวน ${receivedQuantity} ${item.baseUnit}`,
+    description: `รับสินค้า ${item.product.name} จำนวน ${receivedQuantity} ${item.product.baseUnit}`,
     resourceId: itemId,
     resourceType: 'TransferItem',
     payload: {
-      transferCode: item.transfer.transferCode,
-      productCode: item.productCode,
+      transferCode: item.transfer.code,
+      productCode: item.product.code,
       preparedQuantity: item.preparedQuantity,
       receivedQuantity,
-    }
+    } as Prisma.InputJsonValue
   });
 
   return updatedItem;
@@ -629,6 +638,7 @@ export async function cancelTransferItem(
     include: {
       transfer: true,
       product: true,
+      batches: true,  // ✅ FIXED: Join TransferBatch
     }
   });
 
@@ -643,21 +653,22 @@ export async function cancelTransferItem(
   const cancelledBySnapshot = await createUserSnapshot(cancelledBy, item.transfer.organizationId);
 
   const updatedItem = await prisma.$transaction(async (tx) => {
-    if (item.status === 'PREPARED' && item.selectedBatches) {
-      const selectedBatches = item.selectedBatches as Array<{
-        batchId: string;
-        quantity: number;
-      }>;
-
-      for (const batch of selectedBatches) {
+    // ✅ FIXED: Unreserve from TransferBatch table
+    if (item.status === 'PREPARED' && item.batches.length > 0) {
+      for (const transferBatch of item.batches) {
         await tx.stockBatch.update({
-          where: { id: batch.batchId },
+          where: { id: transferBatch.batchId },
           data: {
-            availableQuantity: { increment: batch.quantity },
-            reservedQuantity: { decrement: batch.quantity },
+            availableQuantity: { increment: transferBatch.quantity },
+            reservedQuantity: { decrement: transferBatch.quantity },
           }
         });
       }
+
+      // ✅ FIXED: Delete TransferBatch records
+      await tx.transferBatch.deleteMany({
+        where: { transferItemId: itemId }
+      });
     }
 
     const updated = await tx.transferItem.update({
@@ -665,22 +676,21 @@ export async function cancelTransferItem(
       data: {
         status: 'CANCELLED',
         cancelledAt: new Date(),
-        cancelledBy,
-        cancelledBySnapshot,
-        rejectReason: reason,
+        // ✅ FIXED: ลบ cancelledBy, cancelledBySnapshot
+        cancelReason: reason,  // ✅ FIXED: rejectReason → cancelReason
       }
     });
 
-    await tx.transferStatusHistory.create({
+    await tx.transferHistory.create({
       data: {
         transferId: item.transferId,
         itemId,
-        changeType: 'ITEM_STATUS',
+        action: 'CANCELLED',
         fromStatus: item.status,
         toStatus: 'CANCELLED',
         changedBy: cancelledBy,
-        changedBySnapshot: cancelledBySnapshot,
-        reason,
+        changedBySnapshot: cancelledBySnapshot as Prisma.InputJsonValue,
+        notes: reason,
       }
     });
 
@@ -708,8 +718,9 @@ export async function cancelTransfer(
     throw new Error('Transfer not found');
   }
 
-  if (transfer.overallStatus === 'COMPLETED' || transfer.overallStatus === 'CANCELLED') {
-    throw new Error(`Cannot cancel transfer with status: ${transfer.overallStatus}`);
+  // ✅ FIXED: overallStatus → status
+  if (transfer.status === 'DELIVERED' || transfer.status === 'CANCELLED') {
+    throw new Error(`Cannot cancel transfer with status: ${transfer.status}`);
   }
 
   const cancelledBySnapshot = await createUserSnapshot(cancelledBy, transfer.organizationId);
@@ -724,23 +735,22 @@ export async function cancelTransfer(
     await tx.transfer.update({
       where: { id: transferId },
       data: {
-        overallStatus: 'CANCELLED',
+        status: 'CANCELLED',  // ✅ FIXED: overallStatus → status
         cancelledAt: new Date(),
-        cancelledBy,
-        cancelledBySnapshot,
+        // ✅ FIXED: ลบ cancelledBy, cancelledBySnapshot
         cancelReason: reason,
       }
     });
 
-    await tx.transferStatusHistory.create({
+    await tx.transferHistory.create({
       data: {
         transferId,
-        changeType: 'TRANSFER_STATUS',
-        fromStatus: transfer.overallStatus,
+        action: 'CANCELLED',
+        fromStatus: transfer.status,
         toStatus: 'CANCELLED',
         changedBy: cancelledBy,
-        changedBySnapshot: cancelledBySnapshot,
-        reason,
+        changedBySnapshot: cancelledBySnapshot as Prisma.InputJsonValue,
+        notes: reason,
       }
     });
   });
@@ -789,7 +799,11 @@ export async function getTransfersByDepartment(
       ...whereClause,
     },
     include: {
-      items: true,
+      items: {
+        include: {
+          product: true  // ✅ FIXED: Join Product
+        }
+      },
       requestingDepartment: true,
       supplyingDepartment: true,
     },
@@ -806,11 +820,16 @@ export async function getTransferWithDetails(transferId: string) {
       items: {
         include: {
           product: true,
+          batches: {  // ✅ FIXED: Join TransferBatch
+            include: {
+              batch: true
+            }
+          }
         }
       },
       requestingDepartment: true,
       supplyingDepartment: true,
-      statusHistory: {
+      statusHistory: {  // ✅ FIXED: transferStatusHistory → statusHistory (relation name)
         orderBy: { createdAt: 'desc' }
       }
     }

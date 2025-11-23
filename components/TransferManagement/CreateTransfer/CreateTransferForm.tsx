@@ -1,9 +1,9 @@
 // components/TransferManagement/CreateTransfer/CreateTransferForm.tsx
-// CreateTransferForm - Main form container (multi-step) - No Dialog Wrapper
+// CreateTransferForm - UPDATED: Connect to API + Stock refresh
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { CreateTransferData, TransferPriority } from '@/types/transfer';
 import Step1BasicInfo from './Step1BasicInfo';
@@ -20,16 +20,26 @@ interface Department {
   slug: string;
 }
 
+interface ProductStock {
+  stockId?: string;
+  availableQuantity: number;
+  lastUpdated: Date;
+}
+
 interface Product {
   id: string;
   code: string;
   name: string;
   genericName?: string;
   baseUnit: string;
+  defaultWithdrawalQty?: number;
+  requestingStock?: ProductStock;
+  supplyingStock?: ProductStock;
 }
 
 interface SelectedProduct extends Product {
   quantity: number;
+  requestingCurrentStock: number;
   notes?: string;
 }
 
@@ -55,13 +65,15 @@ export default function CreateTransferForm({
   requestingDepartmentId,
   requestingDepartmentName,
   departments,
-  products,
+  products: initialProducts,
   orgSlug,
   deptSlug,
 }: CreateTransferFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
 
   const [step1Data, setStep1Data] = useState<Step1FormData>({
     title: '',
@@ -75,6 +87,73 @@ export default function CreateTransferForm({
 
   const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
+
+  // Load products with stock info
+  const loadProductsWithStock = useCallback(async () => {
+    try {
+      if (!step1Data.supplyingDepartmentId) {
+        setProducts(initialProducts);
+        return;
+      }
+
+      const supplyingDept = departments.find(d => d.id === step1Data.supplyingDepartmentId);
+      if (!supplyingDept) return;
+
+      // Load requesting department stocks
+      const requestingStocksRes = await fetch(
+        `/api/${orgSlug}/${deptSlug}/stocks`
+      );
+      const requestingData = await requestingStocksRes.json();
+
+      // Load supplying department stocks
+      const supplyingStocksRes = await fetch(
+        `/api/${orgSlug}/${supplyingDept.slug}/stocks`
+      );
+      const supplyingData = await supplyingStocksRes.json();
+
+      // Map products with stock info
+      const productsWithStock = initialProducts.map(product => {
+        const requestingStock = requestingData.data?.find(
+          (s: any) => s.product.id === product.id
+        );
+        const supplyingStock = supplyingData.data?.find(
+          (s: any) => s.product.id === product.id
+        );
+
+        return {
+          ...product,
+          requestingStock: requestingStock ? {
+            stockId: requestingStock.id,
+            availableQuantity: requestingStock.availableQuantity,
+            lastUpdated: new Date(requestingStock.updatedAt),
+          } : undefined,
+          supplyingStock: supplyingStock ? {
+            stockId: supplyingStock.id,
+            availableQuantity: supplyingStock.availableQuantity,
+            lastUpdated: new Date(supplyingStock.updatedAt),
+          } : undefined,
+        };
+      });
+
+      setProducts(productsWithStock);
+    } catch (error) {
+      console.error('Failed to load products with stock:', error);
+    }
+  }, [step1Data.supplyingDepartmentId, departments, initialProducts, orgSlug, deptSlug]);
+
+  // Load stock when supplying department changes
+  useEffect(() => {
+    if (currentStep === 2) {
+      loadProductsWithStock();
+    }
+  }, [currentStep, loadProductsWithStock]);
+
+  const handleRefreshStock = async () => {
+    setIsRefreshing(true);
+    await loadProductsWithStock();
+    toast.success('รีเฟรชข้อมูลสต็อกเรียบร้อย');
+    setIsRefreshing(false);
+  };
 
   const handleStep1Change = (data: Partial<Step1FormData>) => {
     setStep1Data((prev) => ({ ...prev, ...data }));
@@ -131,25 +210,33 @@ export default function CreateTransferForm({
         })),
       };
 
-      // TODO: Implement API call
-      // const response = await fetch(`/api/${orgSlug}/transfers`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(transferData),
-      // });
-      // const data = await response.json();
+      const response = await fetch(`/api/${orgSlug}/transfers`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-requesting-dept-id': requestingDepartmentId,
+        },
+        body: JSON.stringify({
+          ...transferData,
+          requestingDepartmentId,
+        }),
+      });
 
-      console.log('Transfer data:', transferData);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create transfer');
+      }
 
       toast.success('สำเร็จ', {
-        description: 'สร้างใบเบิกใหม่เรียบร้อย',
+        description: `สร้างใบเบิก ${data.data.code} เรียบร้อย`,
       });
 
       router.push(`/${orgSlug}/${deptSlug}/transfers`);
     } catch (error) {
       console.error('Error creating transfer:', error);
       toast.error('เกิดข้อผิดพลาด', {
-        description: 'ไม่สามารถสร้างใบเบิกได้',
+        description: error instanceof Error ? error.message : 'ไม่สามารถสร้างใบเบิกได้',
       });
     } finally {
       setLoading(false);
@@ -196,7 +283,7 @@ export default function CreateTransferForm({
                 currentStep >= step ? 'text-blue-600' : 'text-gray-500'
               }`}
             >
-              {step === 1 && 'ข้อมูลใบเบิก'}
+              {step === 1 && 'ข้อมูลพื้นฐาน'}
               {step === 2 && 'เลือกสินค้า'}
               {step === 3 && 'ตรวจสอบ'}
             </div>
@@ -219,6 +306,8 @@ export default function CreateTransferForm({
             products={products}
             selectedProducts={selectedProducts}
             onChange={setSelectedProducts}
+            onRefreshStock={handleRefreshStock}
+            isRefreshing={isRefreshing}
           />
         )}
 

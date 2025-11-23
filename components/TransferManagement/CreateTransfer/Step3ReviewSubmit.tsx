@@ -1,13 +1,11 @@
 // components/TransferManagement/CreateTransfer/Step3ReviewSubmit.tsx
-// Step3ReviewSubmit - Review & submit step
+// Step3ReviewSubmit - Review with stock comparison
 
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { TransferPriority } from '@/types/transfer';
 import TransferPriorityBadge from '../shared/TransferPriorityBadge';
-import DepartmentBadge from '../shared/DepartmentBadge';
-import QuantityDisplay from '../shared/QuantityDisplay';
 
 interface Step1Data {
   title: string;
@@ -23,6 +21,7 @@ interface SelectedProduct {
   name: string;
   baseUnit: string;
   quantity: number;
+  requestingCurrentStock: number;
   notes?: string;
 }
 
@@ -65,11 +64,15 @@ export default function Step3ReviewSubmit({
           <div className="grid grid-cols-2 gap-4 pt-4 border-t">
             <div>
               <p className="text-sm text-gray-600">หน่วยงานที่ขอเบิก</p>
-              <DepartmentBadge name={requestingDepartmentName} className="mt-1" />
+              <p className="text-sm font-medium text-gray-900 mt-1">
+                {requestingDepartmentName}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">หน่วยงานที่จ่าย</p>
-              <DepartmentBadge name={supplyingDepartmentName} className="mt-1" />
+              <p className="text-sm font-medium text-gray-900 mt-1">
+                {supplyingDepartmentName}
+              </p>
             </div>
           </div>
 
@@ -101,25 +104,34 @@ export default function Step3ReviewSubmit({
                 className="p-4 bg-gray-50 rounded-lg border border-gray-200"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                  <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-blue-600">
                         {product.code}
                       </span>
                       <span className="text-sm text-gray-900">{product.name}</span>
                     </div>
+
+                    <div className="flex items-center gap-4 text-xs text-gray-600">
+                      <div>
+                        <span className="font-medium">คงเหลือแผนกตัวเอง:</span>{' '}
+                        <span className="text-gray-900">
+                          {product.requestingCurrentStock.toLocaleString()} {product.baseUnit}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium">จำนวนเบิก:</span>{' '}
+                        <span className="text-blue-600 font-semibold">
+                          {product.quantity.toLocaleString()} {product.baseUnit}
+                        </span>
+                      </div>
+                    </div>
+
                     {product.notes && (
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600">
                         หมายเหตุ: {product.notes}
                       </p>
                     )}
-                  </div>
-                  <div className="text-right">
-                    <QuantityDisplay
-                      quantity={product.quantity}
-                      unit={product.baseUnit}
-                      className="text-sm font-semibold text-gray-900"
-                    />
                   </div>
                 </div>
               </div>
