@@ -209,11 +209,11 @@ export async function approveTransferItem(data: ApproveItemRequest) {
       include: { items: true }
     });
 
-    if (transfer && !transfer.approvedDate) {
+    if (transfer && !transfer.approvedAt) {
       await tx.transfer.update({
         where: { id: transfer.id },
         data: {
-          approvedDate: new Date(),
+          approvedAt: new Date(),
           approvedBy,
           approvedBySnapshot,
           overallStatus: 'PARTIAL',
@@ -569,7 +569,7 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
         where: { id: item.transferId },
         data: {
           overallStatus: 'COMPLETED',
-          completedDate: new Date(),
+          completedAt: new Date(),
         }
       });
     }
@@ -725,7 +725,7 @@ export async function cancelTransfer(
       where: { id: transferId },
       data: {
         overallStatus: 'CANCELLED',
-        cancelledDate: new Date(),
+        cancelledAt: new Date(),
         cancelledBy,
         cancelledBySnapshot,
         cancelReason: reason,
@@ -761,7 +761,7 @@ async function generateTransferCode(organizationId: string): Promise<string> {
   const count = await prisma.transfer.count({
     where: {
       organizationId,
-      requestedDate: {
+      requestedAt: {
         gte: startOfDay,
         lte: endOfDay,
       }
@@ -794,7 +794,7 @@ export async function getTransfersByDepartment(
       supplyingDepartment: true,
     },
     orderBy: {
-      requestedDate: 'desc',
+      requestedAt: 'desc',
     }
   });
 }

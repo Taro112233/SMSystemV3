@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-11-21T05:05:30.255Z
+// Last generated: 2025-11-23T09:31:56.958Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -427,9 +427,6 @@ model Stock {
   departmentId   String
   productId      String
   
-  // ✅ REMOVED: All quantity fields (moved to StockBatch)
-  // Stock now only holds configuration and relationships
-  
   // Stock Location (within department)
   location       String?  // ชั้น A-1, ตู้ยา B, ห้องเย็น
   
@@ -481,7 +478,7 @@ model StockBatch {
   costPrice      Decimal? @db.Decimal(10, 2)
   sellingPrice   Decimal? @db.Decimal(10, 2)
   
-  // ✅ NEW: Quantity Tracking (moved from Stock)
+  // ✅ Quantity Tracking
   totalQuantity      Int @default(0)  // รวมจำนวนทั้งหมด
   availableQuantity  Int @default(0)  // ว่าง = total - reserved - incoming
   reservedQuantity   Int @default(0)  // จองสำหรับ approved transfers
@@ -505,7 +502,9 @@ model StockBatch {
   updatedAt      DateTime @updatedAt
   receivedAt     DateTime @default(now())
   
+  // Relations
   stock          Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  transferBatches TransferBatch[]  // ✅ ADDED: Opposite relation for Transfer system
   
   @@unique([stockId, lotNumber])
   @@index([expiryDate])
@@ -606,6 +605,7 @@ enum AuditSeverity {
 
 // prisma/schemas/transfer.prisma
 // ===== TRANSFER SYSTEM - Department to Department =====
+// ✅ UPDATED: Match UI Types 100%
 
 // ===== TRANSFER REQUEST (Organization Level) =====
 model Transfer {
@@ -613,7 +613,7 @@ model Transfer {
   organizationId String
   
   // Transfer Reference
-  transferCode   String   // "REQ-2024-0001"
+  code           String   // ✅ CHANGED: transferCode → code (match UI)
   title          String   // "ขอเบิกยาฉุกเฉิน OPD"
   
   // Department Context
@@ -625,14 +625,15 @@ model Transfer {
   notes          String?  // หมายเหตุเพิ่มเติม
   priority       TransferPriority @default(NORMAL)
   
-  // Transfer-Level Status
-  overallStatus  TransferOverallStatus @default(PENDING)
+  // ✅ CHANGED: Transfer-Level Status (เก็บทั้ง UI และ computed)
+  status         TransferStatus @default(PENDING)  // UI status (includes APPROVED/PREPARED/DELIVERED)
   
   // Timeline
-  requestedDate  DateTime  @default(now())
-  approvedDate   DateTime?
-  completedDate  DateTime?
-  cancelledDate  DateTime?
+  requestedAt    DateTime  @default(now())
+  approvedAt     DateTime?
+  preparedAt     DateTime?  // ✅ ADDED: For UI timeline
+  deliveredAt    DateTime?  // ✅ ADDED: For UI timeline
+  cancelledAt    DateTime?
   
   // Cancellation
   cancelReason   String?
@@ -641,11 +642,7 @@ model Transfer {
   requestedBy         String
   requestedBySnapshot Json?
   
-  approvedBy          String?
-  approvedBySnapshot  Json?
-  
-  cancelledBy         String?
-  cancelledBySnapshot Json?
+  // ✅ REMOVED: approvedBy, cancelledBy (ไม่จำเป็นใน transfer level)
   
   // Timestamps
   createdAt      DateTime @default(now())
@@ -657,15 +654,15 @@ model Transfer {
   supplyingDepartment  Department  @relation("TransferSupplying", fields: [supplyingDepartmentId], references: [id], onDelete: Restrict)
   
   items          TransferItem[]
-  statusHistory  TransferStatusHistory[]
+  statusHistory  TransferHistory[]
   
   // Indexes
-  @@unique([organizationId, transferCode])
-  @@index([organizationId, overallStatus])
-  @@index([requestingDepartmentId, overallStatus])
-  @@index([supplyingDepartmentId, overallStatus])
-  @@index([requestedDate])
-  @@index([overallStatus, priority])
+  @@unique([organizationId, code])
+  @@index([organizationId, status])
+  @@index([requestingDepartmentId, status])
+  @@index([supplyingDepartmentId, status])
+  @@index([requestedAt])
+  @@index([status, priority])
   @@map("transfers")
 }
 
@@ -674,11 +671,8 @@ model TransferItem {
   id             String   @id @default(cuid())
   transferId     String
   
-  // Product Info
+  // ✅ CHANGED: Product Info (ไม่ต้องเก็บ snapshot ซ้ำ - join กับ Product table)
   productId      String
-  productCode    String
-  productName    String
-  baseUnit       String
   
   // Item-Level Status
   status         TransferItemStatus @default(PENDING)
@@ -689,12 +683,9 @@ model TransferItem {
   preparedQuantity  Int?
   receivedQuantity  Int?
   
-  // Batch Selection
-  selectedBatches   Json?
-  
   // Notes
   notes          String?
-  rejectReason   String?
+  cancelReason   String?  // ✅ CHANGED: rejectReason → cancelReason (match UI)
   
   // Timeline
   approvedAt     DateTime?
@@ -702,18 +693,7 @@ model TransferItem {
   deliveredAt    DateTime?
   cancelledAt    DateTime?
   
-  // User Tracking
-  approvedBy          String?
-  approvedBySnapshot  Json?
-  
-  preparedBy          String?
-  preparedBySnapshot  Json?
-  
-  deliveredBy         String?
-  deliveredBySnapshot Json?
-  
-  cancelledBy         String?
-  cancelledBySnapshot Json?
+  // ✅ REMOVED: User Tracking (ใช้ History แทน - avoid duplication)
   
   // Timestamps
   createdAt      DateTime @default(now())
@@ -722,6 +702,7 @@ model TransferItem {
   // Relations
   transfer       Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
   product        Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  batches        TransferBatch[]  // ✅ ADDED: Separate table instead of JSON
   
   // Indexes
   @@index([transferId])
@@ -731,29 +712,43 @@ model TransferItem {
   @@map("transfer_items")
 }
 
-// ===== TRANSFER STATUS HISTORY (Audit Trail) =====
-model TransferStatusHistory {
+// ===== TRANSFER BATCH (Batch Selection) =====
+// ✅ ADDED: Separate table for batches (better than JSON)
+model TransferBatch {
+  id              String   @id @default(cuid())
+  transferItemId  String
+  batchId         String
+  quantity        Int
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  transferItem    TransferItem @relation(fields: [transferItemId], references: [id], onDelete: Cascade)
+  batch           StockBatch   @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  
+  // Indexes
+  @@index([transferItemId])
+  @@index([batchId])
+  @@map("transfer_batches")
+}
+
+// ===== TRANSFER HISTORY (Audit Trail) =====
+// ✅ CHANGED: Rename to match UI types
+model TransferHistory {
   id             String   @id @default(cuid())
   transferId     String
-  itemId         String?
+  itemId         String?  // สำหรับ item-level actions
   
-  // Status Change
-  changeType     String
+  // ✅ CHANGED: Action info (match UI types)
+  action         String   // "APPROVED", "PREPARED", "DELIVERED", "CANCELLED"
   fromStatus     String?
-  toStatus       String
+  toStatus       String?
   
   // Who & Why
   changedBy         String
   changedBySnapshot Json?
-  reason         String?
   notes          String?
-  
-  // Additional Data
-  metadata       Json?
-  
-  // Request Context
-  ipAddress      String?
-  userAgent      String?
   
   // Timestamp
   createdAt      DateTime @default(now())
@@ -764,27 +759,31 @@ model TransferStatusHistory {
   // Indexes
   @@index([transferId, createdAt(sort: Desc)])
   @@index([itemId])
-  @@map("transfer_status_history")
+  @@map("transfer_histories")
 }
 
 // ===== ENUMS =====
-enum TransferOverallStatus {
-  PENDING
-  PARTIAL
-  COMPLETED
-  CANCELLED
+// ✅ CHANGED: Match UI types exactly
+enum TransferStatus {
+  PENDING      // รอดำเนินการ
+  APPROVED     // อนุมัติแล้ว (all items approved)
+  PREPARED     // จัดเตรียมแล้ว (all items prepared)
+  DELIVERED    // รับเข้าแล้ว (all items delivered)
+  PARTIAL      // ดำเนินการบางส่วน
+  COMPLETED    // เสร็จสมบูรณ์ (alias for DELIVERED)
+  CANCELLED    // ยกเลิก
 }
 
 enum TransferItemStatus {
-  PENDING
-  APPROVED
-  PREPARED
-  DELIVERED
-  CANCELLED
+  PENDING      // รอการอนุมัติ
+  APPROVED     // อนุมัติแล้ว
+  PREPARED     // จัดเตรียมแล้ว
+  DELIVERED    // รับเข้าแล้ว
+  CANCELLED    // ยกเลิก
 }
 
 enum TransferPriority {
-  NORMAL
-  URGENT
-  CRITICAL
+  NORMAL       // ปกติ
+  URGENT       // ด่วน
+  CRITICAL     // ด่วนมาก
 }

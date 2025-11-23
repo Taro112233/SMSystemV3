@@ -8,9 +8,6 @@ model Stock {
   departmentId   String
   productId      String
   
-  // ✅ REMOVED: All quantity fields (moved to StockBatch)
-  // Stock now only holds configuration and relationships
-  
   // Stock Location (within department)
   location       String?  // ชั้น A-1, ตู้ยา B, ห้องเย็น
   
@@ -62,7 +59,7 @@ model StockBatch {
   costPrice      Decimal? @db.Decimal(10, 2)
   sellingPrice   Decimal? @db.Decimal(10, 2)
   
-  // ✅ NEW: Quantity Tracking (moved from Stock)
+  // ✅ Quantity Tracking
   totalQuantity      Int @default(0)  // รวมจำนวนทั้งหมด
   availableQuantity  Int @default(0)  // ว่าง = total - reserved - incoming
   reservedQuantity   Int @default(0)  // จองสำหรับ approved transfers
@@ -86,7 +83,9 @@ model StockBatch {
   updatedAt      DateTime @updatedAt
   receivedAt     DateTime @default(now())
   
+  // Relations
   stock          Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  transferBatches TransferBatch[]  // ✅ ADDED: Opposite relation for Transfer system
   
   @@unique([stockId, lotNumber])
   @@index([expiryDate])

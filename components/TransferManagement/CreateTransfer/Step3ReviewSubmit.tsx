@@ -1,0 +1,132 @@
+// components/TransferManagement/CreateTransfer/Step3ReviewSubmit.tsx
+// Step3ReviewSubmit - Review & submit step
+
+'use client';
+
+import { Card, CardContent } from '@/components/ui/card';
+import { TransferPriority } from '@/types/transfer';
+import TransferPriorityBadge from '../shared/TransferPriorityBadge';
+import DepartmentBadge from '../shared/DepartmentBadge';
+import QuantityDisplay from '../shared/QuantityDisplay';
+
+interface Step1Data {
+  title: string;
+  supplyingDepartmentId: string;
+  requestReason: string;
+  priority: TransferPriority;
+  notes: string;
+}
+
+interface SelectedProduct {
+  id: string;
+  code: string;
+  name: string;
+  baseUnit: string;
+  quantity: number;
+  notes?: string;
+}
+
+interface Step3ReviewSubmitProps {
+  step1Data: Step1Data;
+  selectedProducts: SelectedProduct[];
+  supplyingDepartmentName: string;
+  requestingDepartmentName: string;
+}
+
+export default function Step3ReviewSubmit({
+  step1Data,
+  selectedProducts,
+  supplyingDepartmentName,
+  requestingDepartmentName,
+}: Step3ReviewSubmitProps) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-1">
+          ตรวจสอบข้อมูลก่อนส่งใบเบิก
+        </h3>
+        <p className="text-sm text-gray-500">
+          โปรดตรวจสอบความถูกต้องของข้อมูลก่อนส่งใบเบิก
+        </p>
+      </div>
+
+      {/* Transfer Info */}
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <h4 className="font-semibold text-gray-900">{step1Data.title}</h4>
+              <div className="flex items-center gap-2">
+                <TransferPriorityBadge priority={step1Data.priority} />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+            <div>
+              <p className="text-sm text-gray-600">หน่วยงานที่ขอเบิก</p>
+              <DepartmentBadge name={requestingDepartmentName} className="mt-1" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">หน่วยงานที่จ่าย</p>
+              <DepartmentBadge name={supplyingDepartmentName} className="mt-1" />
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-600">เหตุผลในการขอเบิก</p>
+            <p className="text-sm text-gray-900 mt-1">{step1Data.requestReason}</p>
+          </div>
+
+          {step1Data.notes && (
+            <div>
+              <p className="text-sm text-gray-600">หมายเหตุ</p>
+              <p className="text-sm text-gray-900 mt-1">{step1Data.notes}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Items List */}
+      <Card>
+        <CardContent className="p-6">
+          <h4 className="font-semibold text-gray-900 mb-4">
+            รายการสินค้า ({selectedProducts.length} รายการ)
+          </h4>
+
+          <div className="space-y-3">
+            {selectedProducts.map((product) => (
+              <div
+                key={product.id}
+                className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-blue-600">
+                        {product.code}
+                      </span>
+                      <span className="text-sm text-gray-900">{product.name}</span>
+                    </div>
+                    {product.notes && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        หมายเหตุ: {product.notes}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <QuantityDisplay
+                      quantity={product.quantity}
+                      unit={product.baseUnit}
+                      className="text-sm font-semibold text-gray-900"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

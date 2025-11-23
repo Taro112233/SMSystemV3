@@ -1,4 +1,4 @@
-// FILE: middleware.ts - UPDATED: Better handling for app routes with sub-paths
+// FILE: middleware.ts - UPDATED: Handle dept-subpage
 // InvenStock - Multi-Tenant Inventory Management System
 
 import { NextResponse } from 'next/server';
@@ -11,7 +11,7 @@ import {
   isAuthEndpoint,
   parseRoute,
   isSystemReserved,
-  APP_ROUTES, // ✅ Import APP_ROUTES
+  APP_ROUTES,
 } from './lib/reserved-routes';
 
 // ===== ARCJET SECURITY (AUTH ENDPOINTS ONLY) =====
@@ -90,16 +90,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ✅ NEW: Check for app routes with sub-paths (e.g., /settings/profile)
+  // Check for app routes with sub-paths
   const segments = pathname.split('/').filter(Boolean);
   if (segments.length > 0) {
     const firstSegment = segments[0];
     
-    // Check if this is an app route (including sub-paths)
     if (APP_ROUTES.includes(firstSegment as any)) {
       console.log(`✅ App route (with sub-path): ${pathname}`);
       
-      // Still require authentication for app routes
       const token = request.cookies.get('auth-token')?.value;
 
       if (!token) {
@@ -107,7 +105,6 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/login', request.url));
       }
 
-      // Verify token
       try {
         const payload = await verifyToken(token);
 
@@ -117,7 +114,6 @@ export async function middleware(request: NextRequest) {
 
         console.log(`✅ User authenticated for app route: ${payload.userId}`);
         
-        // Pass with user headers
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set('x-user-id', payload.userId);
         requestHeaders.set('x-username', payload.username);
@@ -181,7 +177,6 @@ export async function middleware(request: NextRequest) {
 
   // Handle different route types
   if (route.type === 'api') {
-    // API routes - pass with user headers
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-user-id', payload.userId);
     requestHeaders.set('x-username', payload.username);
@@ -193,11 +188,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (route.type === 'app' || route.type === 'public') {
-    // App routes or public routes
     return NextResponse.next();
   }
 
-  // ✅ Validate org and dept slugs
+  // Validate org and dept slugs
   if (route.orgSlug && isSystemReserved(route.orgSlug)) {
     console.log(`⚠️ Reserved system slug detected: ${route.orgSlug}`);
     return NextResponse.redirect(new URL('/not-found', request.url));
@@ -208,9 +202,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/not-found', request.url));
   }
 
-  // ✅ Handle valid organization routes
+  // ✅ UPDATED: Handle all valid organization/department routes
   if (route.type === 'org-main' || route.type === 'org-page' || 
-      route.type === 'dept-main' || route.type === 'dept-page') {
+      route.type === 'dept-main' || route.type === 'dept-page' ||
+      route.type === 'dept-subpage') {  // ✅ ADDED
     
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-user-id', payload.userId);
@@ -225,6 +220,11 @@ export async function middleware(request: NextRequest) {
     
     if (route.deptSlug) {
       requestHeaders.set('x-current-dept', route.deptSlug);
+    }
+
+    // ✅ ADDED: Pass subpage info
+    if (route.subpage) {
+      requestHeaders.set('x-dept-subpage', route.subpage);
     }
 
     console.log(`✅ Valid ${route.type}: ${pathname}`);

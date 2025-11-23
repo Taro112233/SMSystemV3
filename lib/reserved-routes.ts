@@ -1,4 +1,4 @@
-// FILE: lib/reserved-routes.ts - UPDATED
+// FILE: lib/reserved-routes.ts - FIXED
 // Centralized Reserved Routes Management
 // ============================================
 
@@ -7,7 +7,7 @@
  * Example: /dashboard, /profile, /settings
  */
 export const APP_ROUTES = [
-  'dashboard',      // ✅ UPDATED: Now includes /dashboard and /dashboard/* paths
+  'dashboard',
   'profile',
   'login',
   'register',
@@ -26,6 +26,17 @@ export const ORG_LEVEL_PAGES = [
   'transfers',
   'inventory',
   'analytics',
+] as const;
+
+/**
+ * Department-level pages (third-level paths)
+ * Example: /{orgSlug}/{deptSlug}/stocks, /{orgSlug}/{deptSlug}/transfers
+ */
+export const DEPT_LEVEL_PAGES = [
+  'stocks',
+  'transfers',
+  'products',
+  'reports',
 ] as const;
 
 /**
@@ -87,6 +98,7 @@ export function getAllReservedSlugs(): string[] {
   return [
     ...APP_ROUTES,
     ...ORG_LEVEL_PAGES,
+    ...DEPT_LEVEL_PAGES,
     ...SYSTEM_RESERVED,
   ];
 }
@@ -114,6 +126,10 @@ export function isOrgLevelPage(slug: string): boolean {
   return ORG_LEVEL_PAGES.includes(slug.toLowerCase() as (typeof ORG_LEVEL_PAGES)[number]);
 }
 
+export function isDeptLevelPage(slug: string): boolean {
+  return DEPT_LEVEL_PAGES.includes(slug.toLowerCase() as (typeof DEPT_LEVEL_PAGES)[number]);
+}
+
 export function isSystemReserved(slug: string): boolean {
   const systemSlugs = getSystemReservedSlugs();
   return systemSlugs.some(reserved => reserved === slug.toLowerCase());
@@ -126,17 +142,19 @@ export const ROUTE_PATTERNS = {
   orgMain: /^\/([a-z0-9-]+)$/,
   orgPage: /^\/([a-z0-9-]+)\/(settings|members|reports|products|transfers|inventory|analytics)$/,
   deptMain: /^\/([a-z0-9-]+)\/([a-z0-9-]+)$/,
-  deptPage: /^\/([a-z0-9-]+)\/([a-z0-9-]+)\/(stocks|transfers|products)$/,
+  deptPage: /^\/([a-z0-9-]+)\/([a-z0-9-]+)\/(stocks|transfers|products|reports)$/,
+  deptSubPage: /^\/([a-z0-9-]+)\/([a-z0-9-]+)\/(stocks|transfers|products)\/([a-z0-9-]+)$/,
 } as const;
 
 /**
- * Parse URL and determine route type
+ * ✅ FIXED: Parse URL and determine route type (supports sub-pages)
  */
 export function parseRoute(pathname: string): {
-  type: 'public' | 'app' | 'org-main' | 'org-page' | 'dept-main' | 'dept-page' | 'api' | 'invalid';
+  type: 'public' | 'app' | 'org-main' | 'org-page' | 'dept-main' | 'dept-page' | 'dept-subpage' | 'api' | 'invalid';
   orgSlug?: string;
   deptSlug?: string;
   page?: string;
+  subpage?: string;
 } {
   if (pathname.startsWith('/api/')) {
     return { type: 'api' };
@@ -151,7 +169,7 @@ export function parseRoute(pathname: string): {
   if (segments.length > 0) {
     const firstSegment = segments[0];
     
-    // ✅ UPDATED: Check for app routes with sub-paths (e.g., /dashboard/settings/profile)
+    // Check for app routes with sub-paths (e.g., /dashboard/settings/profile)
     if (APP_ROUTES.includes(firstSegment as (typeof APP_ROUTES)[number])) {
       return { type: 'app' };
     }
@@ -161,6 +179,7 @@ export function parseRoute(pathname: string): {
     return { type: 'invalid' };
   }
 
+  // 1 segment: /{orgSlug}
   if (segments.length === 1) {
     const slug = segments[0];
     return {
@@ -169,6 +188,7 @@ export function parseRoute(pathname: string): {
     };
   }
 
+  // 2 segments: /{orgSlug}/{page} or /{orgSlug}/{deptSlug}
   if (segments.length === 2) {
     const [orgSlug, secondSegment] = segments;
     
@@ -187,15 +207,59 @@ export function parseRoute(pathname: string): {
     };
   }
 
+  // 3 segments: /{orgSlug}/{deptSlug}/{page}
   if (segments.length === 3) {
     const [orgSlug, deptSlug, page] = segments;
     
-    return {
-      type: 'dept-page',
-      orgSlug,
-      deptSlug,
-      page,
-    };
+    // Check if it's a valid department page
+    if (isDeptLevelPage(page)) {
+      return {
+        type: 'dept-page',
+        orgSlug,
+        deptSlug,
+        page,
+      };
+    }
+    
+    return { type: 'invalid' };
+  }
+
+  // ✅ ADDED: 4 segments: /{orgSlug}/{deptSlug}/{page}/{subpage}
+  // Example: /siriraj/ipd/transfers/create, /siriraj/ipd/transfers/{transferId}
+  if (segments.length === 4) {
+    const [orgSlug, deptSlug, page, subpage] = segments;
+    
+    // Validate page is a department-level page
+    if (isDeptLevelPage(page)) {
+      return {
+        type: 'dept-subpage',
+        orgSlug,
+        deptSlug,
+        page,
+        subpage,
+      };
+    }
+    
+    return { type: 'invalid' };
+  }
+
+  // ✅ ADDED: 5+ segments are also valid (for nested routes)
+  // Example: /siriraj/ipd/transfers/create/step2
+  if (segments.length >= 5) {
+    const [orgSlug, deptSlug, page, ...rest] = segments;
+    
+    // Validate page is a department-level page
+    if (isDeptLevelPage(page)) {
+      return {
+        type: 'dept-subpage',
+        orgSlug,
+        deptSlug,
+        page,
+        subpage: rest.join('/'), // Join remaining segments
+      };
+    }
+    
+    return { type: 'invalid' };
   }
 
   return { type: 'invalid' };
@@ -204,6 +268,7 @@ export function parseRoute(pathname: string): {
 // ===== TYPE EXPORTS =====
 export type AppRoute = (typeof APP_ROUTES)[number];
 export type OrgLevelPage = (typeof ORG_LEVEL_PAGES)[number];
+export type DeptLevelPage = (typeof DEPT_LEVEL_PAGES)[number];
 export type SystemReserved = (typeof SYSTEM_RESERVED)[number];
 export type PublicRoute = (typeof PUBLIC_ROUTES)[number];
 export type RouteType = ReturnType<typeof parseRoute>['type'];
