@@ -1,6 +1,4 @@
 // components/TransferManagement/TransferList/DepartmentTransfersView.tsx
-// DepartmentTransfersView - Main container with tabs (outgoing/incoming)
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -49,20 +47,39 @@ export default function DepartmentTransfersView({
     try {
       setLoading(true);
 
-      // TODO: Implement API calls
-      // const endpoint = activeTab === 'outgoing'
-      //   ? `/api/${orgSlug}/${departmentSlug}/transfers/outgoing`
-      //   : `/api/${orgSlug}/${departmentSlug}/transfers/incoming`;
-      // const response = await fetch(endpoint);
-      // const data = await response.json();
+      const endpoint = activeTab === 'outgoing'
+        ? `/api/${orgSlug}/${departmentSlug}/transfers/outgoing`
+        : `/api/${orgSlug}/${departmentSlug}/transfers/incoming`;
 
-      // Mock data for now
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Build query params
+      const params = new URLSearchParams();
+      if (filters.status && filters.status !== 'all') {
+        params.append('status', filters.status);
+      }
+      if (filters.priority && filters.priority !== 'all') {
+        params.append('priority', filters.priority);
+      }
+      if (filters.search) {
+        params.append('search', filters.search);
+      }
+
+      const url = `${endpoint}?${params.toString()}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch transfers');
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch transfers');
+      }
 
       if (activeTab === 'outgoing') {
-        setOutgoingTransfers([]);
+        setOutgoingTransfers(data.data || []);
       } else {
-        setIncomingTransfers([]);
+        setIncomingTransfers(data.data || []);
       }
     } catch (error) {
       console.error('Error fetching transfers:', error);

@@ -1,6 +1,4 @@
 // app/api/[orgSlug]/[deptSlug]/transfers/incoming/route.ts
-// Incoming Transfers API - List transfers TO this department
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
@@ -48,6 +46,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const priority = searchParams.get('priority');
+    const search = searchParams.get('search');
 
     // Build where clause
     const where: any = {
@@ -63,12 +62,23 @@ export async function GET(
       where.priority = priority;
     }
 
+    if (search) {
+      where.OR = [
+        { code: { contains: search, mode: 'insensitive' } },
+        { title: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     // Fetch transfers
     const transfers = await prisma.transfer.findMany({
       where,
       include: {
         supplyingDepartment: {
-          select: { id: true, name: true, slug: true },
+          select: { 
+            id: true, 
+            name: true, 
+            slug: true 
+          },
         },
         _count: {
           select: { items: true },
@@ -77,9 +87,39 @@ export async function GET(
       orderBy: { requestedAt: 'desc' },
     });
 
+    // Format response to match Transfer type
+    const formattedTransfers = transfers.map(transfer => ({
+      id: transfer.id,
+      code: transfer.code,
+      title: transfer.title,
+      organizationId: transfer.organizationId,
+      requestingDepartmentId: transfer.requestingDepartmentId,
+      requestingDepartment: {
+        id: department.id,
+        name: department.name,
+        slug: department.slug,
+      },
+      supplyingDepartmentId: transfer.supplyingDepartmentId,
+      supplyingDepartment: transfer.supplyingDepartment,
+      status: transfer.status,
+      priority: transfer.priority,
+      requestReason: transfer.requestReason,
+      notes: transfer.notes,
+      totalItems: transfer._count.items,
+      requestedAt: transfer.requestedAt,
+      approvedAt: transfer.approvedAt,
+      preparedAt: transfer.preparedAt,
+      deliveredAt: transfer.deliveredAt,
+      cancelledAt: transfer.cancelledAt,
+      requestedBy: transfer.requestedBy,
+      requestedBySnapshot: transfer.requestedBySnapshot,
+      createdAt: transfer.createdAt,
+      updatedAt: transfer.updatedAt,
+    }));
+
     return NextResponse.json({
       success: true,
-      data: transfers,
+      data: formattedTransfers,
       department: {
         id: department.id,
         name: department.name,

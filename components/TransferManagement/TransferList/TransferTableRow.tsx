@@ -1,6 +1,4 @@
 // components/TransferManagement/TransferList/TransferTableRow.tsx
-// TransferTableRow - Individual transfer row
-
 'use client';
 
 import { Transfer } from '@/types/transfer';
