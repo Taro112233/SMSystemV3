@@ -101,6 +101,7 @@ export interface TransferFiltersState {
 }
 
 export interface CreateTransferData {
+  transferCode: string;
   title: string;
   supplyingDepartmentId: string;
   requestReason?: string;

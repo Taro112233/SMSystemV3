@@ -1,5 +1,5 @@
 // components/TransferManagement/CreateTransfer/CreateTransferForm.tsx
-// CreateTransferForm - UPDATED: Remove requestingCurrentStock tracking
+// CreateTransferForm - UPDATED: Handle duplicate transferCode error
 
 'use client';
 
@@ -40,7 +40,6 @@ interface Product {
 interface SelectedProduct extends Product {
   quantity: number;
   notes?: string;
-  // ✅ REMOVED: requestingCurrentStock
 }
 
 interface CreateTransferFormProps {
@@ -54,6 +53,7 @@ interface CreateTransferFormProps {
 }
 
 interface Step1FormData {
+  transferCode: string;
   title: string;
   supplyingDepartmentId: string;
   requestReason: string;
@@ -76,6 +76,7 @@ export default function CreateTransferForm({
   const [products, setProducts] = useState<Product[]>(initialProducts);
 
   const [step1Data, setStep1Data] = useState<Step1FormData>({
+    transferCode: '',
     title: '',
     supplyingDepartmentId: '',
     requestReason: '',
@@ -99,7 +100,6 @@ export default function CreateTransferForm({
       const supplyingDept = departments.find(d => d.id === step1Data.supplyingDepartmentId);
       if (!supplyingDept) return;
 
-      // Load products with stock from API
       const response = await fetch(
         `/api/${orgSlug}/${deptSlug}/transfers/products?supplyingDept=${supplyingDept.slug}`
       );
@@ -118,7 +118,6 @@ export default function CreateTransferForm({
     }
   }, [step1Data.supplyingDepartmentId, departments, initialProducts, orgSlug, deptSlug]);
 
-  // Load stock when supplying department changes
   useEffect(() => {
     if (currentStep === 2) {
       loadProductsWithStock();
@@ -138,6 +137,7 @@ export default function CreateTransferForm({
 
   const canProceedStep1 = () => {
     return (
+      step1Data.transferCode.trim() !== '' &&
       step1Data.title.trim() !== '' &&
       step1Data.supplyingDepartmentId !== '' &&
       step1Data.requestReason.trim() !== ''
@@ -175,6 +175,7 @@ export default function CreateTransferForm({
 
     try {
       const transferData: CreateTransferData = {
+        transferCode: step1Data.transferCode.trim(),
         title: step1Data.title,
         supplyingDepartmentId: step1Data.supplyingDepartmentId,
         requestReason: step1Data.requestReason,
@@ -201,6 +202,16 @@ export default function CreateTransferForm({
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle duplicate transferCode error (409)
+        if (response.status === 409) {
+          toast.error('เลขที่ใบเบิกซ้ำ', {
+            description: data.message || 'เลขที่ใบเบิกนี้มีอยู่ในระบบแล้ว กรุณาใช้เลขที่อื่น',
+            duration: 5000,
+          });
+          setCurrentStep(1); // Go back to Step 1
+          return;
+        }
+        
         throw new Error(data.error || 'Failed to create transfer');
       }
 
@@ -273,6 +284,7 @@ export default function CreateTransferForm({
           <Step1BasicInfo
             data={step1Data}
             departments={departments.filter((d) => d.id !== requestingDepartmentId)}
+            requestingDepartmentName={requestingDepartmentName}
             onChange={handleStep1Change}
           />
         )}

@@ -1,5 +1,5 @@
 // components/TransferManagement/CreateTransfer/Step3ReviewSubmit.tsx
-// Step3ReviewSubmit - UPDATED: Remove requestingCurrentStock field
+// Step3ReviewSubmit - UPDATED: Add transferCode display
 
 'use client';
 
@@ -8,6 +8,7 @@ import { TransferPriority } from '@/types/transfer';
 import TransferPriorityBadge from '../shared/TransferPriorityBadge';
 
 interface Step1Data {
+  transferCode: string;
   title: string;
   supplyingDepartmentId: string;
   requestReason: string;
@@ -22,7 +23,6 @@ interface SelectedProduct {
   baseUnit: string;
   quantity: number;
   notes?: string;
-  // ✅ REMOVED: requestingCurrentStock
 }
 
 interface Step3ReviewSubmitProps {
@@ -56,6 +56,10 @@ export default function Step3ReviewSubmit({
             <div className="space-y-1">
               <h4 className="font-semibold text-gray-900">{step1Data.title}</h4>
               <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">
+                  เลขที่: <span className="font-mono font-medium text-blue-600">{step1Data.transferCode}</span>
+                </span>
+                <span className="text-gray-300">•</span>
                 <TransferPriorityBadge priority={step1Data.priority} />
               </div>
             </div>

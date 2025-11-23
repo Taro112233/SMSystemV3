@@ -1,12 +1,11 @@
 // components/TransferManagement/CreateTransfer/Step1BasicInfo.tsx
-// Step1BasicInfo - Basic information step
+// Step1BasicInfo - Basic information step with transfer code
 
 'use client';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { TransferPriority } from '@/types/transfer';
 import {
   Select,
   SelectContent,
@@ -14,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { TransferPriority } from '@/types/transfer';
 
 interface Department {
   id: string;
@@ -21,7 +21,8 @@ interface Department {
   slug: string;
 }
 
-export interface Step1Data {
+interface Step1FormData {
+  transferCode: string;
   title: string;
   supplyingDepartmentId: string;
   requestReason: string;
@@ -30,33 +31,64 @@ export interface Step1Data {
 }
 
 interface Step1BasicInfoProps {
-  data: Step1Data;
+  data: Step1FormData;
   departments: Department[];
-  onChange: (data: Partial<Step1Data>) => void;
+  requestingDepartmentName: string;
+  onChange: (data: Partial<Step1FormData>) => void;
 }
 
 export default function Step1BasicInfo({
   data,
   departments,
+  requestingDepartmentName,
   onChange,
 }: Step1BasicInfoProps) {
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="title">
-          หัวข้อใบเบิก <span className="text-red-500">*</span>
-        </Label>
-        <Input
-          id="title"
-          value={data.title}
-          onChange={(e) => onChange({ title: e.target.value })}
-          placeholder="ระบุหัวข้อใบเบิก"
-        />
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-1">
+          ข้อมูลพื้นฐานใบเบิก
+        </h3>
+        <p className="text-sm text-gray-500">
+          กรอกข้อมูลพื้นฐานของใบเบิกสินค้า
+        </p>
       </div>
 
+      <div className="grid grid-cols-2 gap-6">
+        {/* หัวข้อใบเบิก */}
+        <div className="space-y-2">
+          <Label htmlFor="title" className="required">
+            หัวข้อใบเบิก
+          </Label>
+          <Input
+            id="title"
+            type="text"
+            placeholder="เช่น ขอเบิกยาฉุกเฉิน"
+            value={data.title}
+            onChange={(e) => onChange({ title: e.target.value })}
+            required
+          />
+        </div>
+
+        {/* เลขที่ใบเบิก */}
+        <div className="space-y-2">
+          <Label htmlFor="transferCode" className="required">
+            เลขที่ใบเบิก
+          </Label>
+          <Input
+            id="transferCode"
+            type="text"
+            placeholder="เช่น REQ-2025-0001"
+            value={data.transferCode}
+            onChange={(e) => onChange({ transferCode: e.target.value })}
+            required
+          />
+        </div>
+
+        {/* หน่วยงานที่จ่าย */}
       <div className="space-y-2">
-        <Label htmlFor="supplyingDepartment">
-          หน่วยงานที่ขอเบิก <span className="text-red-500">*</span>
+        <Label htmlFor="supplyingDepartment" className="required">
+          หน่วยงานที่จ่าย *
         </Label>
         <Select
           value={data.supplyingDepartmentId}
@@ -75,45 +107,67 @@ export default function Step1BasicInfo({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="priority">
-          ความสำคัญ <span className="text-red-500">*</span>
-        </Label>
-        <Select
-          value={data.priority}
-          onValueChange={(value) => onChange({ priority: value as TransferPriority })}
-        >
-          <SelectTrigger id="priority">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="NORMAL">ปกติ</SelectItem>
-            <SelectItem value="URGENT">ด่วน</SelectItem>
-            <SelectItem value="CRITICAL">ด่วนมาก</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* ความสำคัญ */}
+        <div className="space-y-2">
+          <Label htmlFor="priority" className="required">
+            ความสำคัญ
+          </Label>
+          <Select
+            value={data.priority}
+            onValueChange={(value: TransferPriority) =>
+              onChange({ priority: value })
+            }
+          >
+            <SelectTrigger id="priority">
+              <SelectValue placeholder="เลือกความสำคัญ" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NORMAL">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-gray-400" />
+                  <span>ปกติ</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="URGENT">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-orange-400" />
+                  <span>ด่วน</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="CRITICAL">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  <span>ด่วนมาก</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
+      {/* เหตุผลในการขอเบิก */}
       <div className="space-y-2">
-        <Label htmlFor="requestReason">
-          เหตุผลในการขอเบิก <span className="text-red-500">*</span>
+        <Label htmlFor="requestReason" className="required">
+          เหตุผลในการขอเบิก
         </Label>
         <Textarea
           id="requestReason"
+          placeholder="ระบุเหตุผลในการขอเบิก เช่น สต็อกไม่เพียงพอ, ผู้ป่วยเพิ่มขึ้น"
           value={data.requestReason}
           onChange={(e) => onChange({ requestReason: e.target.value })}
-          placeholder="ระบุเหตุผลในการขอเบิก"
           rows={3}
+          required
         />
       </div>
 
+      {/* หมายเหตุเพิ่มเติม */}
       <div className="space-y-2">
         <Label htmlFor="notes">หมายเหตุเพิ่มเติม</Label>
         <Textarea
           id="notes"
+          placeholder="ข้อมูลเพิ่มเติม (ถ้ามี)"
           value={data.notes}
           onChange={(e) => onChange({ notes: e.target.value })}
-          placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"
           rows={3}
         />
       </div>

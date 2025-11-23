@@ -126,6 +126,7 @@ export async function POST(
 
     const body = await request.json();
     const {
+      transferCode,
       requestingDepartmentId,
       supplyingDepartmentId,
       title,
@@ -136,16 +137,37 @@ export async function POST(
     } = body;
 
     // Validation
-    if (!requestingDepartmentId || !supplyingDepartmentId || !title || !items || items.length === 0) {
+    if (!transferCode || !requestingDepartmentId || !supplyingDepartmentId || !title || !items || items.length === 0) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
+    // ✅ Check if transferCode already exists in organization
+    const existingTransfer = await prisma.transfer.findUnique({
+      where: {
+        organizationId_code: {
+          organizationId: access.organizationId,
+          code: transferCode.trim(),
+        },
+      },
+    });
+
+    if (existingTransfer) {
+      return NextResponse.json(
+        { 
+          error: 'Transfer code already exists',
+          message: `เลขที่ใบเบิก ${transferCode} มีอยู่ในระบบแล้ว กรุณาใช้เลขที่อื่น`,
+        },
+        { status: 409 }
+      );
+    }
+
     // Create transfer using helper
     const transfer = await createTransfer({
       organizationId: access.organizationId,
+      transferCode: transferCode.trim(),
       requestingDepartmentId,
       supplyingDepartmentId,
       title,
@@ -163,6 +185,18 @@ export async function POST(
     });
   } catch (error) {
     console.error('Create transfer failed:', error);
+    
+    // Handle Prisma unique constraint error
+    if (error instanceof Error && error.message.includes('Unique constraint')) {
+      return NextResponse.json(
+        { 
+          error: 'Transfer code already exists',
+          message: 'เลขที่ใบเบิกซ้ำกับใบเบิกอื่นในระบบ',
+        },
+        { status: 409 }
+      );
+    }
+    
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }

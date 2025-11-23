@@ -6,10 +6,13 @@ import { createUserSnapshot } from '@/lib/user-snapshot';
 import { createAuditLog } from '@/lib/audit-logger';
 import { Prisma } from '@prisma/client';
 
+type OrganizationRole = 'MEMBER' | 'ADMIN' | 'OWNER';
+
 // ===== TYPE DEFINITIONS =====
 
 interface CreateTransferRequest {
   organizationId: string;
+  transferCode: string;
   requestingDepartmentId: string;
   supplyingDepartmentId: string;
   title: string;
@@ -53,7 +56,7 @@ interface DeliverItemRequest {
 // ===== 1. CREATE TRANSFER =====
 
 export async function createTransfer(data: CreateTransferRequest) {
-  const { organizationId, requestingDepartmentId, supplyingDepartmentId, items, requestedBy } = data;
+  const { organizationId, transferCode, requestingDepartmentId, supplyingDepartmentId, items, requestedBy } = data;
 
   if (requestingDepartmentId === supplyingDepartmentId) {
     throw new Error('Cannot create transfer to the same department');
@@ -72,7 +75,6 @@ export async function createTransfer(data: CreateTransferRequest) {
     throw new Error('Invalid departments');
   }
 
-  const transferCode = await generateTransferCode(organizationId);
   const requestedBySnapshot = await createUserSnapshot(requestedBy, organizationId);
 
   const productIds = items.map(item => item.productId);
@@ -92,19 +94,19 @@ export async function createTransfer(data: CreateTransferRequest) {
     const newTransfer = await tx.transfer.create({
       data: {
         organizationId,
-        code: transferCode,  // ✅ FIXED: transferCode → code
+        code: transferCode.trim(),
         title: data.title,
         requestingDepartmentId,
         supplyingDepartmentId,
         requestReason: data.requestReason,
         notes: data.notes,
         priority: data.priority || 'NORMAL',
-        status: 'PENDING',  // ✅ FIXED: overallStatus → status
+        status: 'PENDING',
         requestedBy,
         requestedBySnapshot: requestedBySnapshot as Prisma.InputJsonValue,
         items: {
           create: items.map(item => ({
-            productId: item.productId,  // ✅ FIXED: ลบ snapshot fields
+            productId: item.productId,
             requestedQuantity: item.requestedQuantity,
             status: 'PENDING',
             notes: item.notes,
@@ -114,7 +116,7 @@ export async function createTransfer(data: CreateTransferRequest) {
       include: {
         items: {
           include: {
-            product: true  // ✅ FIXED: join Product table
+            product: true
           }
         },
         requestingDepartment: true,
@@ -122,14 +124,14 @@ export async function createTransfer(data: CreateTransferRequest) {
       }
     });
 
-    await tx.transferHistory.create({  // ✅ FIXED: transferStatusHistory → transferHistory
+    await tx.transferHistory.create({
       data: {
         transferId: newTransfer.id,
-        action: 'CREATED',  // ✅ FIXED: changeType → action
+        action: 'CREATED',
         toStatus: 'PENDING',
         changedBy: requestedBy,
         changedBySnapshot: requestedBySnapshot as Prisma.InputJsonValue,
-        notes: 'Transfer request created',  // ✅ FIXED: reason → notes
+        notes: 'Transfer request created',
       }
     });
 
@@ -197,12 +199,10 @@ export async function approveTransferItem(data: ApproveItemRequest) {
         status: 'APPROVED',
         approvedQuantity,
         approvedAt: new Date(),
-        // ✅ FIXED: ลบ approvedBy, approvedBySnapshot (ใช้ History แทน)
         notes: notes || item.notes,
       }
     });
 
-    // ✅ FIXED: Check if all items approved → update Transfer status
     const allItems = await tx.transferItem.findMany({
       where: { transferId: item.transferId }
     });
@@ -215,23 +215,22 @@ export async function approveTransferItem(data: ApproveItemRequest) {
       await tx.transfer.update({
         where: { id: item.transferId },
         data: {
-          status: allApproved ? 'APPROVED' : 'PARTIAL',  // ✅ FIXED: overallStatus → status
+          status: allApproved ? 'APPROVED' : 'PARTIAL',
           approvedAt: new Date(),
-          // ✅ FIXED: ลบ approvedBy, approvedBySnapshot
         }
       });
     }
 
-    await tx.transferHistory.create({  // ✅ FIXED: transferStatusHistory → transferHistory
+    await tx.transferHistory.create({
       data: {
         transferId: item.transferId,
         itemId,
-        action: 'APPROVED',  // ✅ FIXED: changeType → action
+        action: 'APPROVED',
         fromStatus: 'PENDING',
         toStatus: 'APPROVED',
         changedBy: approvedBy,
         changedBySnapshot: approvedBySnapshot as Prisma.InputJsonValue,
-        notes,  // ✅ FIXED: reason → notes
+        notes,
       }
     });
 
@@ -246,12 +245,12 @@ export async function approveTransferItem(data: ApproveItemRequest) {
     action: 'transfers.approve_item',
     category: 'TRANSFER',
     severity: 'INFO',
-    description: `อนุมัติรายการ ${item.product.name} จำนวน ${approvedQuantity} ${item.product.baseUnit}`,  // ✅ FIXED: use product.name
+    description: `อนุมัติรายการ ${item.product.name} จำนวน ${approvedQuantity} ${item.product.baseUnit}`,
     resourceId: itemId,
     resourceType: 'TransferItem',
     payload: {
-      transferCode: item.transfer.code,  // ✅ FIXED: transferCode → code
-      productCode: item.product.code,  // ✅ FIXED: use product.code
+      transferCode: item.transfer.code,
+      productCode: item.product.code,
       requestedQuantity: item.requestedQuantity,
       approvedQuantity,
     } as Prisma.InputJsonValue
@@ -332,12 +331,10 @@ export async function prepareTransferItem(data: PrepareItemRequest) {
         status: 'PREPARED',
         preparedQuantity,
         preparedAt: new Date(),
-        // ✅ FIXED: ลบ preparedBy, preparedBySnapshot, selectedBatches (JSON)
         notes: notes || item.notes,
       }
     });
 
-    // ✅ FIXED: Create TransferBatch records (separate table)
     for (const selectedBatch of selectedBatches) {
       await tx.transferBatch.create({
         data: {
@@ -356,7 +353,6 @@ export async function prepareTransferItem(data: PrepareItemRequest) {
       });
     }
 
-    // ✅ FIXED: Check if all items prepared → update Transfer status
     const allItems = await tx.transferItem.findMany({
       where: { transferId: item.transferId }
     });
@@ -444,7 +440,7 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
         }
       },
       product: true,
-      batches: {  // ✅ FIXED: Join TransferBatch
+      batches: {
         include: {
           batch: true
         }
@@ -468,7 +464,6 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
     throw new Error('Invalid received quantity');
   }
 
-  // ✅ FIXED: Get batches from TransferBatch table
   if (!item.batches || item.batches.length === 0) {
     throw new Error('No batches selected');
   }
@@ -482,7 +477,6 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
         status: 'DELIVERED',
         receivedQuantity,
         deliveredAt: new Date(),
-        // ✅ FIXED: ลบ deliveredBy, deliveredBySnapshot
         notes: notes || item.notes,
       }
     });
@@ -569,7 +563,6 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
       });
     }
 
-    // ✅ FIXED: Check if all items delivered → update Transfer status
     const allItems = await tx.transferItem.findMany({
       where: { transferId: item.transferId }
     });
@@ -582,8 +575,8 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
       await tx.transfer.update({
         where: { id: item.transferId },
         data: {
-          status: 'DELIVERED',  // ✅ FIXED: overallStatus → status, COMPLETED → DELIVERED
-          deliveredAt: new Date(),  // ✅ FIXED: completedAt → deliveredAt
+          status: 'DELIVERED',
+          deliveredAt: new Date(),
         }
       });
     }
@@ -638,7 +631,7 @@ export async function cancelTransferItem(
     include: {
       transfer: true,
       product: true,
-      batches: true,  // ✅ FIXED: Join TransferBatch
+      batches: true,
     }
   });
 
@@ -653,7 +646,6 @@ export async function cancelTransferItem(
   const cancelledBySnapshot = await createUserSnapshot(cancelledBy, item.transfer.organizationId);
 
   const updatedItem = await prisma.$transaction(async (tx) => {
-    // ✅ FIXED: Unreserve from TransferBatch table
     if (item.status === 'PREPARED' && item.batches.length > 0) {
       for (const transferBatch of item.batches) {
         await tx.stockBatch.update({
@@ -665,7 +657,6 @@ export async function cancelTransferItem(
         });
       }
 
-      // ✅ FIXED: Delete TransferBatch records
       await tx.transferBatch.deleteMany({
         where: { transferItemId: itemId }
       });
@@ -676,8 +667,7 @@ export async function cancelTransferItem(
       data: {
         status: 'CANCELLED',
         cancelledAt: new Date(),
-        // ✅ FIXED: ลบ cancelledBy, cancelledBySnapshot
-        cancelReason: reason,  // ✅ FIXED: rejectReason → cancelReason
+        cancelReason: reason,
       }
     });
 
@@ -718,7 +708,6 @@ export async function cancelTransfer(
     throw new Error('Transfer not found');
   }
 
-  // ✅ FIXED: overallStatus → status
   if (transfer.status === 'DELIVERED' || transfer.status === 'CANCELLED') {
     throw new Error(`Cannot cancel transfer with status: ${transfer.status}`);
   }
@@ -735,9 +724,8 @@ export async function cancelTransfer(
     await tx.transfer.update({
       where: { id: transferId },
       data: {
-        status: 'CANCELLED',  // ✅ FIXED: overallStatus → status
+        status: 'CANCELLED',
         cancelledAt: new Date(),
-        // ✅ FIXED: ลบ cancelledBy, cancelledBySnapshot
         cancelReason: reason,
       }
     });
@@ -756,30 +744,6 @@ export async function cancelTransfer(
   });
 
   return true;
-}
-
-// ===== UTILITY FUNCTIONS =====
-
-async function generateTransferCode(organizationId: string): Promise<string> {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  
-  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-  
-  const count = await prisma.transfer.count({
-    where: {
-      organizationId,
-      requestedAt: {
-        gte: startOfDay,
-        lte: endOfDay,
-      }
-    }
-  });
-  
-  const sequence = String(count + 1).padStart(4, '0');
-  return `REQ-${year}${month}-${sequence}`;
 }
 
 // ===== QUERY HELPERS =====
@@ -801,7 +765,7 @@ export async function getTransfersByDepartment(
     include: {
       items: {
         include: {
-          product: true  // ✅ FIXED: Join Product
+          product: true
         }
       },
       requestingDepartment: true,
@@ -820,7 +784,7 @@ export async function getTransferWithDetails(transferId: string) {
       items: {
         include: {
           product: true,
-          batches: {  // ✅ FIXED: Join TransferBatch
+          batches: {
             include: {
               batch: true
             }
@@ -829,7 +793,7 @@ export async function getTransferWithDetails(transferId: string) {
       },
       requestingDepartment: true,
       supplyingDepartment: true,
-      statusHistory: {  // ✅ FIXED: transferStatusHistory → statusHistory (relation name)
+      statusHistory: {
         orderBy: { createdAt: 'desc' }
       }
     }
