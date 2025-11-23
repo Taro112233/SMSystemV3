@@ -1,5 +1,5 @@
 // components/TransferManagement/CreateTransfer/Step2ProductSelection.tsx
-// Step2ProductSelection - Product selection with stock info
+// Step2ProductSelection - UPDATED: Remove requestingCurrentStock
 
 'use client';
 
@@ -23,9 +23,9 @@ interface Product {
   supplyingStock?: ProductStock;
 }
 
+// ✅ FIXED: Remove requestingCurrentStock
 interface SelectedProduct extends Product {
   quantity: number;
-  requestingCurrentStock: number;
   notes?: string;
 }
 

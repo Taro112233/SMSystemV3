@@ -1,5 +1,5 @@
 // components/TransferManagement/CreateTransfer/ProductSelectionTable.tsx
-// ProductSelectionTable - Product table with stock info and filters
+// ProductSelectionTable - UPDATED: Read-only stock display
 
 'use client';
 
@@ -26,13 +26,12 @@ interface Product {
   genericName?: string;
   baseUnit: string;
   defaultWithdrawalQty?: number;
-  requestingStock?: ProductStock; // Stock in requesting dept
-  supplyingStock?: ProductStock;  // Stock in supplying dept
+  requestingStock?: ProductStock;
+  supplyingStock?: ProductStock;
 }
 
 interface SelectedProduct extends Product {
   quantity: number;
-  requestingCurrentStock: number; // Editable field
   notes?: string;
 }
 
@@ -90,7 +89,6 @@ export default function ProductSelectionTable({
         {
           ...product,
           quantity: product.defaultWithdrawalQty || 1,
-          requestingCurrentStock: product.requestingStock?.availableQuantity || 0,
           notes: '',
         },
       ]);
@@ -101,14 +99,6 @@ export default function ProductSelectionTable({
     onSelectionChange(
       selectedProducts.map(p =>
         p.id === productId ? { ...p, quantity: Math.max(1, quantity) } : p
-      )
-    );
-  };
-
-  const handleRequestingStockChange = (productId: string, stock: number) => {
-    onSelectionChange(
-      selectedProducts.map(p =>
-        p.id === productId ? { ...p, requestingCurrentStock: Math.max(0, stock) } : p
       )
     );
   };
@@ -188,10 +178,10 @@ export default function ProductSelectionTable({
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
                 หน่วย
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-32">
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-32">
                 คงเหลือ<br />แผนกตัวเอง
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-32">
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-32">
                 คงเหลือ<br />แผนกที่เบิก
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-32">
@@ -235,30 +225,10 @@ export default function ProductSelectionTable({
                     <span className="text-sm text-gray-600">{product.baseUnit}</span>
                   </td>
 
-                  {/* Requesting Dept Stock (Editable when selected) */}
+                  {/* ✅ UPDATED: Requesting Dept Stock (Read-only) */}
                   <td className="px-4 py-3">
-                    {selected ? (
-                      <div className="space-y-1">
-                        <Input
-                          type="number"
-                          min="0"
-                          value={selected.requestingCurrentStock}
-                          onChange={(e) =>
-                            handleRequestingStockChange(
-                              product.id,
-                              parseInt(e.target.value) || 0
-                            )
-                          }
-                          className="w-24 h-8 text-sm"
-                        />
-                        {requestingStock && (
-                          <div className="text-xs text-gray-500">
-                            {formatTimeAgo(requestingStock.lastUpdated)}
-                          </div>
-                        )}
-                      </div>
-                    ) : requestingStock ? (
-                      <div className="space-y-1">
+                    {requestingStock ? (
+                      <div className="text-center space-y-1">
                         <div className="text-sm font-medium text-gray-900">
                           {requestingStock.availableQuantity.toLocaleString()}
                         </div>
@@ -267,14 +237,16 @@ export default function ProductSelectionTable({
                         </div>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-400">-</span>
+                      <div className="text-center">
+                        <span className="text-sm text-gray-400">-</span>
+                      </div>
                     )}
                   </td>
 
                   {/* Supplying Dept Stock (Read-only) */}
                   <td className="px-4 py-3">
                     {supplyingStock ? (
-                      <div className="space-y-1">
+                      <div className="text-center space-y-1">
                         <div className={`text-sm font-medium ${
                           supplyingStock.availableQuantity > 0 
                             ? 'text-green-600' 
@@ -287,7 +259,9 @@ export default function ProductSelectionTable({
                         </div>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-400">-</span>
+                      <div className="text-center">
+                        <span className="text-sm text-gray-400">-</span>
+                      </div>
                     )}
                   </td>
 

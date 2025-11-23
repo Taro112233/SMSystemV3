@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/[deptSlug]/stocks/[stockId]/batches/route.ts
-// Batch Management API - Add and list batches for a stock
+// Batch Management API - UPDATED: Support transfer preparation
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
 
-// GET - List all batches for a stock
+// GET - List all batches for a stock (UPDATED: Add filter for available batches)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string; deptSlug: string; stockId: string }> }
@@ -54,7 +54,14 @@ export async function GET(
         departmentId: department.id,
       },
       include: {
-        product: true,
+        product: {
+          select: {
+            code: true,
+            name: true,
+            genericName: true,
+            baseUnit: true,
+          },
+        },
       },
     });
 
@@ -65,17 +72,64 @@ export async function GET(
       );
     }
 
+    // ✅ NEW: Check query params for filtering
+    const { searchParams } = new URL(request.url);
+    const availableOnly = searchParams.get('availableOnly') === 'true';
+    const forTransfer = searchParams.get('forTransfer') === 'true';
+
+    // Build where clause
+    const whereClause: any = {
+      stockId,
+      isActive: true,
+    };
+
+    // ✅ NEW: Filter for transfer preparation
+    if (availableOnly || forTransfer) {
+      whereClause.status = 'AVAILABLE';
+      whereClause.availableQuantity = { gt: 0 };
+    }
+
     // Get batches
     const batches = await prisma.stockBatch.findMany({
-      where: {
-        stockId,
+      where: whereClause,
+      select: {
+        id: true,
+        lotNumber: true,
+        expiryDate: true,
+        manufactureDate: true,
+        supplier: true,
+        costPrice: true,
+        sellingPrice: true,
+        totalQuantity: true,
+        availableQuantity: true,
+        reservedQuantity: true,
+        incomingQuantity: true,
+        location: true,
+        status: true,
         isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        receivedAt: true,
       },
       orderBy: [
-        { expiryDate: 'asc' },
-        { createdAt: 'desc' },
+        { expiryDate: 'asc' }, // ✅ FIFO - earliest expiry first
+        { createdAt: 'asc' },
       ],
     });
+
+    // ✅ NEW: Calculate summary for transfer preparation
+    const summary = forTransfer ? {
+      totalBatches: batches.length,
+      totalAvailable: batches.reduce((sum, b) => sum + b.availableQuantity, 0),
+      totalReserved: batches.reduce((sum, b) => sum + b.reservedQuantity, 0),
+      nearExpiry: batches.filter(b => {
+        if (!b.expiryDate) return false;
+        const daysToExpiry = Math.floor(
+          (new Date(b.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+        );
+        return daysToExpiry <= 90; // Within 3 months
+      }).length,
+    } : undefined;
 
     return NextResponse.json({
       success: true,
@@ -84,7 +138,9 @@ export async function GET(
         id: stock.id,
         product: stock.product,
         location: stock.location,
+        defaultWithdrawalQty: stock.defaultWithdrawalQty,
       },
+      summary, // ✅ NEW: Include summary for transfer
     });
   } catch (error) {
     console.error('Get batches failed:', error);
@@ -95,7 +151,7 @@ export async function GET(
   }
 }
 
-// POST - Add new batch
+// POST - Add new batch (unchanged from original)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string; deptSlug: string; stockId: string }> }

@@ -1,5 +1,5 @@
 // components/TransferManagement/CreateTransfer/Step3ReviewSubmit.tsx
-// Step3ReviewSubmit - Review with stock comparison
+// Step3ReviewSubmit - UPDATED: Remove requestingCurrentStock field
 
 'use client';
 
@@ -21,8 +21,8 @@ interface SelectedProduct {
   name: string;
   baseUnit: string;
   quantity: number;
-  requestingCurrentStock: number;
   notes?: string;
+  // ✅ REMOVED: requestingCurrentStock
 }
 
 interface Step3ReviewSubmitProps {
@@ -113,12 +113,6 @@ export default function Step3ReviewSubmit({
                     </div>
 
                     <div className="flex items-center gap-4 text-xs text-gray-600">
-                      <div>
-                        <span className="font-medium">คงเหลือแผนกตัวเอง:</span>{' '}
-                        <span className="text-gray-900">
-                          {product.requestingCurrentStock.toLocaleString()} {product.baseUnit}
-                        </span>
-                      </div>
                       <div>
                         <span className="font-medium">จำนวนเบิก:</span>{' '}
                         <span className="text-blue-600 font-semibold">

@@ -1,5 +1,5 @@
 // components/TransferManagement/CreateTransfer/CreateTransferForm.tsx
-// CreateTransferForm - UPDATED: Connect to API + Stock refresh
+// CreateTransferForm - UPDATED: Remove requestingCurrentStock tracking
 
 'use client';
 
@@ -39,8 +39,8 @@ interface Product {
 
 interface SelectedProduct extends Product {
   quantity: number;
-  requestingCurrentStock: number;
   notes?: string;
+  // ✅ REMOVED: requestingCurrentStock
 }
 
 interface CreateTransferFormProps {
@@ -99,45 +99,22 @@ export default function CreateTransferForm({
       const supplyingDept = departments.find(d => d.id === step1Data.supplyingDepartmentId);
       if (!supplyingDept) return;
 
-      // Load requesting department stocks
-      const requestingStocksRes = await fetch(
-        `/api/${orgSlug}/${deptSlug}/stocks`
+      // Load products with stock from API
+      const response = await fetch(
+        `/api/${orgSlug}/${deptSlug}/transfers/products?supplyingDept=${supplyingDept.slug}`
       );
-      const requestingData = await requestingStocksRes.json();
+      
+      if (!response.ok) {
+        throw new Error('Failed to load products with stock');
+      }
 
-      // Load supplying department stocks
-      const supplyingStocksRes = await fetch(
-        `/api/${orgSlug}/${supplyingDept.slug}/stocks`
-      );
-      const supplyingData = await supplyingStocksRes.json();
-
-      // Map products with stock info
-      const productsWithStock = initialProducts.map(product => {
-        const requestingStock = requestingData.data?.find(
-          (s: any) => s.product.id === product.id
-        );
-        const supplyingStock = supplyingData.data?.find(
-          (s: any) => s.product.id === product.id
-        );
-
-        return {
-          ...product,
-          requestingStock: requestingStock ? {
-            stockId: requestingStock.id,
-            availableQuantity: requestingStock.availableQuantity,
-            lastUpdated: new Date(requestingStock.updatedAt),
-          } : undefined,
-          supplyingStock: supplyingStock ? {
-            stockId: supplyingStock.id,
-            availableQuantity: supplyingStock.availableQuantity,
-            lastUpdated: new Date(supplyingStock.updatedAt),
-          } : undefined,
-        };
-      });
-
-      setProducts(productsWithStock);
+      const data = await response.json();
+      setProducts(data.data);
     } catch (error) {
       console.error('Failed to load products with stock:', error);
+      toast.error('เกิดข้อผิดพลาด', {
+        description: 'ไม่สามารถโหลดข้อมูลสต็อกได้',
+      });
     }
   }, [step1Data.supplyingDepartmentId, departments, initialProducts, orgSlug, deptSlug]);
 
@@ -214,7 +191,6 @@ export default function CreateTransferForm({
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-requesting-dept-id': requestingDepartmentId,
         },
         body: JSON.stringify({
           ...transferData,
