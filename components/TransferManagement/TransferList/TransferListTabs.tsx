@@ -22,13 +22,13 @@ export default function TransferListTabs({
   return (
     <Tabs value={activeTab} onValueChange={onTabChange as any}>
       <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="outgoing" className="gap-2">
-          <ArrowUpCircle className="h-4 w-4" />
-          รายการเบิกออก ({outgoingCount})
-        </TabsTrigger>
         <TabsTrigger value="incoming" className="gap-2">
           <ArrowDownCircle className="h-4 w-4" />
           รายการรับเข้า ({incomingCount})
+        </TabsTrigger>
+        <TabsTrigger value="outgoing" className="gap-2">
+          <ArrowUpCircle className="h-4 w-4" />
+          รายการเบิกออก ({outgoingCount})
         </TabsTrigger>
       </TabsList>
     </Tabs>
