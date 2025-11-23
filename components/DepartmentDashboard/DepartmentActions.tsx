@@ -33,9 +33,8 @@ export const DepartmentActions = () => {
       title: 'การเบิก-จ่าย',
       icon: TrendingUp,
       actions: [
-        { icon: FileText, label: 'สร้างใบเบิก', onClick: () => console.log('Create requisition') },
-        { icon: PlaneTakeoff, label: 'รายการเบิกออก', onClick: () => console.log('Outgoing transfers') },
-        { icon: PlaneLanding, label: 'รายการรับเข้า', onClick: () => console.log('Incoming transfers') }
+        { icon: FileText, label: 'สร้างใบเบิก', onClick: () => router.push(`/${orgSlug}/${deptSlug}/transfers/create`) },
+        { icon: PlaneTakeoff, label: 'จัดการใบเบิก', onClick: () => router.push(`/${orgSlug}/${deptSlug}/transfers`) },
       ]
     },
     {

@@ -1,5 +1,5 @@
 // components/TransferManagement/CreateTransfer/CreateTransferForm.tsx
-// CreateTransferForm - Main form container (multi-step)
+// CreateTransferForm - Main form container (multi-step) - No Dialog Wrapper
 
 'use client';
 
@@ -9,7 +9,6 @@ import { CreateTransferData, TransferPriority } from '@/types/transfer';
 import Step1BasicInfo from './Step1BasicInfo';
 import Step2ProductSelection from './Step2ProductSelection';
 import Step3ReviewSubmit from './Step3ReviewSubmit';
-import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
@@ -162,18 +161,16 @@ export default function CreateTransferForm({
   );
 
   return (
-    <div className="space-y-6">
-      <DialogHeader>
-        <DialogTitle>สร้างใบเบิกใหม่</DialogTitle>
-      </DialogHeader>
-
-      {/* Progress */}
-      <div className="space-y-2">
+    <div className="space-y-8">
+      {/* Progress Section */}
+      <div className="space-y-3">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">ขั้นตอน {currentStep} จาก {totalSteps}</span>
+          <span className="text-gray-600 font-medium">
+            ขั้นตอน {currentStep} จาก {totalSteps}
+          </span>
           <span className="text-gray-600">{Math.round(progress)}%</span>
         </div>
-        <Progress value={progress} />
+        <Progress value={progress} className="h-2" />
       </div>
 
       {/* Step Indicator */}
@@ -186,7 +183,7 @@ export default function CreateTransferForm({
             }`}
           >
             <div
-              className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+              className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold ${
                 currentStep >= step
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-600'
@@ -195,11 +192,11 @@ export default function CreateTransferForm({
               {step}
             </div>
             <div
-              className={`text-xs mt-1 ${
-                currentStep >= step ? 'text-blue-600 font-medium' : 'text-gray-500'
+              className={`text-sm mt-2 font-medium ${
+                currentStep >= step ? 'text-blue-600' : 'text-gray-500'
               }`}
             >
-              {step === 1 && 'ข้อมูลพื้นฐาน'}
+              {step === 1 && 'ข้อมูลใบเบิก'}
               {step === 2 && 'เลือกสินค้า'}
               {step === 3 && 'ตรวจสอบ'}
             </div>
@@ -208,7 +205,7 @@ export default function CreateTransferForm({
       </div>
 
       {/* Step Content */}
-      <div className="min-h-[400px]">
+      <div className="min-h-[500px] py-6">
         {currentStep === 1 && (
           <Step1BasicInfo
             data={step1Data}
@@ -241,14 +238,20 @@ export default function CreateTransferForm({
           variant="outline"
           onClick={handleBack}
           disabled={currentStep === 1 || loading}
-          className="gap-1"
+          className="gap-2"
+          size="lg"
         >
           <ChevronLeft className="h-4 w-4" />
           ก่อนหน้า
         </Button>
 
         {currentStep < totalSteps ? (
-          <Button onClick={handleNext} disabled={loading} className="gap-1">
+          <Button 
+            onClick={handleNext} 
+            disabled={loading} 
+            className="gap-2"
+            size="lg"
+          >
             ถัดไป
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -256,7 +259,8 @@ export default function CreateTransferForm({
           <Button
             onClick={handleSubmit}
             disabled={loading}
-            className="min-w-[120px]"
+            className="min-w-[160px]"
+            size="lg"
           >
             {loading ? (
               <>

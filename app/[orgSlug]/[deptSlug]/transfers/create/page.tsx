@@ -1,13 +1,14 @@
 // app/[orgSlug]/[deptSlug]/transfers/create/page.tsx
-// Create Transfer Page
+// Create Transfer Page - Full Page (Not Modal)
 
 'use client';
 
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { CreateTransferForm } from '@/components/TransferManagement';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 
 interface Department {
   id: string;
@@ -103,7 +104,7 @@ export default function CreateTransferPage({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
           <p className="text-sm text-gray-500 mt-3">กำลังโหลดข้อมูล...</p>
@@ -114,39 +115,53 @@ export default function CreateTransferPage({
 
   if (error || !requestingDepartment) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center max-w-md">
-          <div className="p-3 bg-red-100 rounded-full w-fit mx-auto">
-            <AlertCircle className="h-8 w-8 text-red-600" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mt-4">
-            ไม่สามารถเข้าถึงได้
-          </h2>
-          <p className="text-sm text-gray-600 mt-2">{error || 'ไม่พบข้อมูล'}</p>
-          <button
-            onClick={() => router.push(`/${orgSlug}/${deptSlug}/transfers`)}
-            className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            กลับหน้าใบเบิก
-          </button>
-        </div>
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center">
+            <div className="p-3 bg-red-100 rounded-full w-fit mx-auto">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mt-4">
+              ไม่สามารถเข้าถึงได้
+            </h2>
+            <p className="text-sm text-gray-600 mt-2">{error || 'ไม่พบข้อมูล'}</p>
+            <Button
+              onClick={() => router.push(`/${orgSlug}/${deptSlug}/transfers`)}
+              className="mt-6 w-full"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              กลับหน้าใบเบิก
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <Dialog open={true} onOpenChange={() => router.push(`/${orgSlug}/${deptSlug}/transfers`)}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <CreateTransferForm
-          organizationId={organizationId}
-          requestingDepartmentId={requestingDepartment.id}
-          requestingDepartmentName={requestingDepartment.name}
-          departments={departments}
-          products={products}
-          orgSlug={orgSlug}
-          deptSlug={deptSlug}
-        />
-      </DialogContent>
-    </Dialog>
+    <div className="container max-w-6xl mx-auto py-6 space-y-6">
+      {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">สร้างใบเบิกใหม่</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            หน่วยงาน: {requestingDepartment.name}
+          </p>
+        </div>
+
+      {/* Main Form Card */}
+      <Card>
+        <CardContent className="p-6">
+          <CreateTransferForm
+            organizationId={organizationId}
+            requestingDepartmentId={requestingDepartment.id}
+            requestingDepartmentName={requestingDepartment.name}
+            departments={departments}
+            products={products}
+            orgSlug={orgSlug}
+            deptSlug={deptSlug}
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
