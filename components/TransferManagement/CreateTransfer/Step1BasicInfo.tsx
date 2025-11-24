@@ -58,7 +58,7 @@ export default function Step1BasicInfo({
         {/* หัวข้อใบเบิก */}
         <div className="space-y-2">
           <Label htmlFor="title" className="required">
-            หัวข้อใบเบิก
+            หัวข้อใบเบิก <span className="text-red-500">*</span>
           </Label>
           <Input
             id="title"
@@ -73,7 +73,7 @@ export default function Step1BasicInfo({
         {/* เลขที่ใบเบิก */}
         <div className="space-y-2">
           <Label htmlFor="transferCode" className="required">
-            เลขที่ใบเบิก
+            เลขที่ใบเบิก <span className="text-red-500">*</span>
           </Label>
           <Input
             id="transferCode"
@@ -88,7 +88,7 @@ export default function Step1BasicInfo({
         {/* หน่วยงานที่จ่าย */}
       <div className="space-y-2">
         <Label htmlFor="supplyingDepartment" className="required">
-          หน่วยงานที่จ่าย *
+          หน่วยงานที่จ่าย <span className="text-red-500">*</span>
         </Label>
         <Select
           value={data.supplyingDepartmentId}
@@ -110,7 +110,7 @@ export default function Step1BasicInfo({
         {/* ความสำคัญ */}
         <div className="space-y-2">
           <Label htmlFor="priority" className="required">
-            ความสำคัญ
+            ความสำคัญ <span className="text-red-500">*</span>
           </Label>
           <Select
             value={data.priority}
@@ -148,7 +148,7 @@ export default function Step1BasicInfo({
       {/* เหตุผลในการขอเบิก */}
       <div className="space-y-2">
         <Label htmlFor="requestReason" className="required">
-          เหตุผลในการขอเบิก
+          เหตุผลในการขอเบิก <span className="text-red-500">*</span>
         </Label>
         <Textarea
           id="requestReason"
