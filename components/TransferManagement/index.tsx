@@ -1,5 +1,5 @@
 // components/TransferManagement/index.tsx
-// Main export file
+// Main export file - UPDATED with Dialog exports
 
 export { default as OrganizationTransfersView } from './TransferOverview/OrganizationTransfersView';
 export { default as DepartmentTransfersView } from './TransferList/DepartmentTransfersView';
@@ -12,3 +12,11 @@ export { default as TransferPriorityBadge } from './shared/TransferPriorityBadge
 export { default as QuantityDisplay } from './shared/QuantityDisplay';
 export { default as DepartmentBadge } from './shared/DepartmentBadge';
 export { default as TransferCodeDisplay } from './shared/TransferCodeDisplay';
+
+// ✅ NEW: Dialog components exports
+export { default as ApproveItemDialog } from './ItemActions/ApproveItemDialog';
+export { default as PrepareItemDialog } from './ItemActions/PrepareItemDialog';
+export { default as DeliverItemDialog } from './ItemActions/DeliverItemDialog';
+export { default as CancelItemDialog } from './ItemActions/CancelItemDialog';
+export { default as BatchSelectionTable } from './ItemActions/BatchSelectionTable';
+export { default as BatchInfoDisplay } from './ItemActions/BatchInfoDisplay';

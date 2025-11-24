@@ -1,17 +1,10 @@
 // components/TransferManagement/TransferDetail/TransferItemsTab.tsx
-// TransferItemsTab - Items tab content
+// TransferItemsTab - Items tab content - SIMPLIFIED without batch fetching
 
 'use client';
 
 import { TransferItem } from '@/types/transfer';
 import TransferItemCard from './TransferItemCard';
-
-interface StockBatch {
-  id: string;
-  lotNumber: string;
-  expiryDate?: Date;
-  availableQuantity: number;
-}
 
 interface TransferItemsTabProps {
   items: TransferItem[];
@@ -24,7 +17,6 @@ interface TransferItemsTabProps {
   onPrepare: (itemId: string, data: any) => Promise<void>;
   onDeliver: (itemId: string, data: any) => Promise<void>;
   onCancelItem: (itemId: string, data: any) => Promise<void>;
-  getBatchesForItem?: (itemId: string) => StockBatch[];
 }
 
 export default function TransferItemsTab({
@@ -38,7 +30,6 @@ export default function TransferItemsTab({
   onPrepare,
   onDeliver,
   onCancelItem,
-  getBatchesForItem = () => [],
 }: TransferItemsTabProps) {
   if (items.length === 0) {
     return (
@@ -59,7 +50,6 @@ export default function TransferItemsTab({
           canPrepare={canPrepare}
           canReceive={canReceive}
           canCancel={canCancel}
-          availableBatches={getBatchesForItem(item.id)}
           onApprove={onApprove}
           onPrepare={onPrepare}
           onDeliver={onDeliver}

@@ -1,5 +1,5 @@
 // components/TransferManagement/TransferDetail/TransferItemCard.tsx
-// TransferItemCard - Individual item card with actions
+// TransferItemCard - Individual item card with actions - FIXED batch fetching
 
 'use client';
 
@@ -15,7 +15,8 @@ import ApproveItemDialog from '../ItemActions/ApproveItemDialog';
 import PrepareItemDialog from '../ItemActions/PrepareItemDialog';
 import DeliverItemDialog from '../ItemActions/DeliverItemDialog';
 import CancelItemDialog from '../ItemActions/CancelItemDialog';
-import { CheckCircle, Package, Truck, XCircle } from 'lucide-react';
+import { CheckCircle, Package, Truck, XCircle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface StockBatch {
   id: string;
@@ -31,7 +32,6 @@ interface TransferItemCardProps {
   canPrepare: boolean;
   canReceive: boolean;
   canCancel: boolean;
-  availableBatches?: StockBatch[];
   onApprove: (itemId: string, data: any) => Promise<void>;
   onPrepare: (itemId: string, data: any) => Promise<void>;
   onDeliver: (itemId: string, data: any) => Promise<void>;
@@ -45,7 +45,6 @@ export default function TransferItemCard({
   canPrepare,
   canReceive,
   canCancel,
-  availableBatches = [],
   onApprove,
   onPrepare,
   onDeliver,
@@ -55,6 +54,8 @@ export default function TransferItemCard({
   const [prepareDialogOpen, setPrepareDialogOpen] = useState(false);
   const [deliverDialogOpen, setDeliverDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+  const [batches, setBatches] = useState<StockBatch[]>([]);
 
   const showApproveButton = 
     canApprove && 
@@ -75,6 +76,82 @@ export default function TransferItemCard({
     canCancel && 
     item.status !== 'DELIVERED' && 
     item.status !== 'CANCELLED';
+
+  // ✅ Fetch batches when prepare button is clicked
+  const handlePrepareClick = async () => {
+    setLoadingBatches(true);
+    
+    try {
+      // Get URL parts
+      const pathParts = window.location.pathname.split('/');
+      const orgSlug = pathParts[1];
+      const deptSlug = pathParts[2];
+
+      console.log('🔍 Fetching batches for product:', item.product.code, item.productId);
+
+      // First, find stock for this product in current department
+      const stockResponse = await fetch(
+        `/api/${orgSlug}/${deptSlug}/stocks?search=${item.product.code}`,
+        { credentials: 'include' }
+      );
+
+      if (!stockResponse.ok) {
+        throw new Error('Failed to fetch stock');
+      }
+
+      const stockData = await stockResponse.json();
+      console.log('📦 Stock response:', stockData);
+
+      if (!stockData.success || !stockData.data || stockData.data.length === 0) {
+        toast.error('ไม่พบสต็อก', {
+          description: 'ไม่พบสต็อกสินค้านี้ในแผนก',
+        });
+        setBatches([]);
+        setPrepareDialogOpen(true);
+        return;
+      }
+
+      // Get the first stock (should be the one for this product)
+      const stock = stockData.data[0];
+      console.log('📦 Found stock:', stock.id);
+
+      // Fetch batches for this stock
+      const batchesResponse = await fetch(
+        `/api/${orgSlug}/${deptSlug}/stocks/${stock.id}/batches?availableOnly=true&forTransfer=true`,
+        { credentials: 'include' }
+      );
+
+      if (!batchesResponse.ok) {
+        throw new Error('Failed to fetch batches');
+      }
+
+      const batchesData = await batchesResponse.json();
+      console.log('📦 Batches response:', batchesData);
+
+      if (batchesData.success && batchesData.data) {
+        setBatches(batchesData.data);
+        
+        if (batchesData.data.length === 0) {
+          toast.warning('ไม่มี Batch', {
+            description: 'ไม่มี Batch ที่พร้อมใช้งานสำหรับสินค้านี้',
+          });
+        }
+      } else {
+        setBatches([]);
+      }
+
+      setPrepareDialogOpen(true);
+    } catch (error) {
+      console.error('❌ Error fetching batches:', error);
+      toast.error('เกิดข้อผิดพลาด', {
+        description: 'ไม่สามารถโหลดข้อมูล Batch ได้',
+      });
+      setBatches([]);
+      setPrepareDialogOpen(true);
+    } finally {
+      setLoadingBatches(false);
+    }
+  };
 
   const handleApprove = async (data: any) => {
     await onApprove(item.id, data);
@@ -133,11 +210,16 @@ export default function TransferItemCard({
 
                 {showPrepareButton && (
                   <Button
-                    onClick={() => setPrepareDialogOpen(true)}
+                    onClick={handlePrepareClick}
                     size="sm"
                     className="gap-1 bg-purple-600 hover:bg-purple-700"
+                    disabled={loadingBatches}
                   >
-                    <Package className="h-4 w-4" />
+                    {loadingBatches ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Package className="h-4 w-4" />
+                    )}
                     จัดเตรียม
                   </Button>
                 )}
@@ -178,7 +260,7 @@ export default function TransferItemCard({
                 />
               </div>
 
-              {item.approvedQuantity !== undefined && (
+              {item.approvedQuantity !== undefined && item.approvedQuantity !== null && (
                 <div>
                   <div className="text-xs text-gray-600 mb-1">จำนวนที่อนุมัติ</div>
                   <QuantityDisplay
@@ -189,7 +271,7 @@ export default function TransferItemCard({
                 </div>
               )}
 
-              {item.preparedQuantity !== undefined && (
+              {item.preparedQuantity !== undefined && item.preparedQuantity !== null && (
                 <div>
                   <div className="text-xs text-gray-600 mb-1">จำนวนที่จัดเตรียม</div>
                   <QuantityDisplay
@@ -200,7 +282,7 @@ export default function TransferItemCard({
                 </div>
               )}
 
-              {item.receivedQuantity !== undefined && (
+              {item.receivedQuantity !== undefined && item.receivedQuantity !== null && (
                 <div>
                   <div className="text-xs text-gray-600 mb-1">จำนวนที่รับเข้า</div>
                   <QuantityDisplay
@@ -255,7 +337,7 @@ export default function TransferItemCard({
 
       <PrepareItemDialog
         item={item}
-        availableBatches={availableBatches}
+        availableBatches={batches}
         open={prepareDialogOpen}
         onOpenChange={setPrepareDialogOpen}
         onPrepare={handlePrepare}

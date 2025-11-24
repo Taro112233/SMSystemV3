@@ -1,18 +1,17 @@
 // components/TransferManagement/TransferDetail/TransferDetailView.tsx
-// TransferDetailView - Main detail container
+// TransferDetailView - Main detail container - FIXED permission logic
 
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Transfer, TransferHistory } from '@/types/transfer';
+import { Transfer } from '@/types/transfer';
 import TransferDetailHeader from './TransferDetailHeader';
 import TransferStatusTimeline from './TransferStatusTimeline';
-import TransferTabs from './TransferTabs';
 import TransferItemsTab from './TransferItemsTab';
 import TransferHistoryTab from './TransferHistoryTab';
 import TransferNotes from './TransferNotes';
-import { TabsContent } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Package, History, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface TransferDetailViewProps {
@@ -30,42 +29,50 @@ export default function TransferDetailView({
 }: TransferDetailViewProps) {
   const [loading, setLoading] = useState(true);
   const [transfer, setTransfer] = useState<Transfer | null>(null);
-  const [history, setHistory] = useState<TransferHistory[]>([]);
   const [activeTab, setActiveTab] = useState('items');
-
-  // Determine user role
-  const userRole = transfer
-    ? transfer.requestingDepartmentId === userDepartmentId
-      ? 'requesting'
-      : transfer.supplyingDepartmentId === userDepartmentId
-      ? 'supplying'
-      : 'other'
-    : 'other';
-
-  // Permission checks (simplified - should come from API)
-  const canApprove = userRole === 'supplying';
-  const canPrepare = userRole === 'supplying';
-  const canReceive = userRole === 'requesting';
-  const canCancel = true; // ADMIN/OWNER only in real implementation
+  const [organizationRole, setOrganizationRole] = useState<'MEMBER' | 'ADMIN' | 'OWNER' | null>(null);
 
   useEffect(() => {
     fetchTransferDetail();
+    fetchUserRole();
   }, [transferId]);
+
+  const fetchUserRole = async () => {
+    try {
+      const response = await fetch(`/api/auth/me?orgSlug=${orgSlug}`, {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data.permissions) {
+          setOrganizationRole(data.data.permissions.currentRole);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+    }
+  };
 
   const fetchTransferDetail = async () => {
     try {
       setLoading(true);
 
-      // TODO: Implement API call
-      // const response = await fetch(`/api/${orgSlug}/transfers/${transferId}`);
-      // const data = await response.json();
-      // setTransfer(data.transfer);
-      // setHistory(data.history);
+      const response = await fetch(`/api/${orgSlug}/transfers/${transferId}`, {
+        credentials: 'include',
+      });
 
-      // Mock data for now
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setTransfer(null);
-      setHistory([]);
+      if (!response.ok) {
+        throw new Error('Failed to fetch transfer');
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch transfer');
+      }
+
+      setTransfer(data.data);
     } catch (error) {
       console.error('Error fetching transfer:', error);
       toast.error('เกิดข้อผิดพลาด', {
@@ -78,10 +85,21 @@ export default function TransferDetailView({
 
   const handleCancelTransfer = async () => {
     try {
-      // TODO: Implement API call
-      // await fetch(`/api/${orgSlug}/transfers/${transferId}`, {
-      //   method: 'DELETE',
-      // });
+      const reason = prompt('กรุณาระบุเหตุผลในการยกเลิก:');
+      if (!reason) return;
+
+      const response = await fetch(`/api/${orgSlug}/transfers/${transferId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel transfer');
+      }
 
       toast.success('สำเร็จ', {
         description: 'ยกเลิกใบเบิกเรียบร้อย',
@@ -98,11 +116,21 @@ export default function TransferDetailView({
 
   const handleApproveItem = async (itemId: string, data: any) => {
     try {
-      // TODO: Implement API call
-      // await fetch(`/api/${orgSlug}/transfers/${transferId}/approve-item`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({ itemId, ...data }),
-      // });
+      const response = await fetch(
+        `/api/${orgSlug}/transfers/${transferId}/approve-item`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ itemId, ...data }),
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to approve item');
+      }
 
       toast.success('สำเร็จ', {
         description: 'อนุมัติรายการเรียบร้อย',
@@ -119,11 +147,21 @@ export default function TransferDetailView({
 
   const handlePrepareItem = async (itemId: string, data: any) => {
     try {
-      // TODO: Implement API call
-      // await fetch(`/api/${orgSlug}/transfers/${transferId}/prepare-item`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({ itemId, ...data }),
-      // });
+      const response = await fetch(
+        `/api/${orgSlug}/transfers/${transferId}/prepare-item`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ itemId, ...data }),
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to prepare item');
+      }
 
       toast.success('สำเร็จ', {
         description: 'จัดเตรียมรายการเรียบร้อย',
@@ -140,11 +178,21 @@ export default function TransferDetailView({
 
   const handleDeliverItem = async (itemId: string, data: any) => {
     try {
-      // TODO: Implement API call
-      // await fetch(`/api/${orgSlug}/transfers/${transferId}/deliver-item`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({ itemId, ...data }),
-      // });
+      const response = await fetch(
+        `/api/${orgSlug}/transfers/${transferId}/deliver-item`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ itemId, ...data }),
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to deliver item');
+      }
 
       toast.success('สำเร็จ', {
         description: 'รับเข้ารายการเรียบร้อย',
@@ -161,11 +209,21 @@ export default function TransferDetailView({
 
   const handleCancelItem = async (itemId: string, data: any) => {
     try {
-      // TODO: Implement API call
-      // await fetch(`/api/${orgSlug}/transfers/${transferId}/cancel-item`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({ itemId, ...data }),
-      // });
+      const response = await fetch(
+        `/api/${orgSlug}/transfers/${transferId}/cancel-item`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ itemId, ...data }),
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel item');
+      }
 
       toast.success('สำเร็จ', {
         description: 'ยกเลิกรายการเรียบร้อย',
@@ -197,6 +255,32 @@ export default function TransferDetailView({
     );
   }
 
+  // ✅ FIXED: Determine user role in transfer context
+  const userRole = transfer.requestingDepartmentId === userDepartmentId
+    ? 'requesting'
+    : transfer.supplyingDepartmentId === userDepartmentId
+    ? 'supplying'
+    : 'other';
+
+  // ✅ FIXED: Permission checks based on BOTH transfer role AND organization role
+  // All members can perform basic actions, but based on their department context
+  const canApprove = userRole === 'supplying' && organizationRole !== null;
+  const canPrepare = userRole === 'supplying' && organizationRole !== null;
+  const canReceive = userRole === 'requesting' && organizationRole !== null;
+  const canCancel = organizationRole === 'ADMIN' || organizationRole === 'OWNER';
+
+  console.log('🔍 Transfer Detail Permissions:', {
+    userDepartmentId,
+    requestingDeptId: transfer.requestingDepartmentId,
+    supplyingDeptId: transfer.supplyingDepartmentId,
+    userRole,
+    organizationRole,
+    canApprove,
+    canPrepare,
+    canReceive,
+    canCancel,
+  });
+
   return (
     <div className="space-y-6">
       <TransferDetailHeader
@@ -214,14 +298,19 @@ export default function TransferDetailView({
         cancelledAt={transfer.cancelledAt}
       />
 
-      <TransferTabs
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        itemsCount={transfer.items.length}
-      />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="items" className="gap-2">
+            <Package className="h-4 w-4" />
+            รายการสินค้า ({transfer.items.length})
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />
+            ประวัติการเปลี่ยนแปลง
+          </TabsTrigger>
+        </TabsList>
 
-      {activeTab === 'items' ? (
-        <TabsContent value="items">
+        <TabsContent value="items" className="mt-6">
           <TransferItemsTab
             items={transfer.items}
             userRole={userRole}
@@ -235,11 +324,11 @@ export default function TransferDetailView({
             onCancelItem={handleCancelItem}
           />
         </TabsContent>
-      ) : (
-        <TabsContent value="history">
-          <TransferHistoryTab history={history} />
+
+        <TabsContent value="history" className="mt-6">
+          <TransferHistoryTab history={transfer.statusHistory || []} />
         </TabsContent>
-      )}
+      </Tabs>
 
       <TransferNotes notes={transfer.notes} />
     </div>

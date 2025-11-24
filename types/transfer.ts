@@ -51,6 +51,7 @@ export interface Transfer {
   createdAt: Date;
   updatedAt: Date;
   items: TransferItem[];
+  statusHistory?: TransferHistory[]; // ✅ เพิ่มบรรทัดนี้
 }
 
 export interface TransferItem {
@@ -140,6 +141,7 @@ export interface CancelItemData {
 export interface TransferHistory {
   id: string;
   transferId: string;
+  itemId?: string; // ✅ เพิ่ม itemId
   action: string;
   fromStatus?: string;
   toStatus?: string;
