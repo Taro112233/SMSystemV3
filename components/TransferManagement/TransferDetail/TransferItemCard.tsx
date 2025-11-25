@@ -1,5 +1,5 @@
 // components/TransferManagement/TransferDetail/TransferItemCard.tsx
-// TransferItemCard - Individual item card with actions - FIXED batch fetching
+// TransferItemCard - Individual item card with actions - IMPROVED LAYOUT
 
 'use client';
 
@@ -10,12 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import TransferStatusBadge from '../shared/TransferStatusBadge';
 import QuantityDisplay from '../shared/QuantityDisplay';
-import BatchInfoDisplay from '../ItemActions/BatchInfoDisplay';
 import ApproveItemDialog from '../ItemActions/ApproveItemDialog';
 import PrepareItemDialog from '../ItemActions/PrepareItemDialog';
 import DeliverItemDialog from '../ItemActions/DeliverItemDialog';
 import CancelItemDialog from '../ItemActions/CancelItemDialog';
-import { CheckCircle, Package, Truck, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Package, Truck, XCircle, Loader2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StockBatch {
@@ -77,19 +76,14 @@ export default function TransferItemCard({
     item.status !== 'DELIVERED' && 
     item.status !== 'CANCELLED';
 
-  // ✅ Fetch batches when prepare button is clicked
   const handlePrepareClick = async () => {
     setLoadingBatches(true);
     
     try {
-      // Get URL parts
       const pathParts = window.location.pathname.split('/');
       const orgSlug = pathParts[1];
       const deptSlug = pathParts[2];
 
-      console.log('🔍 Fetching batches for product:', item.product.code, item.productId);
-
-      // First, find stock for this product in current department
       const stockResponse = await fetch(
         `/api/${orgSlug}/${deptSlug}/stocks?search=${item.product.code}`,
         { credentials: 'include' }
@@ -100,7 +94,6 @@ export default function TransferItemCard({
       }
 
       const stockData = await stockResponse.json();
-      console.log('📦 Stock response:', stockData);
 
       if (!stockData.success || !stockData.data || stockData.data.length === 0) {
         toast.error('ไม่พบสต็อก', {
@@ -111,11 +104,8 @@ export default function TransferItemCard({
         return;
       }
 
-      // Get the first stock (should be the one for this product)
       const stock = stockData.data[0];
-      console.log('📦 Found stock:', stock.id);
 
-      // Fetch batches for this stock
       const batchesResponse = await fetch(
         `/api/${orgSlug}/${deptSlug}/stocks/${stock.id}/batches?availableOnly=true&forTransfer=true`,
         { credentials: 'include' }
@@ -126,7 +116,6 @@ export default function TransferItemCard({
       }
 
       const batchesData = await batchesResponse.json();
-      console.log('📦 Batches response:', batchesData);
 
       if (batchesData.success && batchesData.data) {
         setBatches(batchesData.data);
@@ -169,12 +158,21 @@ export default function TransferItemCard({
     await onCancelItem(item.id, data);
   };
 
+  const formatDate = (date?: Date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
     <>
       <Card className="border-gray-200">
         <CardContent className="p-6">
-          <div className="space-y-4">
-            {/* Header */}
+          <div className="space-y-6">
+            {/* Header Section */}
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3">
@@ -193,9 +191,34 @@ export default function TransferItemCard({
                     </span>
                   )}
                 </div>
+                
+                {/* Request & Approval Info */}
+                <div className="flex items-center gap-4 mt-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600">จำนวนที่ขอ:</span>
+                    <QuantityDisplay
+                      quantity={item.requestedQuantity}
+                      unit={item.product.baseUnit}
+                      className="font-semibold text-gray-900"
+                    />
+                  </div>
+                  {item.approvedQuantity !== undefined && item.approvedQuantity !== null && (
+                    <>
+                      <span className="text-gray-300">→</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-600">จำนวนที่อนุมัติ:</span>
+                        <QuantityDisplay
+                          quantity={item.approvedQuantity}
+                          unit={item.product.baseUnit}
+                          className="font-semibold text-blue-900"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Actions */}
+              {/* Action Buttons */}
               <div className="flex items-center gap-2">
                 {showApproveButton && (
                   <Button
@@ -249,66 +272,122 @@ export default function TransferItemCard({
               </div>
             </div>
 
-            {/* Quantities Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <div className="text-xs text-gray-600 mb-1">จำนวนที่ขอ</div>
-                <QuantityDisplay
-                  quantity={item.requestedQuantity}
-                  unit={item.product.baseUnit}
-                  className="text-sm font-semibold text-gray-900"
-                />
-              </div>
-
-              {item.approvedQuantity !== undefined && item.approvedQuantity !== null && (
-                <div>
-                  <div className="text-xs text-gray-600 mb-1">จำนวนที่อนุมัติ</div>
-                  <QuantityDisplay
-                    quantity={item.approvedQuantity}
-                    unit={item.product.baseUnit}
-                    className="text-sm font-semibold text-blue-900"
-                  />
-                </div>
-              )}
-
-              {item.preparedQuantity !== undefined && item.preparedQuantity !== null && (
-                <div>
-                  <div className="text-xs text-gray-600 mb-1">จำนวนที่จัดเตรียม</div>
-                  <QuantityDisplay
-                    quantity={item.preparedQuantity}
-                    unit={item.product.baseUnit}
-                    className="text-sm font-semibold text-purple-900"
-                  />
-                </div>
-              )}
-
-              {item.receivedQuantity !== undefined && item.receivedQuantity !== null && (
-                <div>
-                  <div className="text-xs text-gray-600 mb-1">จำนวนที่รับเข้า</div>
-                  <QuantityDisplay
-                    quantity={item.receivedQuantity}
-                    unit={item.product.baseUnit}
-                    className="text-sm font-semibold text-green-900"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Batches Info */}
+            {/* Batch Details Table */}
             {item.batches && item.batches.length > 0 && (
-              <div className="pt-4 border-t border-gray-200">
-                <BatchInfoDisplay 
-                  batches={item.batches} 
-                  baseUnit={item.product.baseUnit} 
-                />
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                        Lot Number
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                        วันหมดอายุ
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">
+                        จำนวนจัดเตรียม
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">
+                        จำนวนรับเข้า
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                        สถานะ
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {item.batches.map((batch) => (
+                      <tr key={batch.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {batch.batch.lotNumber}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                            {formatDate(batch.batch.expiryDate)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          {item.status === 'PREPARED' || item.status === 'DELIVERED' ? (
+                            <QuantityDisplay
+                              quantity={batch.quantity}
+                              unit={item.product.baseUnit}
+                              className="font-medium text-purple-900"
+                            />
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          {item.status === 'DELIVERED' ? (
+                            <QuantityDisplay
+                              quantity={batch.quantity}
+                              unit={item.product.baseUnit}
+                              className="font-medium text-green-900"
+                            />
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          {item.status === 'DELIVERED' ? (
+                            <Badge className="bg-green-100 text-green-800 border-green-200">
+                              รับเข้าแล้ว
+                            </Badge>
+                          ) : item.status === 'PREPARED' ? (
+                            <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                              จัดเตรียมแล้ว
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-gray-600">
+                              รอดำเนินการ
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50 border-t border-gray-200">
+                    <tr>
+                      <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-700">
+                        รวม
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        {item.preparedQuantity !== undefined && item.preparedQuantity !== null ? (
+                          <QuantityDisplay
+                            quantity={item.preparedQuantity}
+                            unit={item.product.baseUnit}
+                            className="font-semibold text-purple-900"
+                          />
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        {item.receivedQuantity !== undefined && item.receivedQuantity !== null ? (
+                          <QuantityDisplay
+                            quantity={item.receivedQuantity}
+                            unit={item.product.baseUnit}
+                            className="font-semibold text-green-900"
+                          />
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             )}
 
-            {/* Notes */}
+            {/* Notes Section */}
             {item.notes && (
               <div className="pt-4 border-t border-gray-200">
                 <div className="text-xs text-gray-600 mb-1">หมายเหตุ</div>
-                <div className="text-sm text-gray-900">{item.notes}</div>
+                <div className="text-sm text-gray-900 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  {item.notes}
+                </div>
               </div>
             )}
 

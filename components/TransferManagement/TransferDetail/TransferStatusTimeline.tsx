@@ -90,15 +90,18 @@ export default function TransferStatusTimeline({
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center relative">
+        {/* ✅ Steps Layer */}
         {steps.map((step, index) => {
           const Icon = step.icon;
           const isActive = status === step.status;
           const isCompleted = step.completed;
+          const isFirst = index === 0;
+          const isLast = index === steps.length - 1;
 
           return (
             <div key={step.status} className="flex-1 relative">
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center relative z-10">
                 {/* Icon */}
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
@@ -121,21 +124,19 @@ export default function TransferStatusTimeline({
                   {step.label}
                 </div>
 
-                {/* Date */}
-                {step.date && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {formatDate(step.date)}
-                  </div>
-                )}
+                {/* Date หรือ "-" */}
+                <div className="text-xs text-gray-500 mt-1 h-4">
+                  {step.date ? formatDate(step.date) : '-'}
+                </div>
               </div>
 
-              {/* Connector Line */}
-              {index < steps.length - 1 && (
+              {/* ✅ Connector Line - เฉพาะระหว่าง step (ไม่มีก่อน step แรกและหลัง step สุดท้าย) */}
+              {!isLast && (
                 <div
                   className={`absolute top-6 left-1/2 w-full h-0.5 transition-colors ${
-                    steps[index + 1].completed ? 'bg-green-300' : 'bg-gray-200'
+                    steps[index + 1].completed ? 'bg-green-400' : 'bg-gray-200'
                   }`}
-                  style={{ transform: 'translateY(-50%)' }}
+                  style={{ zIndex: 0 }}
                 />
               )}
             </div>

@@ -326,7 +326,9 @@ export default function TransferDetailView({
         </TabsContent>
 
         <TabsContent value="history" className="mt-6">
-          <TransferHistoryTab history={transfer.statusHistory || []} />
+          <TransferHistoryTab 
+            history={transfer.statusHistory || []} 
+            items={transfer.items} />
         </TabsContent>
       </Tabs>
 
