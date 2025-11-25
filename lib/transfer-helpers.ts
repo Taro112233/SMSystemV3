@@ -426,9 +426,8 @@ export async function prepareTransferItem(data: PrepareItemRequest) {
 }
 
 // ===== 4. DELIVER ITEM =====
-
 export async function deliverTransferItem(data: DeliverItemRequest) {
-  const { itemId, receivedQuantity, notes, deliveredBy } = data;
+  const { itemId, receivedQuantity, batchDeliveries, notes, deliveredBy } = data;
 
   const item = await prisma.transferItem.findUnique({
     where: { id: itemId },
@@ -468,6 +467,26 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
     throw new Error('No batches selected');
   }
 
+  // ✅ Validate batch deliveries
+  if (!batchDeliveries || batchDeliveries.length === 0) {
+    throw new Error('Batch deliveries are required');
+  }
+
+  const totalBatchReceived = batchDeliveries.reduce((sum, bd) => sum + bd.receivedQuantity, 0);
+  if (totalBatchReceived !== receivedQuantity) {
+    throw new Error('Batch quantities do not match total received quantity');
+  }
+
+  for (const bd of batchDeliveries) {
+    const transferBatch = item.batches.find(tb => tb.batchId === bd.batchId);
+    if (!transferBatch) {
+      throw new Error(`Batch ${bd.batchId} not found in transfer`);
+    }
+    if (bd.receivedQuantity < 0 || bd.receivedQuantity > transferBatch.quantity) {
+      throw new Error(`Invalid received quantity for batch ${bd.batchId}`);
+    }
+  }
+
   const deliveredBySnapshot = await createUserSnapshot(deliveredBy, item.transfer.organizationId);
 
   const updatedItem = await prisma.$transaction(async (tx) => {
@@ -481,20 +500,23 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
       }
     });
 
-    for (const transferBatch of item.batches) {
+    // ✅ Process each batch delivery
+    for (const bd of batchDeliveries) {
+      const transferBatch = item.batches.find(tb => tb.batchId === bd.batchId);
+      if (!transferBatch) continue;
+
       const sourceBatch = transferBatch.batch;
 
-      const proportion = receivedQuantity / item.preparedQuantity!;
-      const actualQuantity = Math.floor(transferBatch.quantity * proportion);
-
+      // Deduct from source batch
       await tx.stockBatch.update({
         where: { id: sourceBatch.id },
         data: {
-          totalQuantity: { decrement: actualQuantity },
+          totalQuantity: { decrement: bd.receivedQuantity },
           reservedQuantity: { decrement: transferBatch.quantity },
         }
       });
 
+      // Find or create destination stock
       let destStock = await tx.stock.findFirst({
         where: {
           productId: item.productId,
@@ -514,6 +536,7 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
         });
       }
 
+      // Find or create destination batch
       const destBatch = await tx.stockBatch.findFirst({
         where: {
           stockId: destStock.id,
@@ -525,8 +548,8 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
         await tx.stockBatch.update({
           where: { id: destBatch.id },
           data: {
-            totalQuantity: { increment: actualQuantity },
-            availableQuantity: { increment: actualQuantity },
+            totalQuantity: { increment: bd.receivedQuantity },
+            availableQuantity: { increment: bd.receivedQuantity },
           }
         });
       } else {
@@ -539,8 +562,8 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
             supplier: sourceBatch.supplier,
             costPrice: sourceBatch.costPrice,
             sellingPrice: sourceBatch.sellingPrice,
-            totalQuantity: actualQuantity,
-            availableQuantity: actualQuantity,
+            totalQuantity: bd.receivedQuantity,
+            availableQuantity: bd.receivedQuantity,
             reservedQuantity: 0,
             incomingQuantity: 0,
             location: destStock.location,
@@ -563,6 +586,7 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
       });
     }
 
+    // Check if all items delivered
     const allItems = await tx.transferItem.findMany({
       where: { transferId: item.transferId }
     });
@@ -613,10 +637,23 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
       productCode: item.product.code,
       preparedQuantity: item.preparedQuantity,
       receivedQuantity,
+      batchCount: batchDeliveries.filter(bd => bd.receivedQuantity > 0).length,
     } as Prisma.InputJsonValue
   });
 
   return updatedItem;
+}
+
+// Update interface
+interface DeliverItemRequest {
+  itemId: string;
+  receivedQuantity: number;
+  batchDeliveries: {
+    batchId: string;
+    receivedQuantity: number;
+  }[];
+  notes?: string;
+  deliveredBy: string;
 }
 
 // ===== 5. CANCEL ITEM =====

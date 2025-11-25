@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/transfers/[transferId]/deliver-item/route.ts
-// Deliver Transfer Item API
+// Deliver Transfer Item API - FIXED with batch deliveries
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
@@ -29,8 +29,9 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { itemId, receivedQuantity, notes } = body;
+    const { itemId, receivedQuantity, batchDeliveries, notes } = body;
 
+    // ✅ Validation
     if (!itemId || !receivedQuantity || receivedQuantity <= 0) {
       return NextResponse.json(
         { error: 'Invalid request data' },
@@ -38,9 +39,18 @@ export async function POST(
       );
     }
 
+    // ✅ Validate batch deliveries
+    if (!batchDeliveries || !Array.isArray(batchDeliveries) || batchDeliveries.length === 0) {
+      return NextResponse.json(
+        { error: 'Batch deliveries are required' },
+        { status: 400 }
+      );
+    }
+
     const updatedItem = await deliverTransferItem({
       itemId,
       receivedQuantity,
+      batchDeliveries,  // ✅ Include batch deliveries
       notes,
       deliveredBy: user.userId,
     });

@@ -133,6 +133,10 @@ export interface PrepareItemData {
 
 export interface DeliverItemData {
   receivedQuantity: number;
+  batchDeliveries: {  // ✅ NEW: Batch-level delivery data
+    batchId: string;
+    receivedQuantity: number;
+  }[];
   notes?: string;
 }
 

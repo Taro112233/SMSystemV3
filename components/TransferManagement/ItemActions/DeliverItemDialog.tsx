@@ -1,9 +1,9 @@
 // components/TransferManagement/ItemActions/DeliverItemDialog.tsx
-// DeliverItemDialog - Receive/deliver item modal
+// DeliverItemDialog - Receive/deliver item modal with batch-level input
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TransferItem, DeliverItemData } from '@/types/transfer';
 import {
   Dialog,
@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import BatchInfoDisplay from './BatchInfoDisplay';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -27,6 +26,13 @@ interface DeliverItemDialogProps {
   onDeliver: (data: DeliverItemData) => Promise<void>;
 }
 
+interface BatchDeliveryInput {
+  batchId: string;
+  lotNumber: string;
+  preparedQuantity: number;
+  receivedQuantity: number;
+}
+
 export default function DeliverItemDialog({
   item,
   open,
@@ -34,15 +40,58 @@ export default function DeliverItemDialog({
   onDeliver,
 }: DeliverItemDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [receivedQuantity, setReceivedQuantity] = useState(item.preparedQuantity || 0);
+  const [batchInputs, setBatchInputs] = useState<BatchDeliveryInput[]>([]);
   const [notes, setNotes] = useState('');
 
-  const maxQuantity = item.preparedQuantity || 0;
+  useEffect(() => {
+    if (open && item.batches) {
+      // Initialize batch inputs with prepared quantities
+      const initialInputs: BatchDeliveryInput[] = item.batches.map(b => ({
+        batchId: b.batchId,
+        lotNumber: b.batch.lotNumber,
+        preparedQuantity: b.quantity,
+        receivedQuantity: b.quantity, // Default to full prepared quantity
+      }));
+      setBatchInputs(initialInputs);
+    }
+  }, [open, item.batches]);
+
+  const getTotalPrepared = () => {
+    return batchInputs.reduce((sum, b) => sum + b.preparedQuantity, 0);
+  };
+
+  const getTotalReceived = () => {
+    return batchInputs.reduce((sum, b) => sum + b.receivedQuantity, 0);
+  };
+
+  const handleBatchQuantityChange = (batchId: string, value: number) => {
+    setBatchInputs(prev =>
+      prev.map(b =>
+        b.batchId === batchId
+          ? { ...b, receivedQuantity: Math.min(Math.max(0, value), b.preparedQuantity) }
+          : b
+      )
+    );
+  };
 
   const handleSubmit = async () => {
-    if (receivedQuantity <= 0 || receivedQuantity > maxQuantity) {
+    const totalReceived = getTotalReceived();
+
+    if (totalReceived === 0) {
+      toast.error('กรุณาระบุจำนวนที่รับเข้า', {
+        description: 'ต้องระบุจำนวนอย่างน้อย 1 รายการ',
+      });
+      return;
+    }
+
+    // Validate each batch
+    const invalidBatch = batchInputs.find(
+      b => b.receivedQuantity < 0 || b.receivedQuantity > b.preparedQuantity
+    );
+
+    if (invalidBatch) {
       toast.error('จำนวนไม่ถูกต้อง', {
-        description: 'กรุณาระบุจำนวนระหว่าง 1 ถึง ' + maxQuantity,
+        description: `Lot ${invalidBatch.lotNumber} ต้องระหว่าง 0 ถึง ${invalidBatch.preparedQuantity}`,
       });
       return;
     }
@@ -50,7 +99,14 @@ export default function DeliverItemDialog({
     setLoading(true);
 
     try {
-      await onDeliver({ receivedQuantity, notes: notes || undefined });
+      await onDeliver({
+        receivedQuantity: totalReceived,
+        batchDeliveries: batchInputs.map(b => ({
+          batchId: b.batchId,
+          receivedQuantity: b.receivedQuantity,
+        })),
+        notes: notes || undefined,
+      });
       onOpenChange(false);
       setNotes('');
     } catch (error) {
@@ -60,9 +116,18 @@ export default function DeliverItemDialog({
     }
   };
 
+  const formatDate = (date?: Date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>รับเข้ารายการ</DialogTitle>
         </DialogHeader>
@@ -76,35 +141,81 @@ export default function DeliverItemDialog({
             </div>
           </div>
 
-          {/* Prepared Quantity */}
+          {/* Batch-level Input Table */}
           <div className="space-y-2">
-            <Label>จำนวนที่จัดเตรียม</Label>
-            <div className="text-lg font-semibold text-purple-900">
-              {maxQuantity.toLocaleString('th-TH')} {item.product.baseUnit}
+            <Label>ระบุจำนวนที่รับเข้าแต่ละ Batch</Label>
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
+                      Lot Number
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
+                      วันหมดอายุ
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">
+                      จำนวนที่จัดเตรียม
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">
+                      จำนวนที่รับเข้า
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {batchInputs.map((batch) => (
+                    <tr key={batch.batchId} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium text-gray-900">
+                          {batch.lotNumber}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-600">
+                          {formatDate(item.batches?.find(b => b.batchId === batch.batchId)?.batch.expiryDate)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="text-sm font-medium text-gray-900">
+                          {batch.preparedQuantity.toLocaleString('th-TH')}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Input
+                          type="number"
+                          min="0"
+                          max={batch.preparedQuantity}
+                          value={batch.receivedQuantity}
+                          onChange={(e) =>
+                            handleBatchQuantityChange(
+                              batch.batchId,
+                              parseInt(e.target.value) || 0
+                            )
+                          }
+                          className="text-right"
+                          disabled={loading}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-50 font-semibold">
+                  <tr>
+                    <td colSpan={2} className="px-4 py-3 text-sm text-gray-700">
+                      รวม
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm text-purple-900">
+                      {getTotalPrepared().toLocaleString('th-TH')} {item.product.baseUnit}
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm text-green-900">
+                      {getTotalReceived().toLocaleString('th-TH')} {item.product.baseUnit}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
-          </div>
-
-          {/* Batches Info */}
-          {item.batches && item.batches.length > 0 && (
-            <BatchInfoDisplay batches={item.batches} baseUnit={item.product.baseUnit} />
-          )}
-
-          {/* Received Quantity */}
-          <div className="space-y-2">
-            <Label htmlFor="receivedQuantity">
-              จำนวนที่รับเข้า <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="receivedQuantity"
-              type="number"
-              min="1"
-              max={maxQuantity}
-              value={receivedQuantity}
-              onChange={(e) => setReceivedQuantity(parseInt(e.target.value) || 0)}
-              disabled={loading}
-            />
             <div className="text-xs text-gray-500">
-              สูงสุด: {maxQuantity.toLocaleString('th-TH')} {item.product.baseUnit}
+              * ระบุจำนวนที่รับเข้าแต่ละ Batch (สามารถรับไม่ครบก็ได้)
             </div>
           </div>
 
@@ -126,14 +237,14 @@ export default function DeliverItemDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             ยกเลิก
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button onClick={handleSubmit} disabled={loading || getTotalReceived() === 0}>
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 กำลังรับเข้า...
               </>
             ) : (
-              'รับเข้า'
+              `รับเข้า ${getTotalReceived().toLocaleString('th-TH')} ${item.product.baseUnit}`
             )}
           </Button>
         </DialogFooter>
