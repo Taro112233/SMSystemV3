@@ -48,37 +48,40 @@ export async function GET(
       );
     }
 
-    // Get query parameters
+    // Get query params
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search') || '';
+    const search = searchParams.get('search');
     const showLowStock = searchParams.get('showLowStock') === 'true';
     const showExpiring = searchParams.get('showExpiring') === 'true';
-    const sortBy = searchParams.get('sortBy') || 'productName';
-    const sortOrder = searchParams.get('sortOrder') || 'asc';
 
-    // Build where clause for stocks
-    const where: Prisma.StockWhereInput = {
-      departmentId: department.id,
+    // Build where clause for products
+    const productWhere: any = {
       organizationId: access.organizationId,
+      isActive: true,
     };
 
-    // Search filter
     if (search) {
-      where.product = {
-        OR: [
-          { code: { contains: search, mode: 'insensitive' } },
-          { name: { contains: search, mode: 'insensitive' } },
-          { genericName: { contains: search, mode: 'insensitive' } },
-        ],
-      };
+      productWhere.OR = [
+        { code: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { genericName: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
-    // Fetch stocks with product and batches
+    // Get stocks with batches
     const stocks = await prisma.stock.findMany({
-      where,
+      where: {
+        departmentId: department.id,
+        product: productWhere,
+      },
       include: {
         product: {
-          include: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            genericName: true,
+            baseUnit: true,
             attributes: {
               include: {
                 category: true,
@@ -92,93 +95,110 @@ export async function GET(
           orderBy: { expiryDate: 'asc' },
         },
       },
+      orderBy: { product: { code: 'asc' } },
     });
 
-    // Calculate aggregated quantities and apply filters
+    // Get incoming transfers for this department
+    const incomingTransfers = await prisma.transfer.findMany({
+      where: {
+        organizationId: access.organizationId,
+        requestingDepartmentId: department.id,
+        status: {
+          in: ['APPROVED', 'PREPARED'],
+        },
+      },
+      include: {
+        items: {
+          where: {
+            status: {
+              in: ['APPROVED', 'PREPARED'],
+            },
+          },
+          select: {
+            productId: true,
+            approvedQuantity: true,
+            preparedQuantity: true,
+          },
+        },
+      },
+    });
+
+    // Calculate incoming quantity per product
+    const incomingByProduct = new Map<string, number>();
+    incomingTransfers.forEach(transfer => {
+      transfer.items.forEach(item => {
+        const currentIncoming = incomingByProduct.get(item.productId) || 0;
+        const itemIncoming = item.preparedQuantity || item.approvedQuantity || 0;
+        incomingByProduct.set(item.productId, currentIncoming + itemIncoming);
+      });
+    });
+
+    // ✅ FIXED: Map stocks with batches included
     const stocksWithQuantities = stocks.map((stock) => {
-      const batches = stock.stockBatches;
+      const totalQuantity = stock.stockBatches.reduce(
+        (sum, batch) => sum + batch.totalQuantity,
+        0
+      );
+      const availableQuantity = stock.stockBatches.reduce(
+        (sum, batch) => sum + batch.availableQuantity,
+        0
+      );
+      const reservedQuantity = stock.stockBatches.reduce(
+        (sum, batch) => sum + batch.reservedQuantity,
+        0
+      );
       
-      const totalQuantity = batches.reduce((sum, b) => sum + b.totalQuantity, 0);
-      const availableQuantity = batches.reduce((sum, b) => sum + b.availableQuantity, 0);
-      const reservedQuantity = batches.reduce((sum, b) => sum + b.reservedQuantity, 0);
-      const incomingQuantity = batches.reduce((sum, b) => sum + b.incomingQuantity, 0);
+      const incomingQuantity = incomingByProduct.get(stock.productId) || 0;
 
       return {
-        ...stock,
+        id: stock.id,
+        organizationId: stock.organizationId,
+        departmentId: stock.departmentId,
+        productId: stock.productId,
+        product: stock.product,
+        location: stock.location,
+        minStockLevel: stock.minStockLevel,
+        maxStockLevel: stock.maxStockLevel,
+        reorderPoint: stock.reorderPoint,
+        defaultWithdrawalQty: stock.defaultWithdrawalQty,
+        lastStockCheck: stock.lastStockCheck,
+        lastMovement: stock.lastMovement,
+        createdAt: stock.createdAt,
+        updatedAt: stock.updatedAt,
+        // ✅ Include batches in response
+        batches: stock.stockBatches,
+        // Calculated quantities
         totalQuantity,
         availableQuantity,
         reservedQuantity,
         incomingQuantity,
-        batches,
       };
     });
 
     // Apply filters
     let filteredStocks = stocksWithQuantities;
 
-    // Low stock filter
     if (showLowStock) {
-      filteredStocks = filteredStocks.filter((stock) => {
-        if (!stock.minStockLevel) return false;
-        return stock.availableQuantity < stock.minStockLevel;
-      });
+      filteredStocks = filteredStocks.filter(
+        (s) =>
+          s.minStockLevel !== null &&
+          s.availableQuantity < s.minStockLevel
+      );
     }
 
-    // Expiring soon filter (within 90 days)
     if (showExpiring) {
       const ninetyDaysFromNow = new Date();
-      ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
+      ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 365);
 
-      filteredStocks = filteredStocks.filter((stock) => {
-        return stock.batches.some((batch) => {
-          if (!batch.expiryDate) return false;
-          const expiryDate = new Date(batch.expiryDate);
-          return expiryDate <= ninetyDaysFromNow && batch.status === 'AVAILABLE';
-        });
-      });
+      filteredStocks = filteredStocks.filter((s) =>
+        s.batches.some(
+          (b) =>
+            b.expiryDate &&
+            b.status === 'AVAILABLE' &&
+            new Date(b.expiryDate) <= ninetyDaysFromNow
+        )
+      );
     }
-
-    // Sort stocks with proper typing
-    filteredStocks.sort((a, b) => {
-      let aValue: string | number;
-      let bValue: string | number;
-
-      switch (sortBy) {
-        case 'productCode':
-          aValue = a.product.code;
-          bValue = b.product.code;
-          break;
-        case 'productName':
-          aValue = a.product.name;
-          bValue = b.product.name;
-          break;
-        case 'quantity':
-          aValue = a.availableQuantity;
-          bValue = b.availableQuantity;
-          break;
-        case 'expiryDate':
-          const aNearestBatch = a.batches
-            .filter((b) => b.expiryDate && b.status === 'AVAILABLE')
-            .sort((x, y) => new Date(x.expiryDate!).getTime() - new Date(y.expiryDate!).getTime())[0];
-          const bNearestBatch = b.batches
-            .filter((b) => b.expiryDate && b.status === 'AVAILABLE')
-            .sort((x, y) => new Date(x.expiryDate!).getTime() - new Date(y.expiryDate!).getTime())[0];
-          aValue = aNearestBatch?.expiryDate ? new Date(aNearestBatch.expiryDate).getTime() : Infinity;
-          bValue = bNearestBatch?.expiryDate ? new Date(bNearestBatch.expiryDate).getTime() : Infinity;
-          break;
-        default:
-          aValue = a.product.name;
-          bValue = b.product.name;
-      }
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        const comparison = aValue.localeCompare(bValue, 'th');
-        return sortOrder === 'asc' ? comparison : -comparison;
-      } else {
-        const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-        return sortOrder === 'asc' ? comparison : -comparison;
-      }
-    });
 
     return NextResponse.json({
       success: true,
@@ -190,9 +210,9 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error fetching stocks:', error);
+    console.error('Get stocks failed:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch stocks' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

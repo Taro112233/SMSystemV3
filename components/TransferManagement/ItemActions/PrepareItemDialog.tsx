@@ -1,5 +1,5 @@
 // components/TransferManagement/ItemActions/PrepareItemDialog.tsx
-// PrepareItemDialog - Prepare item modal
+// PrepareItemDialog - Prepare item modal - FIXED batch data format
 
 'use client';
 
@@ -83,9 +83,21 @@ export default function PrepareItemDialog({
     setLoading(true);
 
     try {
+      // ✅ FIXED: Format batches with lotNumber for API
+      const formattedBatches = selectedBatches.map(sb => {
+        const batch = availableBatches.find(b => b.id === sb.batchId);
+        return {
+          batchId: sb.batchId,
+          lotNumber: batch?.lotNumber || '', // ✅ Include lotNumber
+          quantity: sb.quantity,
+        };
+      });
+
+      console.log('📦 Preparing item with batches:', formattedBatches);
+
       await onPrepare({
         preparedQuantity: totalSelected,
-        batches: selectedBatches,
+        selectedBatches: formattedBatches, // ✅ Use formatted batches
         notes: notes || undefined,
       });
       onOpenChange(false);
@@ -116,13 +128,22 @@ export default function PrepareItemDialog({
           {/* Batch Selection */}
           <div className="space-y-2">
             <Label>เลือก Batch และระบุจำนวนที่จะจ่าย</Label>
-            <BatchSelectionTable
-              batches={availableBatches}
-              selectedBatches={selectedBatches}
-              maxQuantity={maxQuantity}
-              baseUnit={item.product.baseUnit}
-              onChange={setSelectedBatches}
-            />
+            {availableBatches.length === 0 ? (
+              <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+                <p className="text-gray-600">ไม่มี Batch ที่พร้อมใช้งาน</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  กรุณาเพิ่มสต็อกก่อนจัดเตรียม
+                </p>
+              </div>
+            ) : (
+              <BatchSelectionTable
+                batches={availableBatches}
+                selectedBatches={selectedBatches}
+                maxQuantity={maxQuantity}
+                baseUnit={item.product.baseUnit}
+                onChange={setSelectedBatches}
+              />
+            )}
           </div>
 
           {/* Notes */}
@@ -143,7 +164,10 @@ export default function PrepareItemDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             ยกเลิก
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading || availableBatches.length === 0 || getTotalSelected() === 0}
+          >
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

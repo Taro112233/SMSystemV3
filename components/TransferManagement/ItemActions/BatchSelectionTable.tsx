@@ -1,5 +1,5 @@
 // components/TransferManagement/ItemActions/BatchSelectionTable.tsx
-// BatchSelectionTable - Batch selector component
+// BatchSelectionTable - Batch selector component - FIXED: Show days until expiry
 
 'use client';
 
@@ -47,11 +47,24 @@ export default function BatchSelectionTable({
     });
   };
 
+  const getDaysUntilExpiry = (date?: Date): number => {
+    if (!date) return Infinity;
+    const now = new Date();
+    const expiry = new Date(date);
+    const diffTime = expiry.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
   const isExpiringSoon = (date?: Date) => {
     if (!date) return false;
-    const ninetyDaysFromNow = new Date();
-    ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
-    return new Date(date) <= ninetyDaysFromNow;
+    const daysUntilExpiry = getDaysUntilExpiry(date);
+    return daysUntilExpiry >= 0 && daysUntilExpiry <= 365;
+  };
+
+  const isExpired = (date?: Date) => {
+    if (!date) return false;
+    return getDaysUntilExpiry(date) < 0;
   };
 
   const isSelected = (batchId: string) => {
@@ -132,19 +145,24 @@ export default function BatchSelectionTable({
           </thead>
           <tbody className="divide-y divide-gray-200">
             {batches.map((batch) => {
-              const expiring = isExpiringSoon(batch.expiryDate);
+              const expired = isExpired(batch.expiryDate);
+              const expiring = !expired && isExpiringSoon(batch.expiryDate);
+              const daysUntilExpiry = getDaysUntilExpiry(batch.expiryDate);
               const selected = isSelected(batch.id);
               const quantity = getQuantity(batch.id);
 
               return (
                 <tr
                   key={batch.id}
-                  className={`hover:bg-gray-50 ${expiring ? 'bg-amber-50' : ''}`}
+                  className={`hover:bg-gray-50 ${
+                    expired ? 'bg-red-50' : expiring ? 'bg-amber-50' : ''
+                  }`}
                 >
                   <td className="px-4 py-3">
                     <Checkbox
                       checked={selected}
                       onCheckedChange={() => handleToggle(batch)}
+                      disabled={expired}
                     />
                   </td>
                   <td className="px-4 py-3">
@@ -156,14 +174,23 @@ export default function BatchSelectionTable({
                     <div className="flex items-center gap-2">
                       <span
                         className={`text-sm ${
-                          expiring ? 'text-amber-700 font-medium' : 'text-gray-600'
+                          expired 
+                            ? 'text-red-700 font-medium' 
+                            : expiring 
+                            ? 'text-amber-700 font-medium' 
+                            : 'text-gray-600'
                         }`}
                       >
                         {formatDate(batch.expiryDate)}
                       </span>
-                      {expiring && (
+                      {expired && (
+                        <Badge variant="outline" className="bg-red-100 text-red-800 text-xs">
+                          หมดอายุแล้ว
+                        </Badge>
+                      )}
+                      {expiring && !expired && (
                         <Badge variant="outline" className="bg-amber-100 text-amber-800 text-xs">
-                          ใกล้หมดอายุ
+                          อีก {daysUntilExpiry} วัน
                         </Badge>
                       )}
                     </div>

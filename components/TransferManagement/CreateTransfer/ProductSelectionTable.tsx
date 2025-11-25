@@ -179,10 +179,10 @@ export default function ProductSelectionTable({
                 หน่วย
               </th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-32">
-                คงเหลือ<br />แผนกตัวเอง
+                คงเหลือ<br />แผนกที่เบิก
               </th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-32">
-                คงเหลือ<br />แผนกที่เบิก
+                คงเหลือ<br />แผนกตัวเอง
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-32">
                 จำนวนเบิก
@@ -225,24 +225,6 @@ export default function ProductSelectionTable({
                     <span className="text-sm text-gray-600">{product.baseUnit}</span>
                   </td>
 
-                  {/* ✅ UPDATED: Requesting Dept Stock (Read-only) */}
-                  <td className="px-4 py-3">
-                    {requestingStock ? (
-                      <div className="text-center space-y-1">
-                        <div className="text-sm font-medium text-gray-900">
-                          {requestingStock.availableQuantity.toLocaleString()}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {formatTimeAgo(requestingStock.lastUpdated)}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <span className="text-sm text-gray-400">-</span>
-                      </div>
-                    )}
-                  </td>
-
                   {/* Supplying Dept Stock (Read-only) */}
                   <td className="px-4 py-3">
                     {supplyingStock ? (
@@ -256,6 +238,24 @@ export default function ProductSelectionTable({
                         </div>
                         <div className="text-xs text-gray-500">
                           {formatTimeAgo(supplyingStock.lastUpdated)}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <span className="text-sm text-gray-400">-</span>
+                      </div>
+                    )}
+                  </td>
+
+                  {/* ✅ UPDATED: Requesting Dept Stock (Read-only) */}
+                  <td className="px-4 py-3">
+                    {requestingStock ? (
+                      <div className="text-center space-y-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {requestingStock.availableQuantity.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatTimeAgo(requestingStock.lastUpdated)}
                         </div>
                       </div>
                     ) : (

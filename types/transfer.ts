@@ -1,5 +1,5 @@
 // types/transfer.ts
-// Transfer System Types - Single Source of Truth
+// Transfer System Types - Single Source of Truth - UPDATED
 
 export type TransferStatus = 
   | 'PENDING'
@@ -51,7 +51,7 @@ export interface Transfer {
   createdAt: Date;
   updatedAt: Date;
   items: TransferItem[];
-  statusHistory?: TransferHistory[]; // ✅ เพิ่มบรรทัดนี้
+  statusHistory?: TransferHistory[];
 }
 
 export interface TransferItem {
@@ -120,10 +120,12 @@ export interface ApproveItemData {
   notes?: string;
 }
 
+// ✅ FIXED: Updated PrepareItemData
 export interface PrepareItemData {
   preparedQuantity: number;
-  batches: {
+  selectedBatches: {  // ✅ CHANGED: 'batches' → 'selectedBatches'
     batchId: string;
+    lotNumber: string;  // ✅ ADDED
     quantity: number;
   }[];
   notes?: string;
@@ -141,7 +143,7 @@ export interface CancelItemData {
 export interface TransferHistory {
   id: string;
   transferId: string;
-  itemId?: string; // ✅ เพิ่ม itemId
+  itemId?: string;
   action: string;
   fromStatus?: string;
   toStatus?: string;

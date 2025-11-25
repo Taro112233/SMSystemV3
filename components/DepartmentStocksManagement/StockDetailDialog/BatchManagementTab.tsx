@@ -1,5 +1,5 @@
 // components/DepartmentStocksManagement/StockDetailDialog/BatchManagementTab.tsx
-// UPDATED: Remove batch.status, split date and time into 2 lines
+// BatchManagementTab - FIXED: Add null safety for batches
 
 'use client';
 
@@ -35,6 +35,9 @@ export default function BatchManagementTab({
 }: BatchManagementTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<StockBatch | null>(null);
+
+  // ✅ FIXED: Add null safety for batches
+  const batches = stock.batches || [];
 
   const handleAddBatch = () => {
     setSelectedBatch(null);
@@ -115,7 +118,7 @@ export default function BatchManagementTab({
           <div className="flex items-center gap-2">
             <Package className="h-5 w-5 text-gray-600" />
             <h3 className="font-semibold text-gray-900">
-              รายการ Batch/Lot ({stock.batches.length})
+              รายการ Batch/Lot ({batches.length})
             </h3>
           </div>
           {canManage && (
@@ -141,7 +144,7 @@ export default function BatchManagementTab({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {stock.batches.length === 0 ? (
+            {batches.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={canManage ? 9 : 8} className="text-center py-8">
                   <div className="text-sm text-gray-500">ไม่มี batch ในสต็อก</div>
@@ -159,7 +162,7 @@ export default function BatchManagementTab({
                 </TableCell>
               </TableRow>
             ) : (
-              stock.batches.map((batch) => {
+              batches.map((batch) => {
                 const isExpired =
                   batch.expiryDate && new Date(batch.expiryDate) < today;
                 const isExpiringSoon =
