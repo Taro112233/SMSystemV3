@@ -1,9 +1,9 @@
 // components/TransferManagement/TransferOverview/OrganizationTransfersView.tsx
-// OrganizationTransfersView - Organization-level transfers overview
+// OrganizationTransfersView - OPTIMIZED with client-side filtering
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Transfer, TransferFiltersState } from '@/types/transfer';
 import OverviewStats from './OverviewStats';
 import OverviewFilters from './OverviewFilters';
@@ -22,39 +22,96 @@ export default function OrganizationTransfersView({
   orgSlug,
 }: OrganizationTransfersViewProps) {
   const [loading, setLoading] = useState(true);
-  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [allTransfers, setAllTransfers] = useState<Transfer[]>([]); // ✅ Store all data
   const [filters, setFilters] = useState<TransferFiltersState>({
     search: '',
     status: 'all',
     priority: 'all',
-    sortBy: 'createdAt',
+    sortBy: 'requestedAt',
     sortOrder: 'desc',
   });
 
-  // Stats calculation
-  const stats = {
-    pending: transfers.filter((t) => t.status === 'PENDING').length,
-    approved: transfers.filter((t) => t.status === 'APPROVED').length,
-    prepared: transfers.filter((t) => t.status === 'PREPARED').length,
-    completed: transfers.filter((t) => t.status === 'COMPLETED').length,
-  };
+  // ✅ Client-side filtering - no API calls
+  const filteredTransfers = useMemo(() => {
+    let filtered = [...allTransfers];
 
+    // Filter by status
+    if (filters.status && filters.status !== 'all') {
+      filtered = filtered.filter((t) => t.status === filters.status);
+    }
+
+    // Filter by priority
+    if (filters.priority && filters.priority !== 'all') {
+      filtered = filtered.filter((t) => t.priority === filters.priority);
+    }
+
+    // Filter by search
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        (t) =>
+          t.code.toLowerCase().includes(searchLower) ||
+          t.title.toLowerCase().includes(searchLower) ||
+          t.requestingDepartment.name.toLowerCase().includes(searchLower) ||
+          t.supplyingDepartment.name.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      const sortBy = filters.sortBy || 'requestedAt';
+      const order = filters.sortOrder === 'asc' ? 1 : -1;
+
+      if (sortBy === 'requestedAt' || sortBy === 'createdAt') {
+        return (
+          (new Date(a[sortBy]).getTime() - new Date(b[sortBy]).getTime()) * order
+        );
+      }
+
+      if (sortBy === 'priority') {
+        const priorityOrder = { CRITICAL: 3, URGENT: 2, NORMAL: 1 };
+        return (
+          (priorityOrder[a.priority] - priorityOrder[b.priority]) * order
+        );
+      }
+
+      return 0;
+    });
+
+    return filtered;
+  }, [allTransfers, filters]);
+
+  // ✅ Stats calculation from filtered data
+  const stats = useMemo(() => ({
+    pending: filteredTransfers.filter((t) => t.status === 'PENDING').length,
+    approved: filteredTransfers.filter((t) => t.status === 'APPROVED').length,
+    prepared: filteredTransfers.filter((t) => t.status === 'PREPARED').length,
+    completed: filteredTransfers.filter((t) => ['DELIVERED', 'COMPLETED'].includes(t.status)).length,
+  }), [filteredTransfers]);
+
+  // ✅ Fetch all data only once
   useEffect(() => {
-    fetchTransfers();
-  }, [organizationId, filters]);
+    fetchAllTransfers();
+  }, [orgSlug]);
 
-  const fetchTransfers = async () => {
+  const fetchAllTransfers = async () => {
     try {
       setLoading(true);
 
-      // TODO: Implement API call
-      // const response = await fetch(`/api/${orgSlug}/transfers?...`);
-      // const data = await response.json();
-      // setTransfers(data.transfers);
+      // Fetch ALL transfers (no filters in API call)
+      const response = await fetch(`/api/${orgSlug}/transfers`, {
+        credentials: 'include',
+      });
 
-      // Mock data for now
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setTransfers([]);
+      if (!response.ok) {
+        throw new Error('Failed to fetch transfers');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setAllTransfers(data.data || []);
+      }
     } catch (error) {
       console.error('Error fetching transfers:', error);
       toast.error('เกิดข้อผิดพลาด', {
@@ -66,6 +123,7 @@ export default function OrganizationTransfersView({
   };
 
   const handleFilterChange = (newFilters: Partial<TransferFiltersState>) => {
+    // ✅ Just update state - no API call
     setFilters((prev) => ({ ...prev, ...newFilters }));
   };
 
@@ -87,23 +145,32 @@ export default function OrganizationTransfersView({
         </p>
       </div>
 
+      {/* ✅ Stats from filtered data */}
       <OverviewStats {...stats} />
 
       <Card>
         <CardContent className="p-6">
           <OverviewFilters filters={filters} onFilterChange={handleFilterChange} />
 
+          {/* ✅ Show filtered transfers */}
           <div className="mt-4">
             <TransferTable
-              transfers={transfers}
+              transfers={filteredTransfers}
               orgSlug={orgSlug}
               viewType="organization"
             />
           </div>
 
-          {!loading && transfers.length > 0 && (
+          {/* ✅ Show count of filtered results */}
+          {!loading && (
             <div className="mt-4 text-sm text-gray-500">
-              พบ {transfers.length} รายการ
+              {filteredTransfers.length === allTransfers.length ? (
+                <>พบ {allTransfers.length} รายการทั้งหมด</>
+              ) : (
+                <>
+                  พบ {filteredTransfers.length} จาก {allTransfers.length} รายการ
+                </>
+              )}
             </div>
           )}
         </CardContent>
