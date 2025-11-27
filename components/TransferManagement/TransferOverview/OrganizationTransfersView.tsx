@@ -1,5 +1,5 @@
 // components/TransferManagement/TransferOverview/OrganizationTransfersView.tsx
-// OrganizationTransfersView - OPTIMIZED with client-side filtering
+// UPDATED: Add missing sortBy and sortOrder props
 
 'use client';
 
@@ -22,7 +22,7 @@ export default function OrganizationTransfersView({
   orgSlug,
 }: OrganizationTransfersViewProps) {
   const [loading, setLoading] = useState(true);
-  const [allTransfers, setAllTransfers] = useState<Transfer[]>([]); // ✅ Store all data
+  const [allTransfers, setAllTransfers] = useState<Transfer[]>([]);
   const [filters, setFilters] = useState<TransferFiltersState>({
     search: '',
     status: 'all',
@@ -31,7 +31,7 @@ export default function OrganizationTransfersView({
     sortOrder: 'desc',
   });
 
-  // ✅ Client-side filtering - no API calls
+  // ✅ Client-side filtering
   const filteredTransfers = useMemo(() => {
     let filtered = [...allTransfers];
 
@@ -81,15 +81,19 @@ export default function OrganizationTransfersView({
     return filtered;
   }, [allTransfers, filters]);
 
-  // ✅ Stats calculation from filtered data
-  const stats = useMemo(() => ({
-    pending: filteredTransfers.filter((t) => t.status === 'PENDING').length,
-    approved: filteredTransfers.filter((t) => t.status === 'APPROVED').length,
-    prepared: filteredTransfers.filter((t) => t.status === 'PREPARED').length,
-    completed: filteredTransfers.filter((t) => ['DELIVERED', 'COMPLETED'].includes(t.status)).length,
-  }), [filteredTransfers]);
+  // ✅ Stats calculation
+  const stats = useMemo(
+    () => ({
+      pending: filteredTransfers.filter((t) => t.status === 'PENDING').length,
+      approved: filteredTransfers.filter((t) => t.status === 'APPROVED').length,
+      prepared: filteredTransfers.filter((t) => t.status === 'PREPARED').length,
+      completed: filteredTransfers.filter((t) =>
+        ['DELIVERED', 'COMPLETED'].includes(t.status)
+      ).length,
+    }),
+    [filteredTransfers]
+  );
 
-  // ✅ Fetch all data only once
   useEffect(() => {
     fetchAllTransfers();
   }, [orgSlug]);
@@ -98,7 +102,6 @@ export default function OrganizationTransfersView({
     try {
       setLoading(true);
 
-      // Fetch ALL transfers (no filters in API call)
       const response = await fetch(`/api/${orgSlug}/transfers`, {
         credentials: 'include',
       });
@@ -123,9 +126,12 @@ export default function OrganizationTransfersView({
   };
 
   const handleFilterChange = (newFilters: Partial<TransferFiltersState>) => {
-    // ✅ Just update state - no API call
     setFilters((prev) => ({ ...prev, ...newFilters }));
   };
+
+  // ✅ Safe extraction with defaults
+  const sortBy = filters.sortBy || 'requestedAt';
+  const sortOrder = filters.sortOrder || 'desc';
 
   if (loading) {
     return (
@@ -145,23 +151,30 @@ export default function OrganizationTransfersView({
         </p>
       </div>
 
-      {/* ✅ Stats from filtered data */}
       <OverviewStats {...stats} />
 
       <Card>
         <CardContent className="p-6">
           <OverviewFilters filters={filters} onFilterChange={handleFilterChange} />
 
-          {/* ✅ Show filtered transfers */}
           <div className="mt-4">
             <TransferTable
               transfers={filteredTransfers}
               orgSlug={orgSlug}
               viewType="organization"
+              loading={false}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={(field) => {
+                const newOrder =
+                  filters.sortBy === field && filters.sortOrder === 'asc'
+                    ? 'desc'
+                    : 'asc';
+                handleFilterChange({ sortBy: field as any, sortOrder: newOrder });
+              }}
             />
           </div>
 
-          {/* ✅ Show count of filtered results */}
           {!loading && (
             <div className="mt-4 text-sm text-gray-500">
               {filteredTransfers.length === allTransfers.length ? (

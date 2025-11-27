@@ -1,5 +1,5 @@
 // components/TransferManagement/index.tsx
-// Main export file - COMPLETE exports
+// UPDATED: Re-export DepartmentSelectionDialog
 
 // ===== Main Views =====
 export { default as OrganizationTransfersView } from './TransferOverview/OrganizationTransfersView';
@@ -13,6 +13,7 @@ export { default as OverviewFilters } from './TransferOverview/OverviewFilters';
 
 // ===== Transfer List Components =====
 export { default as TransferTable } from './TransferList/TransferTable';
+export { default as TransferFilters } from './TransferList/TransferFilters';
 
 // ===== Transfer Detail Components =====
 export { default as TransferDetailHeader } from './TransferDetail/TransferDetailHeader';
@@ -29,7 +30,7 @@ export { default as TransferPriorityBadge } from './shared/TransferPriorityBadge
 export { default as QuantityDisplay } from './shared/QuantityDisplay';
 export { default as DepartmentBadge } from './shared/DepartmentBadge';
 export { default as TransferCodeDisplay } from './shared/TransferCodeDisplay';
-export { default as DepartmentSelectionDialog } from './shared/DepartmentSelectionDialog'; // ✅ NEW
+export { default as DepartmentSelectionDialog } from './shared/DepartmentSelectionDialog'; // ✅ Re-export
 
 // ===== Item Action Dialog Components =====
 export { default as ApproveItemDialog } from './ItemActions/ApproveItemDialog';

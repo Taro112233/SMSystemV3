@@ -1,15 +1,16 @@
 // components/TransferManagement/TransferList/DepartmentTransfersView.tsx
+// UPDATED: Fix TypeScript errors with proper type handling
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Transfer, TransferFiltersState } from '@/types/transfer';
 import { useRouter } from 'next/navigation';
-import TransferListTabs from './TransferListTabs';
 import TransferFilters from './TransferFilters';
 import TransferTable from './TransferTable';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface DepartmentTransfersViewProps {
@@ -27,7 +28,6 @@ export default function DepartmentTransfersView({
   orgSlug,
 }: DepartmentTransfersViewProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'outgoing' | 'incoming'>('incoming');
   const [loading, setLoading] = useState(true);
   const [outgoingTransfers, setOutgoingTransfers] = useState<Transfer[]>([]);
   const [incomingTransfers, setIncomingTransfers] = useState<Transfer[]>([]);
@@ -41,15 +41,11 @@ export default function DepartmentTransfersView({
 
   useEffect(() => {
     fetchTransfers();
-  }, [departmentId, activeTab, filters]);
+  }, [departmentId, filters]);
 
   const fetchTransfers = async () => {
     try {
       setLoading(true);
-
-      const endpoint = activeTab === 'outgoing'
-        ? `/api/${orgSlug}/${departmentSlug}/transfers/outgoing`
-        : `/api/${orgSlug}/${departmentSlug}/transfers/incoming`;
 
       // Build query params
       const params = new URLSearchParams();
@@ -63,24 +59,29 @@ export default function DepartmentTransfersView({
         params.append('search', filters.search);
       }
 
-      const url = `${endpoint}?${params.toString()}`;
-      const response = await fetch(url);
+      const queryString = params.toString();
 
-      if (!response.ok) {
+      // Fetch both outgoing and incoming in parallel
+      const [outgoingResponse, incomingResponse] = await Promise.all([
+        fetch(`/api/${orgSlug}/${departmentSlug}/transfers/outgoing?${queryString}`),
+        fetch(`/api/${orgSlug}/${departmentSlug}/transfers/incoming?${queryString}`),
+      ]);
+
+      if (!outgoingResponse.ok || !incomingResponse.ok) {
         throw new Error('Failed to fetch transfers');
       }
 
-      const data = await response.json();
+      const [outgoingData, incomingData] = await Promise.all([
+        outgoingResponse.json(),
+        incomingResponse.json(),
+      ]);
 
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch transfers');
+      if (!outgoingData.success || !incomingData.success) {
+        throw new Error('Failed to fetch transfers');
       }
 
-      if (activeTab === 'outgoing') {
-        setOutgoingTransfers(data.data || []);
-      } else {
-        setIncomingTransfers(data.data || []);
-      }
+      setOutgoingTransfers(outgoingData.data || []);
+      setIncomingTransfers(incomingData.data || []);
     } catch (error) {
       console.error('Error fetching transfers:', error);
       toast.error('เกิดข้อผิดพลาด', {
@@ -99,60 +100,91 @@ export default function DepartmentTransfersView({
     router.push(`/${orgSlug}/${departmentSlug}/transfers/create`);
   };
 
-  const currentTransfers =
-    activeTab === 'outgoing' ? outgoingTransfers : incomingTransfers;
+  // ✅ Safe extraction with defaults
+  const sortBy = filters.sortBy || 'requestedAt';
+  const sortOrder = filters.sortOrder || 'desc';
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">จัดการใบเบิก</h1>
           <p className="text-sm text-gray-500 mt-1">{departmentName}</p>
         </div>
 
-        {activeTab === 'incoming' && (
-          <Button onClick={handleCreateClick} className="gap-2">
-            <Plus className="h-4 w-4" />
-            สร้างใบเบิกใหม่
-          </Button>
-        )}
+        <Button onClick={handleCreateClick} className="gap-2">
+          <Plus className="h-4 w-4" />
+          สร้างใบเบิกใหม่
+        </Button>
       </div>
 
+      {/* Filters */}
       <Card>
         <CardContent className="p-6">
-          <TransferListTabs
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            outgoingCount={outgoingTransfers.length}
-            incomingCount={incomingTransfers.length}
+          <TransferFilters filters={filters} onFilterChange={handleFilterChange} />
+        </CardContent>
+      </Card>
+
+      {/* Outgoing Transfers (รายการเบิกออก - ผู้ให้) */}
+      <Card>
+        <CardHeader className="border-b border-gray-200">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <ArrowUpCircle className="h-5 w-5 text-blue-600" />
+            รายการเบิกออก ({outgoingTransfers.length})
+            <span className="text-sm font-normal text-gray-500 ml-2">
+              (หน่วยงานอื่นขอเบิกจากคุณ)
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <TransferTable
+            transfers={outgoingTransfers}
+            orgSlug={orgSlug}
+            deptSlug={departmentSlug}
+            viewType="outgoing"
+            loading={loading}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={(field) => {
+              const newOrder =
+                filters.sortBy === field && filters.sortOrder === 'asc'
+                  ? 'desc'
+                  : 'asc';
+              handleFilterChange({ sortBy: field as any, sortOrder: newOrder });
+            }}
           />
+        </CardContent>
+      </Card>
 
-          <div className="mt-6">
-            <TransferFilters filters={filters} onFilterChange={handleFilterChange} />
-
-            <TransferTable
-              transfers={currentTransfers}
-              orgSlug={orgSlug}
-              deptSlug={departmentSlug}
-              viewType={activeTab}
-              loading={loading}
-              sortBy={filters.sortBy}
-              sortOrder={filters.sortOrder}
-              onSort={(field) => {
-                const newOrder =
-                  filters.sortBy === field && filters.sortOrder === 'asc'
-                    ? 'desc'
-                    : 'asc';
-                handleFilterChange({ sortBy: field as any, sortOrder: newOrder });
-              }}
-            />
-
-            {!loading && currentTransfers.length > 0 && (
-              <div className="mt-4 text-sm text-gray-500">
-                พบ {currentTransfers.length} รายการ
-              </div>
-            )}
-          </div>
+      {/* Incoming Transfers (รายการรับเข้า - ผู้ขอ) */}
+      <Card>
+        <CardHeader className="border-b border-gray-200">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <ArrowDownCircle className="h-5 w-5 text-green-600" />
+            รายการรับเข้า ({incomingTransfers.length})
+            <span className="text-sm font-normal text-gray-500 ml-2">
+              (คุณขอเบิกจากหน่วยงานอื่น)
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <TransferTable
+            transfers={incomingTransfers}
+            orgSlug={orgSlug}
+            deptSlug={departmentSlug}
+            viewType="incoming"
+            loading={loading}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={(field) => {
+              const newOrder =
+                filters.sortBy === field && filters.sortOrder === 'asc'
+                  ? 'desc'
+                  : 'asc';
+              handleFilterChange({ sortBy: field as any, sortOrder: newOrder });
+            }}
+          />
         </CardContent>
       </Card>
     </div>

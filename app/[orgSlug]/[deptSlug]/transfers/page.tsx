@@ -1,5 +1,5 @@
 // app/[orgSlug]/[deptSlug]/transfers/page.tsx
-// Department Transfers Page
+// Department Transfers Page - UPDATED: Show both outgoing and incoming in single view
 
 'use client';
 
