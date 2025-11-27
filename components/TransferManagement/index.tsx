@@ -29,6 +29,7 @@ export { default as TransferPriorityBadge } from './shared/TransferPriorityBadge
 export { default as QuantityDisplay } from './shared/QuantityDisplay';
 export { default as DepartmentBadge } from './shared/DepartmentBadge';
 export { default as TransferCodeDisplay } from './shared/TransferCodeDisplay';
+export { default as DepartmentSelectionDialog } from './shared/DepartmentSelectionDialog'; // ✅ NEW
 
 // ===== Item Action Dialog Components =====
 export { default as ApproveItemDialog } from './ItemActions/ApproveItemDialog';
