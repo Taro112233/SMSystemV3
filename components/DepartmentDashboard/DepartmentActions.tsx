@@ -37,13 +37,8 @@ export const DepartmentActions = () => {
         },
         {
           icon: Calendar,
-          label: "รายการสินค้าใกล้หมดอายุ",
+          label: "นับสต็อกสินค้า",
           onClick: () => console.log("Expiring items"),
-        },
-        {
-          icon: Package,
-          label: "จัดการสต็อกการ์ด",
-          onClick: () => console.log("Manage stock cards"),
         },
       ],
     },
