@@ -40,6 +40,18 @@ export const DEPT_LEVEL_PAGES = [
 ] as const;
 
 /**
+ * Settings sub-pages (allowed after /{orgSlug}/settings/)
+ * Example: /{orgSlug}/settings/categories, /{orgSlug}/settings/units
+ */
+export const SETTINGS_SUBPAGES = [
+  'categories',
+  'units',
+  'departments',
+  'organization',
+  'members',
+] as const;
+
+/**
  * System reserved paths (cannot be used as org or dept slugs)
  */
 export const SYSTEM_RESERVED = [
@@ -130,6 +142,10 @@ export function isDeptLevelPage(slug: string): boolean {
   return DEPT_LEVEL_PAGES.includes(slug.toLowerCase() as (typeof DEPT_LEVEL_PAGES)[number]);
 }
 
+export function isSettingsSubpage(slug: string): boolean {
+  return SETTINGS_SUBPAGES.includes(slug.toLowerCase() as (typeof SETTINGS_SUBPAGES)[number]);
+}
+
 export function isSystemReserved(slug: string): boolean {
   const systemSlugs = getSystemReservedSlugs();
   return systemSlugs.some(reserved => reserved === slug.toLowerCase());
@@ -141,16 +157,17 @@ export const ROUTE_PATTERNS = {
   singleRoute: /^\/([a-z0-9-]+)$/,
   orgMain: /^\/([a-z0-9-]+)$/,
   orgPage: /^\/([a-z0-9-]+)\/(settings|members|reports|products|transfers|inventory|analytics)$/,
+  orgSettingsSubpage: /^\/([a-z0-9-]+)\/settings\/(categories|units|departments|organization|members)$/,
   deptMain: /^\/([a-z0-9-]+)\/([a-z0-9-]+)$/,
   deptPage: /^\/([a-z0-9-]+)\/([a-z0-9-]+)\/(stocks|transfers|products|reports)$/,
   deptSubPage: /^\/([a-z0-9-]+)\/([a-z0-9-]+)\/(stocks|transfers|products)\/([a-z0-9-]+)$/,
 } as const;
 
 /**
- * ✅ FIXED: Parse URL and determine route type (supports sub-pages)
+ * ✅ FIXED: Parse URL and determine route type (supports settings subpages)
  */
 export function parseRoute(pathname: string): {
-  type: 'public' | 'app' | 'org-main' | 'org-page' | 'dept-main' | 'dept-page' | 'dept-subpage' | 'api' | 'invalid';
+  type: 'public' | 'app' | 'org-main' | 'org-page' | 'org-settings-subpage' | 'dept-main' | 'dept-page' | 'dept-subpage' | 'api' | 'invalid';
   orgSlug?: string;
   deptSlug?: string;
   page?: string;
@@ -207,24 +224,34 @@ export function parseRoute(pathname: string): {
     };
   }
 
-  // 3 segments: /{orgSlug}/{deptSlug}/{page}
+  // 3 segments: /{orgSlug}/settings/{subpage} or /{orgSlug}/{deptSlug}/{page}
   if (segments.length === 3) {
-    const [orgSlug, deptSlug, page] = segments;
+    const [orgSlug, secondSegment, thirdSegment] = segments;
     
-    // Check if it's a valid department page
-    if (isDeptLevelPage(page)) {
+    // ✅ Check for settings subpages: /{orgSlug}/settings/{subpage}
+    if (secondSegment === 'settings' && isSettingsSubpage(thirdSegment)) {
+      return {
+        type: 'org-settings-subpage',
+        orgSlug,
+        page: 'settings',
+        subpage: thirdSegment,
+      };
+    }
+    
+    // Check if it's a valid department page: /{orgSlug}/{deptSlug}/{page}
+    if (isDeptLevelPage(thirdSegment)) {
       return {
         type: 'dept-page',
         orgSlug,
-        deptSlug,
-        page,
+        deptSlug: secondSegment,
+        page: thirdSegment,
       };
     }
     
     return { type: 'invalid' };
   }
 
-  // ✅ ADDED: 4 segments: /{orgSlug}/{deptSlug}/{page}/{subpage}
+  // ✅ 4 segments: /{orgSlug}/{deptSlug}/{page}/{subpage}
   // Example: /siriraj/ipd/transfers/create, /siriraj/ipd/transfers/{transferId}
   if (segments.length === 4) {
     const [orgSlug, deptSlug, page, subpage] = segments;
@@ -243,7 +270,7 @@ export function parseRoute(pathname: string): {
     return { type: 'invalid' };
   }
 
-  // ✅ ADDED: 5+ segments are also valid (for nested routes)
+  // ✅ 5+ segments are also valid (for nested routes)
   // Example: /siriraj/ipd/transfers/create/step2
   if (segments.length >= 5) {
     const [orgSlug, deptSlug, page, ...rest] = segments;
@@ -269,6 +296,7 @@ export function parseRoute(pathname: string): {
 export type AppRoute = (typeof APP_ROUTES)[number];
 export type OrgLevelPage = (typeof ORG_LEVEL_PAGES)[number];
 export type DeptLevelPage = (typeof DEPT_LEVEL_PAGES)[number];
+export type SettingsSubpage = (typeof SETTINGS_SUBPAGES)[number];
 export type SystemReserved = (typeof SYSTEM_RESERVED)[number];
 export type PublicRoute = (typeof PUBLIC_ROUTES)[number];
 export type RouteType = ReturnType<typeof parseRoute>['type'];

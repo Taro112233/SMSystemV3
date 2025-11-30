@@ -1,4 +1,4 @@
-// FILE: middleware.ts - UPDATED: Handle dept-subpage
+// FILE: middleware.ts - UPDATED: Handle org-settings-subpage
 // InvenStock - Multi-Tenant Inventory Management System
 
 import { NextResponse } from 'next/server';
@@ -202,10 +202,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/not-found', request.url));
   }
 
-  // ✅ UPDATED: Handle all valid organization/department routes
+  // ✅ UPDATED: Handle all valid organization/department routes (including org-settings-subpage)
   if (route.type === 'org-main' || route.type === 'org-page' || 
+      route.type === 'org-settings-subpage' ||  // ✅ ADDED
       route.type === 'dept-main' || route.type === 'dept-page' ||
-      route.type === 'dept-subpage') {  // ✅ ADDED
+      route.type === 'dept-subpage') {
     
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-user-id', payload.userId);
@@ -222,9 +223,8 @@ export async function middleware(request: NextRequest) {
       requestHeaders.set('x-current-dept', route.deptSlug);
     }
 
-    // ✅ ADDED: Pass subpage info
     if (route.subpage) {
-      requestHeaders.set('x-dept-subpage', route.subpage);
+      requestHeaders.set('x-subpage', route.subpage);
     }
 
     console.log(`✅ Valid ${route.type}: ${pathname}`);
