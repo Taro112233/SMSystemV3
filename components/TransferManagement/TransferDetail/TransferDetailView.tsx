@@ -1,5 +1,5 @@
 // components/TransferManagement/TransferDetail/TransferDetailView.tsx
-// TransferDetailView - Main detail container - FIXED permission logic
+// TransferDetailView - Main detail container - NO CHANGES (items sorted in child component)
 
 'use client';
 
@@ -255,15 +255,14 @@ export default function TransferDetailView({
     );
   }
 
-  // ✅ FIXED: Determine user role in transfer context
+  // ✅ Determine user role in transfer context
   const userRole = transfer.requestingDepartmentId === userDepartmentId
     ? 'requesting'
     : transfer.supplyingDepartmentId === userDepartmentId
     ? 'supplying'
     : 'other';
 
-  // ✅ FIXED: Permission checks based on BOTH transfer role AND organization role
-  // All members can perform basic actions, but based on their department context
+  // ✅ Permission checks based on BOTH transfer role AND organization role
   const canApprove = userRole === 'supplying' && organizationRole !== null;
   const canPrepare = userRole === 'supplying' && organizationRole !== null;
   const canReceive = userRole === 'requesting' && organizationRole !== null;

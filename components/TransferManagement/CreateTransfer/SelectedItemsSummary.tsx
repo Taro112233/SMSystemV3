@@ -1,8 +1,9 @@
 // components/TransferManagement/CreateTransfer/SelectedItemsSummary.tsx
-// SelectedItemsSummary - UPDATED: Remove requestingCurrentStock
+// SelectedItemsSummary - UPDATED: Sort selected items alphabetically
 
 'use client';
 
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X } from 'lucide-react';
@@ -15,7 +16,6 @@ interface SelectedProduct {
   baseUnit: string;
   quantity: number;
   notes?: string;
-  // ✅ REMOVED: requestingCurrentStock
 }
 
 interface SelectedItemsSummaryProps {
@@ -27,6 +27,13 @@ export default function SelectedItemsSummary({
   selectedProducts,
   onRemove,
 }: SelectedItemsSummaryProps) {
+  // ✅ Sort selected products alphabetically by code
+  const sortedProducts = useMemo(() => {
+    return [...selectedProducts].sort((a, b) => 
+      a.code.localeCompare(b.code, 'th')
+    );
+  }, [selectedProducts]);
+
   if (selectedProducts.length === 0) {
     return null;
   }
@@ -40,7 +47,7 @@ export default function SelectedItemsSummary({
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {selectedProducts.map((product) => (
+          {sortedProducts.map((product) => (
             <div
               key={product.id}
               className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"

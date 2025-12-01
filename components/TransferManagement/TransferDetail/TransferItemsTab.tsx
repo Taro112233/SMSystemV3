@@ -1,8 +1,9 @@
 // components/TransferManagement/TransferDetail/TransferItemsTab.tsx
-// TransferItemsTab - Items tab content - SIMPLIFIED without batch fetching
+// TransferItemsTab - Items tab content - UPDATED: Sort items alphabetically
 
 'use client';
 
+import { useMemo } from 'react';
 import { TransferItem } from '@/types/transfer';
 import TransferItemCard from './TransferItemCard';
 
@@ -31,6 +32,13 @@ export default function TransferItemsTab({
   onDeliver,
   onCancelItem,
 }: TransferItemsTabProps) {
+  // ✅ Sort items alphabetically by product code
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => 
+      a.product.code.localeCompare(b.product.code, 'th')
+    );
+  }, [items]);
+
   if (items.length === 0) {
     return (
       <div className="text-center py-12">
@@ -41,7 +49,11 @@ export default function TransferItemsTab({
 
   return (
     <div className="space-y-4">
-      {items.map((item) => (
+      <div className="text-sm text-gray-600 mb-2">
+        รายการสินค้า {items.length} รายการ (เรียงตาม A-Z)
+      </div>
+      
+      {sortedItems.map((item) => (
         <TransferItemCard
           key={item.id}
           item={item}

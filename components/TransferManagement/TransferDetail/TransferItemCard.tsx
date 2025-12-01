@@ -1,9 +1,9 @@
 // components/TransferManagement/TransferDetail/TransferItemCard.tsx
-// TransferItemCard - Individual item card with actions - IMPROVED LAYOUT
+// TransferItemCard - Individual item card with actions - UPDATED: Sort batches by expiry date
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { TransferItem } from '@/types/transfer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,6 +55,20 @@ export default function TransferItemCard({
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [loadingBatches, setLoadingBatches] = useState(false);
   const [batches, setBatches] = useState<StockBatch[]>([]);
+
+  // ✅ Sort batches by expiry date (FIFO - earliest expiry first)
+  const sortedBatches = useMemo(() => {
+    if (!item.batches || item.batches.length === 0) return [];
+    
+    return [...item.batches].sort((a, b) => {
+      // Batches without expiry date go to the end
+      if (!a.batch.expiryDate && !b.batch.expiryDate) return 0;
+      if (!a.batch.expiryDate) return 1;
+      if (!b.batch.expiryDate) return -1;
+      
+      return new Date(a.batch.expiryDate).getTime() - new Date(b.batch.expiryDate).getTime();
+    });
+  }, [item.batches]);
 
   const showApproveButton = 
     canApprove && 
@@ -272,9 +286,14 @@ export default function TransferItemCard({
               </div>
             </div>
 
-            {/* Batch Details Table */}
-            {item.batches && item.batches.length > 0 && (
+            {/* Batch Details Table - UPDATED: Use sortedBatches */}
+            {sortedBatches.length > 0 && (
               <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                  <div className="text-xs font-semibold text-gray-700 uppercase">
+                    Batch Details (เรียงตามวันหมดอายุ - FIFO)
+                  </div>
+                </div>
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
@@ -296,7 +315,7 @@ export default function TransferItemCard({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {item.batches.map((batch) => (
+                    {sortedBatches.map((batch) => (
                       <tr key={batch.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {batch.batch.lotNumber}

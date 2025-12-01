@@ -1,5 +1,5 @@
 // components/TransferManagement/CreateTransfer/ProductSelectionTable.tsx
-// ProductSelectionTable - UPDATED: Read-only stock display
+// ProductSelectionTable - UPDATED: Sort products alphabetically by code
 
 'use client';
 
@@ -53,7 +53,7 @@ export default function ProductSelectionTable({
   const [search, setSearch] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'requesting' | 'supplying'>('all');
 
-  // Filter products based on tab
+  // ✅ Filter + Sort products alphabetically by code
   const filteredProducts = useMemo(() => {
     let filtered = products;
 
@@ -73,7 +73,8 @@ export default function ProductSelectionTable({
       );
     }
 
-    return filtered;
+    // ✅ Sort alphabetically by product code
+    return filtered.sort((a, b) => a.code.localeCompare(b.code, 'th'));
   }, [products, filterTab, search]);
 
   const isSelected = (productId: string) => {
@@ -158,7 +159,7 @@ export default function ProductSelectionTable({
 
       {/* Results Count */}
       <div className="text-sm text-gray-600">
-        แสดง {filteredProducts.length} รายการ
+        แสดง {filteredProducts.length} รายการ (เรียงตาม A-Z)
       </div>
 
       {/* Table */}
@@ -225,7 +226,7 @@ export default function ProductSelectionTable({
                     <span className="text-sm text-gray-600">{product.baseUnit}</span>
                   </td>
 
-                  {/* Supplying Dept Stock (Read-only) */}
+                  {/* Supplying Dept Stock */}
                   <td className="px-4 py-3">
                     {supplyingStock ? (
                       <div className="text-center space-y-1">
@@ -247,7 +248,7 @@ export default function ProductSelectionTable({
                     )}
                   </td>
 
-                  {/* ✅ UPDATED: Requesting Dept Stock (Read-only) */}
+                  {/* Requesting Dept Stock */}
                   <td className="px-4 py-3">
                     {requestingStock ? (
                       <div className="text-center space-y-1">
