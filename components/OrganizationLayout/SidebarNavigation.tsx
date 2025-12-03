@@ -1,10 +1,10 @@
 // components/OrganizationLayout/SidebarNavigation.tsx
-// ✅ UPDATED: Back button navigation for flat URL structure
+// ✅ FIXED: Use startsWith for path matching
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Home, BarChart3, Settings } from 'lucide-react';
+import { Search, Home, Settings, ArrowRightLeft } from 'lucide-react';
 import { useRouter, useParams, usePathname } from 'next/navigation';
 
 interface SidebarNavigationProps {
@@ -23,17 +23,17 @@ export const SidebarNavigation = ({
   const pathname = usePathname();
   const orgSlug = params.orgSlug as string;
 
-  // Check which page is currently active
-  const isOverviewActive = pathname === `/${orgSlug}`;
-  const isReportsActive = pathname === `/${orgSlug}/reports`;
-  const isSettingsActive = pathname === `/${orgSlug}/settings`;
+  // ✅ FIXED: Use startsWith for better path matching
+  const isOverviewActive = pathname === `/${orgSlug}` || pathname === `/${orgSlug}/`;
+  const isTransfersActive = pathname.startsWith(`/${orgSlug}/transfers`);
+  const isSettingsActive = pathname.startsWith(`/${orgSlug}/settings`);
 
   const handleOverviewClick = () => {
     router.push(`/${orgSlug}`);
   };
 
-  const handleReportsClick = () => {
-    router.push(`/${orgSlug}/reports`);
+  const handleTransfersClick = () => {
+    router.push(`/${orgSlug}/transfers`);
   };
 
   const handleSettingsClick = () => {
@@ -75,12 +75,12 @@ export const SidebarNavigation = ({
         </Button>
         
         <Button 
-          variant={isReportsActive ? "secondary" : "ghost"}
+          variant={isTransfersActive ? "secondary" : "ghost"}
           className={`${collapsed ? 'w-full justify-center' : 'w-full justify-start'} h-9`}
-          onClick={handleReportsClick}
+          onClick={handleTransfersClick}
         >
-          <BarChart3 className="w-4 h-4" />
-          {!collapsed && <span className="ml-2">รายงาน</span>}
+          <ArrowRightLeft className="w-4 h-4" />
+          {!collapsed && <span className="ml-2">การเบิกจ่าย</span>}
         </Button>
         
         <Button 

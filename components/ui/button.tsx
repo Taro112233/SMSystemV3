@@ -12,19 +12,19 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+          "bg-primary text-primary-foreground shadow",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground shadow-sm",
         outline:
-          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-background shadow-sm",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        primary: "bg-blue-500 text-white shadow hover:bg-blue-600",
-        success: "bg-green-500 text-white shadow hover:bg-green-600",
-        warning: "bg-yellow-500 text-white shadow hover:bg-yellow-600",
-        danger: "bg-red-500 text-white shadow hover:bg-red-600",
+          "bg-secondary text-secondary-foreground shadow-sm",
+        ghost: "",
+        link: "text-primary underline-offset-4",
+        primary: "bg-blue-500 text-white shadow",
+        success: "bg-green-500 text-white shadow",
+        warning: "bg-yellow-500 text-white shadow",
+        danger: "bg-red-500 text-white shadow",
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -55,9 +55,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || loading}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+        whileTap={{ scale: 0.92 }}
+        transition={{ duration: 0.05 }}
         {...props}
       >
         {loading && (
