@@ -15,7 +15,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Plus, Edit, AlertTriangle, Package } from 'lucide-react';
-import { toast } from 'sonner';
 import BatchFormModal from './BatchFormModal';
 
 interface BatchManagementTabProps {

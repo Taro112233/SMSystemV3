@@ -6,6 +6,17 @@ import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
+import { BatchStatus } from '@prisma/client';
+
+// ✅ FIXED: Proper WhereClause type with BatchStatus enum
+interface WhereClause {
+  stockId: string;
+  isActive: boolean;
+  status?: BatchStatus;
+  availableQuantity?: {
+    gt: number;
+  };
+}
 
 // GET - List all batches for a stock (UPDATED: Add filter for available batches)
 export async function GET(
@@ -78,7 +89,7 @@ export async function GET(
     const forTransfer = searchParams.get('forTransfer') === 'true';
 
     // Build where clause
-    const whereClause: any = {
+    const whereClause: WhereClause = {
       stockId,
       isActive: true,
     };
@@ -112,7 +123,7 @@ export async function GET(
         receivedAt: true,
       },
       orderBy: [
-        { expiryDate: 'asc' }, // ✅ FIFO - earliest expiry first
+        { expiryDate: 'asc' },
         { createdAt: 'asc' },
       ],
     });
@@ -127,7 +138,7 @@ export async function GET(
         const daysToExpiry = Math.floor(
           (new Date(b.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
         );
-        return daysToExpiry <= 90; // Within 3 months
+        return daysToExpiry <= 90;
       }).length,
     } : undefined;
 
@@ -140,7 +151,7 @@ export async function GET(
         location: stock.location,
         defaultWithdrawalQty: stock.defaultWithdrawalQty,
       },
-      summary, // ✅ NEW: Include summary for transfer
+      summary,
     });
   } catch (error) {
     console.error('Get batches failed:', error);

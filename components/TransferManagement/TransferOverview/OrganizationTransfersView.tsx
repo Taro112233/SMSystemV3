@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Transfer, TransferFiltersState } from '@/types/transfer';
 import OverviewStats from './OverviewStats';
 import OverviewFilters from './OverviewFilters';
@@ -13,12 +13,10 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface OrganizationTransfersViewProps {
-  organizationId: string;
   orgSlug: string;
 }
 
 export default function OrganizationTransfersView({
-  organizationId,
   orgSlug,
 }: OrganizationTransfersViewProps) {
   const [loading, setLoading] = useState(true);
@@ -94,11 +92,7 @@ export default function OrganizationTransfersView({
     [filteredTransfers]
   );
 
-  useEffect(() => {
-    fetchAllTransfers();
-  }, [orgSlug]);
-
-  const fetchAllTransfers = async () => {
+  const fetchAllTransfers = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -123,7 +117,11 @@ export default function OrganizationTransfersView({
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgSlug]);
+
+  useEffect(() => {
+    fetchAllTransfers();
+  }, [fetchAllTransfers]);
 
   const handleFilterChange = (newFilters: Partial<TransferFiltersState>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
@@ -170,7 +168,7 @@ export default function OrganizationTransfersView({
                   filters.sortBy === field && filters.sortOrder === 'asc'
                     ? 'desc'
                     : 'asc';
-                handleFilterChange({ sortBy: field as any, sortOrder: newOrder });
+                handleFilterChange({ sortBy: field as 'requestedAt' | 'createdAt' | 'priority', sortOrder: newOrder });
               }}
             />
           </div>

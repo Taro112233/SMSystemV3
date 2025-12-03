@@ -6,7 +6,6 @@ import { createUserSnapshot } from '@/lib/user-snapshot';
 import { createAuditLog } from '@/lib/audit-logger';
 import { Prisma } from '@prisma/client';
 
-type OrganizationRole = 'MEMBER' | 'ADMIN' | 'OWNER';
 
 // ===== TYPE DEFINITIONS =====
 

@@ -4,7 +4,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { TransferItem } from '@/types/transfer';
+import { TransferItem, ApproveItemData, PrepareItemData, DeliverItemData, CancelItemData } from '@/types/transfer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,10 +31,10 @@ interface TransferItemCardProps {
   canPrepare: boolean;
   canReceive: boolean;
   canCancel: boolean;
-  onApprove: (itemId: string, data: any) => Promise<void>;
-  onPrepare: (itemId: string, data: any) => Promise<void>;
-  onDeliver: (itemId: string, data: any) => Promise<void>;
-  onCancelItem: (itemId: string, data: any) => Promise<void>;
+  onApprove: (itemId: string, data: ApproveItemData) => Promise<void>;
+  onPrepare: (itemId: string, data: PrepareItemData) => Promise<void>;
+  onDeliver: (itemId: string, data: DeliverItemData) => Promise<void>;
+  onCancelItem: (itemId: string, data: CancelItemData) => Promise<void>;
 }
 
 export default function TransferItemCard({
@@ -156,19 +156,19 @@ export default function TransferItemCard({
     }
   };
 
-  const handleApprove = async (data: any) => {
+  const handleApprove = async (data: ApproveItemData) => {
     await onApprove(item.id, data);
   };
 
-  const handlePrepare = async (data: any) => {
+  const handlePrepare = async (data: PrepareItemData) => {
     await onPrepare(item.id, data);
   };
 
-  const handleDeliver = async (data: any) => {
+  const handleDeliver = async (data: DeliverItemData) => {
     await onDeliver(item.id, data);
   };
 
-  const handleCancel = async (data: any) => {
+  const handleCancel = async (data: CancelItemData) => {
     await onCancelItem(item.id, data);
   };
 

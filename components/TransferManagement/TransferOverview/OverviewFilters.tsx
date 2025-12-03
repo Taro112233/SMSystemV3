@@ -3,7 +3,7 @@
 
 'use client';
 
-import { TransferFiltersState } from '@/types/transfer';
+import { TransferFiltersState, TransferStatus, TransferPriority } from '@/types/transfer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -60,7 +60,7 @@ export default function OverviewFilters({
         <Select
           value={filters.status || 'all'}
           onValueChange={(value) =>
-            onFilterChange({ status: value as any })
+            onFilterChange({ status: value as TransferStatus | 'all' })
           }
         >
           <SelectTrigger className="w-40">
@@ -84,7 +84,7 @@ export default function OverviewFilters({
         <Select
           value={filters.priority || 'all'}
           onValueChange={(value) =>
-            onFilterChange({ priority: value as any })
+            onFilterChange({ priority: value as TransferPriority | 'all' })
           }
         >
           <SelectTrigger className="w-32">

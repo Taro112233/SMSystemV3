@@ -15,7 +15,6 @@ import {
   FileCheck,
   Package,
   PlaneTakeoff,
-  PlaneLanding,
 } from "lucide-react";
 
 export const DepartmentActions = () => {

@@ -1,5 +1,5 @@
 // app/[orgSlug]/transfers/page.tsx
-// Organization Transfers Page
+// Organization Transfers Overview Page - FIXED: Remove organizationId prop
 
 'use client';
 
@@ -8,33 +8,28 @@ import { useRouter } from 'next/navigation';
 import { OrganizationTransfersView } from '@/components/TransferManagement';
 import { Loader2, AlertCircle } from 'lucide-react';
 
-interface OrganizationData {
-  id: string;
-  name: string;
-  slug: string;
-  userRole: string;
-}
-
 export default function OrganizationTransfersPage({
   params,
 }: {
   params: Promise<{ orgSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const orgSlug = resolvedParams.orgSlug;
+  const { orgSlug } = resolvedParams;
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [organizationData, setOrganizationData] = useState<OrganizationData | null>(null);
 
   useEffect(() => {
-    const loadPageData = async () => {
+    const validateAccess = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/auth/me?orgSlug=${orgSlug}`);
+        // Validate user access to organization
+        const response = await fetch(`/api/auth/me?orgSlug=${orgSlug}`, {
+          credentials: 'include',
+        });
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -44,30 +39,29 @@ export default function OrganizationTransfersPage({
           throw new Error('Failed to load user data');
         }
 
-        const data = await response.json();
+        const userData = await response.json();
 
-        if (!data.data.currentOrganization || data.data.currentOrganization.slug !== orgSlug) {
+        if (!userData.data.currentOrganization || userData.data.currentOrganization.slug !== orgSlug) {
           setError('No access to this organization');
           return;
         }
 
-        // Check permission (ADMIN+ only)
-        const userRole = data.data.currentOrganization.userRole;
-        if (!['ADMIN', 'OWNER'].includes(userRole)) {
+        // Check if user has at least MEMBER role
+        const userRole = userData.data.permissions?.currentRole;
+        if (!userRole || !['MEMBER', 'ADMIN', 'OWNER'].includes(userRole)) {
           setError('Insufficient permissions');
           return;
         }
 
-        setOrganizationData(data.data.currentOrganization);
+        setLoading(false);
       } catch (err) {
-        console.error('Error loading page data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load page data');
-      } finally {
+        console.error('Error validating access:', err);
+        setError(err instanceof Error ? err.message : 'Failed to validate access');
         setLoading(false);
       }
     };
 
-    loadPageData();
+    validateAccess();
   }, [orgSlug, router]);
 
   if (loading) {
@@ -81,7 +75,7 @@ export default function OrganizationTransfersPage({
     );
   }
 
-  if (error || !organizationData) {
+  if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center max-w-md">
@@ -91,9 +85,9 @@ export default function OrganizationTransfersPage({
           <h2 className="text-xl font-semibold text-gray-900 mt-4">
             ไม่สามารถเข้าถึงได้
           </h2>
-          <p className="text-sm text-gray-600 mt-2">{error || 'คุณไม่มีสิทธิ์เข้าถึง'}</p>
+          <p className="text-sm text-gray-600 mt-2">{error}</p>
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push(`/${orgSlug}`)}
             className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             กลับหน้าหลัก
@@ -105,7 +99,6 @@ export default function OrganizationTransfersPage({
 
   return (
     <OrganizationTransfersView
-      organizationId={organizationData.id}
       orgSlug={orgSlug}
     />
   );

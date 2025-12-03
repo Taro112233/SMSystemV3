@@ -1,5 +1,5 @@
 // app/[orgSlug]/[deptSlug]/transfers/[transferId]/page.tsx
-// Transfer Detail Page - FIXED with proper department ID
+// Transfer Detail Page - FIXED with proper props
 
 'use client';
 
@@ -37,7 +37,7 @@ export default function TransferDetailPage({
 
         if (data.success && data.departments) {
           const department = data.departments.find(
-            (d: any) => d.slug === deptSlug
+            (d: { slug: string }) => d.slug === deptSlug
           );
 
           if (department) {
@@ -80,7 +80,6 @@ export default function TransferDetailPage({
     <TransferDetailView
       transferId={transferId}
       orgSlug={orgSlug}
-      deptSlug={deptSlug}
       userDepartmentId={departmentId}
     />
   );

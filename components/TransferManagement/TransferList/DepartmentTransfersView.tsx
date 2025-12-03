@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Transfer, TransferFiltersState } from '@/types/transfer';
 import { useRouter } from 'next/navigation';
 import TransferFilters from './TransferFilters';
@@ -22,7 +22,6 @@ interface DepartmentTransfersViewProps {
 }
 
 export default function DepartmentTransfersView({
-  departmentId,
   departmentSlug,
   departmentName,
   orgSlug,
@@ -39,11 +38,7 @@ export default function DepartmentTransfersView({
     sortOrder: 'desc',
   });
 
-  useEffect(() => {
-    fetchTransfers();
-  }, [departmentId, filters]);
-
-  const fetchTransfers = async () => {
+  const fetchTransfers = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -90,7 +85,11 @@ export default function DepartmentTransfersView({
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgSlug, departmentSlug, filters]);
+
+  useEffect(() => {
+    fetchTransfers();
+  }, [fetchTransfers]);
 
   const handleFilterChange = (newFilters: Partial<TransferFiltersState>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
@@ -151,7 +150,7 @@ export default function DepartmentTransfersView({
                 filters.sortBy === field && filters.sortOrder === 'asc'
                   ? 'desc'
                   : 'asc';
-              handleFilterChange({ sortBy: field as any, sortOrder: newOrder });
+              handleFilterChange({ sortBy: field as 'requestedAt' | 'createdAt' | 'priority', sortOrder: newOrder });
             }}
           />
         </CardContent>
@@ -182,7 +181,7 @@ export default function DepartmentTransfersView({
                 filters.sortBy === field && filters.sortOrder === 'asc'
                   ? 'desc'
                   : 'asc';
-              handleFilterChange({ sortBy: field as any, sortOrder: newOrder });
+              handleFilterChange({ sortBy: field as 'requestedAt' | 'createdAt' | 'priority', sortOrder: newOrder });
             }}
           />
         </CardContent>

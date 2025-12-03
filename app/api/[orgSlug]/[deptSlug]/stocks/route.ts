@@ -55,7 +55,17 @@ export async function GET(
     const showExpiring = searchParams.get('showExpiring') === 'true';
 
     // Build where clause for products
-    const productWhere: any = {
+    interface ProductWhereClause {
+      organizationId: string;
+      isActive: boolean;
+      OR?: Array<{
+        code?: { contains: string; mode: 'insensitive' };
+        name?: { contains: string; mode: 'insensitive' };
+        genericName?: { contains: string; mode: 'insensitive' };
+      }>;
+    }
+
+    const productWhere: ProductWhereClause = {
       organizationId: access.organizationId,
       isActive: true,
     };

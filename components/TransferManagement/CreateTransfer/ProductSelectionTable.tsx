@@ -137,7 +137,7 @@ export default function ProductSelectionTable({
           />
         </div>
 
-        <Tabs value={filterTab} onValueChange={(v) => setFilterTab(v as any)}>
+        <Tabs value={filterTab} onValueChange={(v) => setFilterTab(v as 'all' | 'requesting' | 'supplying')}>
           <TabsList>
             <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
             <TabsTrigger value="requesting">แผนกตัวเอง</TabsTrigger>

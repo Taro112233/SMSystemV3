@@ -284,7 +284,6 @@ export default function CreateTransferForm({
           <Step1BasicInfo
             data={step1Data}
             departments={departments.filter((d) => d.id !== requestingDepartmentId)}
-            requestingDepartmentName={requestingDepartmentName}
             onChange={handleStep1Change}
           />
         )}

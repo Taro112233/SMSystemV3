@@ -20,7 +20,7 @@ export default function TransferListTabs({
   incomingCount,
 }: TransferListTabsProps) {
   return (
-    <Tabs value={activeTab} onValueChange={onTabChange as any}>
+    <Tabs value={activeTab} onValueChange={(value: string) => onTabChange(value as 'outgoing' | 'incoming')}>
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="incoming" className="gap-2">
           <ArrowDownCircle className="h-4 w-4" />

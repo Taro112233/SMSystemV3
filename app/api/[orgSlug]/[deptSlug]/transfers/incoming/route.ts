@@ -2,6 +2,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
+import { TransferStatus, TransferPriority } from '@prisma/client';
+
+// ✅ FIXED: Proper WhereClause type with Prisma enums
+interface WhereClause {
+  organizationId: string;
+  requestingDepartmentId: string;
+  status?: TransferStatus;
+  priority?: TransferPriority;
+  OR?: Array<{
+    code?: { contains: string; mode: 'insensitive' };
+    title?: { contains: string; mode: 'insensitive' };
+  }>;
+}
 
 export async function GET(
   request: NextRequest,
@@ -49,17 +62,17 @@ export async function GET(
     const search = searchParams.get('search');
 
     // Build where clause
-    const where: any = {
+    const where: WhereClause = {
       organizationId: access.organizationId,
       requestingDepartmentId: department.id,
     };
 
     if (status && status !== 'all') {
-      where.status = status;
+      where.status = status as TransferStatus;
     }
 
     if (priority && priority !== 'all') {
-      where.priority = priority;
+      where.priority = priority as TransferPriority;
     }
 
     if (search) {
@@ -69,7 +82,7 @@ export async function GET(
       ];
     }
 
-    // Fetch transfers
+    // Fetch transfers with proper include
     const transfers = await prisma.transfer.findMany({
       where,
       include: {
@@ -80,8 +93,8 @@ export async function GET(
             slug: true 
           },
         },
-        _count: {
-          select: { items: true },
+        items: {
+          select: { id: true },
         },
       },
       orderBy: { requestedAt: 'desc' },
@@ -105,7 +118,7 @@ export async function GET(
       priority: transfer.priority,
       requestReason: transfer.requestReason,
       notes: transfer.notes,
-      totalItems: transfer._count.items,
+      totalItems: transfer.items.length,
       requestedAt: transfer.requestedAt,
       approvedAt: transfer.approvedAt,
       preparedAt: transfer.preparedAt,

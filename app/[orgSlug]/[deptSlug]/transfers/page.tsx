@@ -40,7 +40,6 @@ export default function DepartmentTransfersPage({
         setLoading(true);
         setError(null);
 
-        // Load user & organization data
         const userResponse = await fetch(`/api/auth/me?orgSlug=${orgSlug}`);
 
         if (!userResponse.ok) {
@@ -60,14 +59,13 @@ export default function DepartmentTransfersPage({
 
         setOrganizationData(userData.data.currentOrganization);
 
-        // Load department data
         const deptResponse = await fetch(`/api/${orgSlug}`);
         if (!deptResponse.ok) {
           throw new Error('Failed to load departments');
         }
 
         const deptData = await deptResponse.json();
-        const department = deptData.departments.find((d: any) => d.slug === deptSlug);
+        const department = deptData.departments.find((d: DepartmentData) => d.slug === deptSlug);
 
         if (!department) {
           setError('Department not found');

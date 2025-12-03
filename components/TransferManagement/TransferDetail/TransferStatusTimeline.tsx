@@ -96,7 +96,6 @@ export default function TransferStatusTimeline({
           const Icon = step.icon;
           const isActive = status === step.status;
           const isCompleted = step.completed;
-          const isFirst = index === 0;
           const isLast = index === steps.length - 1;
 
           return (

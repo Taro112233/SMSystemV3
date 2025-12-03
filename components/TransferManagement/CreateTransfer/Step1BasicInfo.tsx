@@ -33,14 +33,12 @@ interface Step1FormData {
 interface Step1BasicInfoProps {
   data: Step1FormData;
   departments: Department[];
-  requestingDepartmentName: string;
   onChange: (data: Partial<Step1FormData>) => void;
 }
 
 export default function Step1BasicInfo({
   data,
   departments,
-  requestingDepartmentName,
   onChange,
 }: Step1BasicInfoProps) {
   return (

@@ -1,3 +1,4 @@
+```markdown
 # InvenStock Development Instructions
 
 ## 🎯 Project Overview
@@ -155,9 +156,9 @@ Layer 3: Page (Direct API calls, no useAuth context dependency)
 
 ---
 
-### 📱 **UPDATED: Frontend Page Patterns - Flat URL Structure**
+## 📱 **UPDATED: Frontend Page Patterns - Flat URL Structure**
 
-#### Pattern 1: Public Page (No Auth Required)
+### Pattern 1: Public Page (No Auth Required)
 ```typescript
 // pages/login.tsx, pages/register.tsx, pages/landing.tsx
 export default function PublicPage() {
@@ -165,7 +166,7 @@ export default function PublicPage() {
 }
 ```
 
-#### Pattern 2: Auth Required (No Organization)
+### Pattern 2: Auth Required (No Organization)
 ```typescript
 // pages/dashboard.tsx (organization selector)
 export default function DashboardPage() {
@@ -178,7 +179,7 @@ export default function DashboardPage() {
 }
 ```
 
-#### Pattern 3: **UPDATED - Organization Page (Flat URL Pattern)**
+### Pattern 3: **UPDATED - Organization Page (Flat URL Pattern)**
 ```typescript
 // app/[orgSlug]/page.tsx - Flat URL structure
 export default function OrganizationPage() {
@@ -227,7 +228,7 @@ export default function OrganizationPage() {
 }
 ```
 
-#### Pattern 4: **UPDATED - Department Context (Flat URL Pattern)**
+### Pattern 4: **UPDATED - Department Context (Flat URL Pattern)**
 ```typescript
 // app/[orgSlug]/[deptSlug]/page.tsx - Flat department URL
 export default function DepartmentPage() {
@@ -248,9 +249,9 @@ export default function DepartmentPage() {
 
 ---
 
-### 🔌 **UPDATED: API Route Patterns - Flat URL Structure**
+## 🔌 **UPDATED: API Route Patterns - Flat URL Structure**
 
-#### Pattern 1: Public API (No Auth)
+### Pattern 1: Public API (No Auth)
 ```typescript
 // app/api/health/route.ts
 export async function GET() {
@@ -258,7 +259,7 @@ export async function GET() {
 }
 ```
 
-#### Pattern 2: User Auth Only
+### Pattern 2: User Auth Only
 ```typescript
 // app/api/user/profile/route.ts
 import { getServerUser } from '@/lib/auth-server'
@@ -273,7 +274,7 @@ export async function GET() {
 }
 ```
 
-#### Pattern 3: **UPDATED - /api/auth/me with Organization Context**
+### Pattern 3: **UPDATED - /api/auth/me with Organization Context**
 ```typescript
 // app/api/auth/me/route.ts - Enhanced with org context
 export async function GET(request: NextRequest) {
@@ -314,7 +315,7 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-#### Pattern 4: **UPDATED - Organization Member Required (Flat API)**
+### Pattern 4: **UPDATED - Organization Member Required (Flat API)**
 ```typescript
 // app/api/[orgSlug]/products/route.ts - Flat API structure
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server'
@@ -339,7 +340,7 @@ export async function GET(request: Request, { params }: { params: { orgSlug: str
 }
 ```
 
-#### Pattern 5: **UPDATED - Department API (Flat Structure)**
+### Pattern 5: **UPDATED - Department API (Flat Structure)**
 ```typescript
 // app/api/[orgSlug]/[deptSlug]/stocks/route.ts - Flat department API
 import { requireOrgPermission } from '@/lib/auth-server'
@@ -468,6 +469,205 @@ forms/TransferForm/
 
 ---
 
+## ⚠️ **CRITICAL: TypeScript & Lint Error Prevention**
+
+### **🚫 NEVER Use `any` Type**
+```typescript
+// ❌ WRONG - Never use 'any'
+const whereClause: any = { ... }
+const data: any = await fetch(...)
+function handleData(data: any) { ... }
+
+// ✅ CORRECT - Always use proper types
+interface WhereClause {
+  organizationId: string;
+  status?: TransferStatus;
+  priority?: TransferPriority;
+}
+const whereClause: WhereClause = { ... }
+
+// ✅ Use Prisma generated types
+import { TransferStatus, TransferPriority, BatchStatus } from '@prisma/client'
+
+// ✅ Define proper interfaces
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error?: string;
+}
+```
+
+### **🔧 Type Assertions - Use Sparingly**
+```typescript
+// ❌ WRONG - Avoid 'as any'
+setFilterTab(value as any)
+onFilterChange({ status: value as any })
+
+// ✅ CORRECT - Use proper type unions
+type FilterTab = 'all' | 'requesting' | 'supplying'
+setFilterTab(value as FilterTab)
+
+type StatusFilter = TransferStatus | 'all'
+onFilterChange({ status: value as StatusFilter })
+```
+
+### **🗑️ Remove Unused Variables & Imports**
+```typescript
+// ❌ WRONG - Unused imports
+import { toast } from 'sonner'  // Not used in file
+import { PlaneLanding, Plus } from 'lucide-react'  // PlaneLanding not used
+
+// ✅ CORRECT - Only import what you use
+import { Plus } from 'lucide-react'
+
+// ❌ WRONG - Unused variables
+const isFirst = index === 0  // Variable declared but never used
+
+// ✅ CORRECT - Remove or use the variable
+// Just remove if not needed
+```
+
+### **🔗 React Hooks Dependencies**
+```typescript
+// ❌ WRONG - Missing dependencies in useEffect
+useEffect(() => {
+  fetchData()
+}, []) // fetchData not in dependency array
+
+// ✅ CORRECT - Use useCallback for functions
+const fetchData = useCallback(async () => {
+  // function body
+}, [dependency1, dependency2])
+
+useEffect(() => {
+  fetchData()
+}, [fetchData])
+
+// ✅ ALTERNATIVE - Include all dependencies
+useEffect(() => {
+  fetchData()
+}, [orgSlug, deptSlug, filters])
+```
+
+### **📦 Prisma Query Type Safety**
+```typescript
+// ❌ WRONG - Using string literals without types
+const where = {
+  status: 'PENDING',  // No type safety
+  priority: 'URGENT'  // No type safety
+}
+
+// ✅ CORRECT - Use Prisma enums
+import { TransferStatus, TransferPriority } from '@prisma/client'
+
+const where = {
+  status: 'PENDING' as TransferStatus,
+  priority: 'URGENT' as TransferPriority
+}
+
+// ✅ BETTER - Type the entire where clause
+interface WhereClause {
+  organizationId: string;
+  status?: TransferStatus;
+  priority?: TransferPriority;
+}
+
+const where: WhereClause = {
+  organizationId: org.id,
+  status: 'PENDING',
+  priority: 'URGENT'
+}
+```
+
+### **🔄 Include Required Relations**
+```typescript
+// ❌ WRONG - Missing include, accessing undefined property
+const transfers = await prisma.transfer.findMany({
+  where: { ... }
+})
+// Later: transfers[0].supplyingDepartment.name ← Error!
+
+// ✅ CORRECT - Include relations you need
+const transfers = await prisma.transfer.findMany({
+  where: { ... },
+  include: {
+    supplyingDepartment: {
+      select: { id: true, name: true, slug: true }
+    },
+    requestingDepartment: {
+      select: { id: true, name: true, slug: true }
+    },
+    items: {
+      select: { id: true }
+    }
+  }
+})
+
+// Access: transfers[0].supplyingDepartment.name ← Safe!
+```
+
+### **🎯 Component Props Type Safety**
+```typescript
+// ❌ WRONG - Using function types without proper interfaces
+interface Props {
+  onApprove: (itemId: string, data: any) => Promise<void>  // 'any' is wrong
+  onPrepare: (itemId: string, data: any) => Promise<void>  // 'any' is wrong
+}
+
+// ✅ CORRECT - Define proper data types
+import { ApproveItemData, PrepareItemData } from '@/types/transfer'
+
+interface Props {
+  onApprove: (itemId: string, data: ApproveItemData) => Promise<void>
+  onPrepare: (itemId: string, data: PrepareItemData) => Promise<void>
+}
+```
+
+### **📋 Null Safety & Optional Chaining**
+```typescript
+// ❌ WRONG - No null safety
+const batches = stock.batches
+batches.forEach(...)  // Error if batches is null/undefined
+
+// ✅ CORRECT - Always provide defaults
+const batches = stock.batches || []
+batches.forEach(...)  // Safe
+
+// ✅ Use optional chaining
+const count = transfer.items?.length || 0
+const name = user?.organization?.name || 'Unknown'
+```
+
+### **🔍 Type Imports**
+```typescript
+// ✅ Import types from proper sources
+import { TransferStatus, TransferPriority, BatchStatus } from '@prisma/client'
+import { Transfer, TransferItem, ApproveItemData } from '@/types/transfer'
+import { Product } from '@/types/product'
+import { StockBatch } from '@/types/stock'
+
+// ✅ Use type-only imports when possible
+import type { NextRequest } from 'next/server'
+import type { User } from '@/types/auth'
+```
+
+### **⚡ Pre-Commit Checklist**
+```bash
+# Run these commands before committing:
+1. pnpm lint           # Check for lint errors
+2. pnpm type-check     # Check TypeScript errors
+3. Fix all errors before commit
+
+# Common fixes:
+- Replace all 'any' with proper types
+- Remove unused imports and variables
+- Add missing dependencies to hooks
+- Add proper type assertions
+- Include required Prisma relations
+```
+
+---
+
 ## 📈 Performance & Monitoring
 
 ### Database Optimization
@@ -543,7 +743,7 @@ model Department {
 }
 ```
 
-When to Log Audit
+#### When to Log Audit
 ```typescript
 // ✅ Log these actions:
 - CREATE, UPDATE, DELETE operations (NOT Read)
@@ -557,7 +757,7 @@ When to Log Audit
 - Health checks
 ```
 
-Usage Pattern with Snapshots
+#### Usage Pattern with Snapshots
 ```typescript
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
@@ -587,7 +787,7 @@ await createAuditLog({
 });
 ```
 
-Record Creation/Update Pattern
+#### Record Creation/Update Pattern
 ```typescript
 // ✅ When creating/updating records (e.g., Department)
 const userSnapshot = await createUserSnapshot(user.userId, organizationId);
@@ -612,13 +812,12 @@ await prisma.department.update({
 });
 ```
 
-Snapshot Benefits
+#### Snapshot Benefits
+- **Immutable History:** User data ณ ขณะนั้นไม่เปลี่ยนแปลง
+- **Complete Context:** เห็นชื่อ, role, email ของผู้ทำ action ตอนนั้น
+- **Audit Integrity:** ถ้า user ถูกลบ ยังมีข้อมูลใน snapshot
 
-- Immutable History: User data ณ ขณะนั้นไม่เปลี่ยนแปลง
-- Complete Context: เห็นชื่อ, role, email ของผู้ทำ action ตอนนั้น
-- Audit Integrity: ถ้า user ถูกลบ ยังมีข้อมูลใน snapshot
-
-Helper Functions
+#### Helper Functions
 ```typescript
 // lib/user-snapshot.ts
 createUserSnapshot(userId, organizationId?)  // Create snapshot
@@ -628,6 +827,7 @@ createUserSnapshotFromJWT(jwtUser, role?)   // From JWT payload
 createAuditLog(params)              // Create log with snapshots
 getRequestMetadata(request)         // Get IP + User-Agent
 ```
+
 ---
 
 ### **Component Architecture**
@@ -716,6 +916,7 @@ nav.deptStocks('opd'); // → /siriraj-hospital/opd/stocks
 - **Safe Development:** Default values prevent runtime errors
 - **Easy Debugging:** Debug info displayed in error states
 - **Intuitive URLs:** Easy to understand and remember
+- **Lint-Free Code:** Enforced TypeScript best practices
 
 ---
 
@@ -740,4 +941,117 @@ ARCJET_KEY="ajkey_01k4fqfvdzeb1sw7sectgh005x"
 # Application Configuration
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NODE_ENV="development"
+```
+
+---
+
+## 📝 **AI Code Generation Guidelines**
+
+When using AI to generate code for this project, **ALWAYS follow these rules:**
+
+### **🎯 Code Quality Requirements**
+1. **Zero Lint Errors:** All generated code must pass `pnpm lint` without errors
+2. **Type Safety:** Never use `any` type - always use proper TypeScript types
+3. **No Unused Code:** Remove all unused imports, variables, and functions
+4. **Proper Dependencies:** All React hooks must have correct dependency arrays
+
+### **✅ Pre-Generation Checklist**
+Before generating any code, AI should:
+- [ ] Understand the exact requirements
+- [ ] Check existing types in `@/types/*` and `@prisma/client`
+- [ ] Plan proper interfaces and types
+- [ ] Consider null safety and optional chaining
+- [ ] Plan React hooks dependencies
+
+### **🔍 Post-Generation Validation**
+After generating code, AI must verify:
+- [ ] No `any` types used
+- [ ] All imports are actually used
+- [ ] All variables are used
+- [ ] All function parameters have proper types
+- [ ] React hooks have complete dependency arrays
+- [ ] Prisma queries include required relations
+- [ ] Optional chaining used where needed
+- [ ] Default values provided for props
+
+### **🚨 Common Mistakes to Avoid**
+```typescript
+// ❌ Common AI mistakes:
+1. Using 'any' type
+2. Leaving unused imports
+3. Missing Prisma relations in queries
+4. Incomplete hook dependencies
+5. No null safety checks
+6. Missing type assertions for enums
+7. Accessing undefined properties
+
+// ✅ AI should generate clean code like:
+import { TransferStatus } from '@prisma/client'  // Proper enum import
+import { Transfer } from '@/types/transfer'      // Proper type import
+
+interface WhereClause {                          // Defined interface
+  status?: TransferStatus;                       // Proper optional type
+}
+
+const batches = stock.batches || []              // Null safety
+const count = items?.length || 0                 // Optional chaining
+```
+
+### **📊 Code Generation Template**
+When generating components or API routes:
+
+1. **Start with imports:**
+   - Only import what will be used
+   - Import types from `@prisma/client` for enums
+   - Import interfaces from `@/types/*`
+
+2. **Define interfaces:**
+   - Create proper TypeScript interfaces
+   - No `any` types allowed
+   - Use Prisma enums where appropriate
+
+3. **Implement logic:**
+   - Add null safety checks
+   - Use optional chaining
+   - Provide default values
+
+4. **Add error handling:**
+   - Try-catch blocks
+   - Proper error messages
+   - Type-safe error responses
+
+5. **Review before output:**
+   - Check for unused code
+   - Verify type safety
+   - Confirm hook dependencies
+
+### **🎓 Learning from Errors**
+When lint/type errors occur, AI should:
+1. **Analyze the error message carefully**
+2. **Identify root cause** (any type, missing import, etc.)
+3. **Fix using proper TypeScript patterns**
+4. **Verify the fix solves the issue**
+5. **Learn the pattern for future code generation**
+
+---
+
+## 🎯 Summary: AI Best Practices
+
+**ALWAYS:**
+- ✅ Use proper TypeScript types
+- ✅ Import Prisma enums
+- ✅ Define interfaces
+- ✅ Add null safety
+- ✅ Include all hook dependencies
+- ✅ Test mentally if code will lint
+
+**NEVER:**
+- ❌ Use `any` type
+- ❌ Leave unused imports/variables
+- ❌ Skip type definitions
+- ❌ Ignore null safety
+- ❌ Forget Prisma includes
+- ❌ Generate code that will have lint errors
+
+By following these guidelines, AI-generated code will be production-ready, type-safe, and lint-error-free from the first generation.
 ```

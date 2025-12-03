@@ -6,7 +6,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { CreateTransferForm } from '@/components/TransferManagement';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 
@@ -46,7 +46,6 @@ export default function CreateTransferPage({
         setLoading(true);
         setError(null);
 
-        // Load user & organization data
         const userResponse = await fetch(`/api/auth/me?orgSlug=${orgSlug}`);
 
         if (!userResponse.ok) {
@@ -66,14 +65,13 @@ export default function CreateTransferPage({
 
         setOrganizationId(userData.data.currentOrganization.id);
 
-        // Load departments
         const deptResponse = await fetch(`/api/${orgSlug}`);
         if (!deptResponse.ok) {
           throw new Error('Failed to load departments');
         }
 
         const deptData = await deptResponse.json();
-        const currentDept = deptData.departments.find((d: any) => d.slug === deptSlug);
+        const currentDept = deptData.departments.find((d: Department) => d.slug === deptSlug);
 
         if (!currentDept) {
           setError('Department not found');
@@ -83,7 +81,6 @@ export default function CreateTransferPage({
         setRequestingDepartment(currentDept);
         setDepartments(deptData.departments);
 
-        // Load products
         const productsResponse = await fetch(`/api/${orgSlug}/products`);
         if (!productsResponse.ok) {
           throw new Error('Failed to load products');
@@ -140,15 +137,13 @@ export default function CreateTransferPage({
 
   return (
     <div className="container max-w-6xl mx-auto py-6 space-y-6">
-      {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">สร้างใบเบิกใหม่</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            หน่วยงาน: {requestingDepartment.name}
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">สร้างใบเบิกใหม่</h1>
+        <p className="text-sm text-gray-600 mt-1">
+          หน่วยงาน: {requestingDepartment.name}
+        </p>
+      </div>
 
-      {/* Main Form Card */}
       <Card>
         <CardContent className="p-6">
           <CreateTransferForm

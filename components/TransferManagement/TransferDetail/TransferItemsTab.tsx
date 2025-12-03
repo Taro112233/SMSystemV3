@@ -4,7 +4,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { TransferItem } from '@/types/transfer';
+import { TransferItem, ApproveItemData, PrepareItemData, DeliverItemData, CancelItemData } from '@/types/transfer';
 import TransferItemCard from './TransferItemCard';
 
 interface TransferItemsTabProps {
@@ -14,10 +14,10 @@ interface TransferItemsTabProps {
   canPrepare: boolean;
   canReceive: boolean;
   canCancel: boolean;
-  onApprove: (itemId: string, data: any) => Promise<void>;
-  onPrepare: (itemId: string, data: any) => Promise<void>;
-  onDeliver: (itemId: string, data: any) => Promise<void>;
-  onCancelItem: (itemId: string, data: any) => Promise<void>;
+  onApprove: (itemId: string, data: ApproveItemData) => Promise<void>;
+  onPrepare: (itemId: string, data: PrepareItemData) => Promise<void>;
+  onDeliver: (itemId: string, data: DeliverItemData) => Promise<void>;
+  onCancelItem: (itemId: string, data: CancelItemData) => Promise<void>;
 }
 
 export default function TransferItemsTab({

@@ -1,10 +1,10 @@
 // components/TransferManagement/TransferDetail/TransferDetailView.tsx
-// TransferDetailView - Main detail container - NO CHANGES (items sorted in child component)
+// TransferDetailView - Main detail container - FIXED: Remove unused imports and add proper types
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Transfer } from '@/types/transfer';
+import { useState, useEffect, useCallback } from 'react';
+import { Transfer, ApproveItemData, PrepareItemData, DeliverItemData, CancelItemData } from '@/types/transfer';
 import TransferDetailHeader from './TransferDetailHeader';
 import TransferStatusTimeline from './TransferStatusTimeline';
 import TransferItemsTab from './TransferItemsTab';
@@ -17,14 +17,12 @@ import { toast } from 'sonner';
 interface TransferDetailViewProps {
   transferId: string;
   orgSlug: string;
-  deptSlug: string;
   userDepartmentId: string;
 }
 
 export default function TransferDetailView({
   transferId,
   orgSlug,
-  deptSlug,
   userDepartmentId,
 }: TransferDetailViewProps) {
   const [loading, setLoading] = useState(true);
@@ -32,12 +30,7 @@ export default function TransferDetailView({
   const [activeTab, setActiveTab] = useState('items');
   const [organizationRole, setOrganizationRole] = useState<'MEMBER' | 'ADMIN' | 'OWNER' | null>(null);
 
-  useEffect(() => {
-    fetchTransferDetail();
-    fetchUserRole();
-  }, [transferId]);
-
-  const fetchUserRole = async () => {
+  const fetchUserRole = useCallback(async () => {
     try {
       const response = await fetch(`/api/auth/me?orgSlug=${orgSlug}`, {
         credentials: 'include',
@@ -52,9 +45,9 @@ export default function TransferDetailView({
     } catch (error) {
       console.error('Error fetching user role:', error);
     }
-  };
+  }, [orgSlug]);
 
-  const fetchTransferDetail = async () => {
+  const fetchTransferDetail = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -81,7 +74,12 @@ export default function TransferDetailView({
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgSlug, transferId]);
+
+  useEffect(() => {
+    fetchTransferDetail();
+    fetchUserRole();
+  }, [fetchTransferDetail, fetchUserRole]);
 
   const handleCancelTransfer = async () => {
     try {
@@ -114,7 +112,7 @@ export default function TransferDetailView({
     }
   };
 
-  const handleApproveItem = async (itemId: string, data: any) => {
+  const handleApproveItem = async (itemId: string, data: ApproveItemData) => {
     try {
       const response = await fetch(
         `/api/${orgSlug}/transfers/${transferId}/approve-item`,
@@ -145,7 +143,7 @@ export default function TransferDetailView({
     }
   };
 
-  const handlePrepareItem = async (itemId: string, data: any) => {
+  const handlePrepareItem = async (itemId: string, data: PrepareItemData) => {
     try {
       const response = await fetch(
         `/api/${orgSlug}/transfers/${transferId}/prepare-item`,
@@ -176,7 +174,7 @@ export default function TransferDetailView({
     }
   };
 
-  const handleDeliverItem = async (itemId: string, data: any) => {
+  const handleDeliverItem = async (itemId: string, data: DeliverItemData) => {
     try {
       const response = await fetch(
         `/api/${orgSlug}/transfers/${transferId}/deliver-item`,
@@ -207,7 +205,7 @@ export default function TransferDetailView({
     }
   };
 
-  const handleCancelItem = async (itemId: string, data: any) => {
+  const handleCancelItem = async (itemId: string, data: CancelItemData) => {
     try {
       const response = await fetch(
         `/api/${orgSlug}/transfers/${transferId}/cancel-item`,

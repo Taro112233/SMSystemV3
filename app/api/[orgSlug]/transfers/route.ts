@@ -5,6 +5,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createTransfer } from '@/lib/transfer-helpers';
+import { TransferStatus, TransferPriority } from '@prisma/client';
+
+// ✅ FIXED: Proper WhereClause type with Prisma enums
+interface WhereClause {
+  organizationId: string;
+  status?: TransferStatus;
+  priority?: TransferPriority;
+  OR?: Array<{
+    code?: { contains: string; mode: 'insensitive' };
+    title?: { contains: string; mode: 'insensitive' };
+  }>;
+}
 
 // GET - List all transfers in organization
 export async function GET(
@@ -40,16 +52,16 @@ export async function GET(
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
+    const where: WhereClause = {
       organizationId: access.organizationId,
     };
 
     if (status && status !== 'all') {
-      where.status = status;
+      where.status = status as TransferStatus;
     }
 
     if (priority && priority !== 'all') {
-      where.priority = priority;
+      where.priority = priority as TransferPriority;
     }
 
     if (search) {
@@ -70,8 +82,8 @@ export async function GET(
           supplyingDepartment: {
             select: { id: true, name: true, slug: true },
           },
-          _count: {
-            select: { items: true },
+          items: {
+            select: { id: true },
           },
         },
         orderBy: { requestedAt: 'desc' },
