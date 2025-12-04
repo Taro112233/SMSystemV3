@@ -1,5 +1,6 @@
-// FILE: middleware.ts - UPDATED: Handle org-settings-subpage
+// middleware.ts
 // InvenStock - Multi-Tenant Inventory Management System
+// UPDATED: Enhanced security monitoring for CVE-2025-55182 & CVE-2025-66478
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -13,6 +14,7 @@ import {
   isSystemReserved,
   APP_ROUTES,
 } from './lib/reserved-routes';
+import { logSecurityEvent } from './lib/security-logger';
 
 // ===== ARCJET SECURITY (AUTH ENDPOINTS ONLY) =====
 const ajAuth = arcjet({
@@ -32,6 +34,70 @@ const ajAuth = arcjet({
     }),
   ],
 });
+
+// ===== SECURITY: Detect suspicious payloads =====
+function hasSuspiciousPatterns(obj: any): boolean {
+  const suspicious = [
+    '__proto__',
+    'constructor',
+    'prototype',
+    'eval(',
+    'Function(',
+    'require(',
+    'import(',
+    'process.env',
+  ];
+  
+  try {
+    const str = JSON.stringify(obj);
+    return suspicious.some(pattern => str.includes(pattern));
+  } catch {
+    return true; // Cannot serialize = suspicious
+  }
+}
+
+// ===== SECURITY: Validate request payload =====
+async function validateRequestPayload(request: NextRequest): Promise<boolean> {
+  const contentType = request.headers.get('content-type');
+  
+  if (contentType?.includes('application/json')) {
+    try {
+      const clonedRequest = request.clone();
+      const text = await clonedRequest.text();
+      
+      if (text) {
+        const parsed = JSON.parse(text);
+        
+        if (hasSuspiciousPatterns(parsed)) {
+          const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
+          
+          logSecurityEvent({
+            type: 'suspicious_payload',
+            ip: clientIp,
+            path: request.nextUrl.pathname,
+            userAgent: request.headers.get('user-agent') || undefined,
+            details: {
+              contentType,
+              payloadSize: text.length,
+            }
+          });
+          
+          console.error('🚨 Suspicious payload detected:', {
+            ip: clientIp,
+            path: request.nextUrl.pathname,
+          });
+          
+          return false;
+        }
+      }
+    } catch (e) {
+      // Invalid JSON
+      return false;
+    }
+  }
+  
+  return true;
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -53,6 +119,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ===== SECURITY: Validate payload for POST/PUT/PATCH requests =====
+  if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
+    const isValid = await validateRequestPayload(request);
+    
+    if (!isValid) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Invalid request payload' 
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   // ===== ARCJET PROTECTION (AUTH ENDPOINTS ONLY) =====
   try {
     if (isAuthEndpoint(pathname)) {
@@ -63,6 +144,14 @@ export async function middleware(request: NextRequest) {
       if (decision.isDenied()) {
         if (decision.reason.isRateLimit()) {
           console.log(`⛔ Auth rate limit exceeded from IP: ${clientIp}`);
+          
+          logSecurityEvent({
+            type: 'rate_limit',
+            ip: clientIp,
+            path: pathname,
+            userAgent: request.headers.get('user-agent') || undefined,
+          });
+          
           return NextResponse.json(
             { 
               success: false,
@@ -74,6 +163,14 @@ export async function middleware(request: NextRequest) {
         } 
         
         console.log(`🛡️ Auth request blocked from IP: ${clientIp}`);
+        
+        logSecurityEvent({
+          type: 'shield_blocked',
+          ip: clientIp,
+          path: pathname,
+          userAgent: request.headers.get('user-agent') || undefined,
+        });
+        
         return NextResponse.json(
           { success: false, error: "Access denied" },
           { status: 403 }
@@ -202,9 +299,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/not-found', request.url));
   }
 
-  // ✅ UPDATED: Handle all valid organization/department routes (including org-settings-subpage)
+  // Handle all valid organization/department routes
   if (route.type === 'org-main' || route.type === 'org-page' || 
-      route.type === 'org-settings-subpage' ||  // ✅ ADDED
+      route.type === 'org-settings-subpage' ||
       route.type === 'dept-main' || route.type === 'dept-page' ||
       route.type === 'dept-subpage') {
     
