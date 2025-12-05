@@ -1,5 +1,5 @@
 // components/TransferManagement/CreateTransfer/CreateTransferForm.tsx
-// CreateTransferForm - UPDATED: Handle duplicate transferCode error
+// CreateTransferForm - UPDATED: Handle duplicate transferCode error + default requestReason
 
 'use client';
 
@@ -61,6 +61,8 @@ interface Step1FormData {
   notes: string;
 }
 
+const DEFAULT_REQUEST_REASON = 'ข้าพเจ้าขอเบิกเวชภัณฑ์/พัสดุตามรายการที่แนบมาเพื่อใช้งาน';
+
 export default function CreateTransferForm({
   requestingDepartmentId,
   requestingDepartmentName,
@@ -79,7 +81,7 @@ export default function CreateTransferForm({
     transferCode: '',
     title: '',
     supplyingDepartmentId: '',
-    requestReason: '',
+    requestReason: DEFAULT_REQUEST_REASON,
     priority: 'NORMAL',
     notes: '',
   });

@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/transfers/[transferId]/route.ts
-// Transfer Detail API - Get, Cancel & Approve All
+// Transfer Detail API - UPDATED: No notes for approve all
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
@@ -165,13 +165,13 @@ export async function POST(
       );
     }
 
-    // Approve all items with requested quantity
+    // ✅ UPDATED: Approve all items without notes
     const approvedItems = await Promise.all(
       pendingItems.map((item) =>
         approveTransferItem({
           itemId: item.id,
           approvedQuantity: item.requestedQuantity,
-          notes: 'อนุมัติทั้งหมด',
+          notes: undefined,  // ✅ No notes
           approvedBy: user.userId,
         })
       )

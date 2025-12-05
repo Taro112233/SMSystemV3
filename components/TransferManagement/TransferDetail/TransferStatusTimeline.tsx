@@ -1,5 +1,5 @@
 // components/TransferManagement/TransferDetail/TransferStatusTimeline.tsx
-// TransferStatusTimeline - UPDATED: Count on same line as label
+// TransferStatusTimeline - UPDATED: Exclude cancelled items from total count
 
 'use client';
 
@@ -42,29 +42,30 @@ export default function TransferStatusTimeline({
     });
   };
 
-  // ✅ Calculate item-level progress
-  const approvedItems = items.filter(item => 
+  // ✅ UPDATED: Exclude cancelled items from calculations
+  const activeItems = items.filter(item => item.status !== 'CANCELLED');
+  const totalActiveItems = activeItems.length;
+
+  // ✅ Calculate item-level progress (only active items)
+  const approvedItems = activeItems.filter(item => 
     item.status === 'APPROVED' || 
     item.status === 'PREPARED' || 
     item.status === 'DELIVERED'
   );
-  const preparedItems = items.filter(item => 
+  const preparedItems = activeItems.filter(item => 
     item.status === 'PREPARED' || 
     item.status === 'DELIVERED'
   );
-  const deliveredItems = items.filter(item => item.status === 'DELIVERED');
+  const deliveredItems = activeItems.filter(item => item.status === 'DELIVERED');
 
-  const allApproved = approvedItems.length === items.length && items.length > 0;
-  const someApproved = approvedItems.length > 0 && approvedItems.length < items.length;
-  const noneApproved = approvedItems.length === 0;
+  const allApproved = approvedItems.length === totalActiveItems && totalActiveItems > 0;
+  const someApproved = approvedItems.length > 0 && approvedItems.length < totalActiveItems;
 
-  const allPrepared = preparedItems.length === items.length && items.length > 0;
-  const somePrepared = preparedItems.length > 0 && preparedItems.length < items.length;
-  const nonePrepared = preparedItems.length === 0;
+  const allPrepared = preparedItems.length === totalActiveItems && totalActiveItems > 0;
+  const somePrepared = preparedItems.length > 0 && preparedItems.length < totalActiveItems;
 
-  const allDelivered = deliveredItems.length === items.length && items.length > 0;
-  const someDelivered = deliveredItems.length > 0 && deliveredItems.length < items.length;
-  const noneDelivered = deliveredItems.length === 0;
+  const allDelivered = deliveredItems.length === totalActiveItems && totalActiveItems > 0;
+  const someDelivered = deliveredItems.length > 0 && deliveredItems.length < totalActiveItems;
 
   // ✅ Get latest timestamp for partial completion
   const getLatestApprovedAt = () => {
@@ -128,7 +129,7 @@ export default function TransferStatusTimeline({
       icon: someApproved ? Clock : CheckCircle,
       date: allApproved ? approvedAt : someApproved ? getLatestApprovedAt() : null,
       state: approveStepState,
-      count: someApproved ? `${approvedItems.length}/${items.length}` : null,
+      count: someApproved ? `${approvedItems.length}/${totalActiveItems}` : null,
     },
     {
       label: 'จัดเตรียม',
@@ -136,7 +137,7 @@ export default function TransferStatusTimeline({
       icon: somePrepared ? Clock : Package,
       date: allPrepared ? preparedAt : somePrepared ? getLatestPreparedAt() : null,
       state: prepareStepState,
-      count: somePrepared ? `${preparedItems.length}/${items.length}` : null,
+      count: somePrepared ? `${preparedItems.length}/${totalActiveItems}` : null,
     },
     {
       label: 'รับเข้าแล้ว',
@@ -144,7 +145,7 @@ export default function TransferStatusTimeline({
       icon: someDelivered ? Clock : CheckCheck,
       date: allDelivered ? deliveredAt : someDelivered ? getLatestDeliveredAt() : null,
       state: deliverStepState,
-      count: someDelivered ? `${deliveredItems.length}/${items.length}` : null,
+      count: someDelivered ? `${deliveredItems.length}/${totalActiveItems}` : null,
     },
   ];
 
@@ -217,7 +218,7 @@ export default function TransferStatusTimeline({
                   <Icon className="w-6 h-6" />
                 </div>
 
-                {/* ✅ UPDATED: Label + Count on same line */}
+                {/* Label + Count on same line */}
                 <div className="flex items-center gap-1 mt-2">
                   <div className={`text-sm font-medium ${getTextColor()}`}>
                     {step.label}

@@ -36,6 +36,8 @@ interface Step1BasicInfoProps {
   onChange: (data: Partial<Step1FormData>) => void;
 }
 
+const DEFAULT_REQUEST_REASON = 'ข้าพเจ้าขอเบิกเวชภัณฑ์/พัสดุตามรายการที่แนบมาเพื่อใช้งาน';
+
 export default function Step1BasicInfo({
   data,
   departments,
@@ -84,26 +86,26 @@ export default function Step1BasicInfo({
         </div>
 
         {/* หน่วยงานที่จ่าย */}
-      <div className="space-y-2">
-        <Label htmlFor="supplyingDepartment" className="required">
-          หน่วยงานที่จ่าย <span className="text-red-500">*</span>
-        </Label>
-        <Select
-          value={data.supplyingDepartmentId}
-          onValueChange={(value) => onChange({ supplyingDepartmentId: value })}
-        >
-          <SelectTrigger id="supplyingDepartment">
-            <SelectValue placeholder="เลือกหน่วยงาน" />
-          </SelectTrigger>
-          <SelectContent>
-            {departments.map((dept) => (
-              <SelectItem key={dept.id} value={dept.id}>
-                {dept.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="space-y-2">
+          <Label htmlFor="supplyingDepartment" className="required">
+            หน่วงานที่จ่าย <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            value={data.supplyingDepartmentId}
+            onValueChange={(value) => onChange({ supplyingDepartmentId: value })}
+          >
+            <SelectTrigger id="supplyingDepartment">
+              <SelectValue placeholder="เลือกหน่วยงาน" />
+            </SelectTrigger>
+            <SelectContent>
+              {departments.map((dept) => (
+                <SelectItem key={dept.id} value={dept.id}>
+                  {dept.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* ความสำคัญ */}
         <div className="space-y-2">
@@ -150,8 +152,8 @@ export default function Step1BasicInfo({
         </Label>
         <Textarea
           id="requestReason"
-          placeholder="ระบุเหตุผลในการขอเบิก เช่น สต็อกไม่เพียงพอ, ผู้ป่วยเพิ่มขึ้น"
-          value={data.requestReason}
+          placeholder={DEFAULT_REQUEST_REASON}
+          value={data.requestReason || DEFAULT_REQUEST_REASON}
           onChange={(e) => onChange({ requestReason: e.target.value })}
           rows={3}
           required
