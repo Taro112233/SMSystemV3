@@ -23,28 +23,43 @@ Directory structure:
     │   │   ├── page.tsx
     │   │   ├── [deptSlug]/
     │   │   │   ├── page.tsx
-    │   │   │   └── stocks/
-    │   │   │       └── page.tsx
+    │   │   │   ├── stocks/
+    │   │   │   │   └── page.tsx
+    │   │   │   └── transfers/
+    │   │   │       ├── page.tsx
+    │   │   │       ├── [transferId]/
+    │   │   │       │   └── page.tsx
+    │   │   │       └── create/
+    │   │   │           └── page.tsx
     │   │   ├── products/
     │   │   │   └── page.tsx
-    │   │   └── settings/
-    │   │       ├── page.tsx
-    │   │       ├── categories/
-    │   │       │   └── page.tsx
-    │   │       └── units/
-    │   │           └── page.tsx
+    │   │   ├── settings/
+    │   │   │   ├── page.tsx
+    │   │   │   ├── categories/
+    │   │   │   │   └── page.tsx
+    │   │   │   └── units/
+    │   │   │       └── page.tsx
+    │   │   └── transfers/
+    │   │       └── page.tsx
     │   ├── api/
     │   │   ├── [orgSlug]/
     │   │   │   ├── route.ts
     │   │   │   ├── [deptSlug]/
-    │   │   │   │   └── stocks/
-    │   │   │   │       ├── route.ts
-    │   │   │   │       └── [stockId]/
-    │   │   │   │           ├── route.ts
-    │   │   │   │           └── batches/
-    │   │   │   │               ├── route.ts
-    │   │   │   │               └── [batchId]/
-    │   │   │   │                   └── route.ts
+    │   │   │   │   ├── stocks/
+    │   │   │   │   │   ├── route.ts
+    │   │   │   │   │   └── [stockId]/
+    │   │   │   │   │       ├── route.ts
+    │   │   │   │   │       └── batches/
+    │   │   │   │   │           ├── route.ts
+    │   │   │   │   │           └── [batchId]/
+    │   │   │   │   │               └── route.ts
+    │   │   │   │   └── transfers/
+    │   │   │   │       ├── incoming/
+    │   │   │   │       │   └── route.ts
+    │   │   │   │       ├── outgoing/
+    │   │   │   │       │   └── route.ts
+    │   │   │   │       └── products/
+    │   │   │   │           └── route.ts
     │   │   │   ├── audit-logs/
     │   │   │   │   └── route.ts
     │   │   │   ├── departments/
@@ -73,8 +88,20 @@ Directory structure:
     │   │   │   │   │       └── route.ts
     │   │   │   │   └── batch-update-status/
     │   │   │   │       └── route.ts
-    │   │   │   └── settings/
-    │   │   │       └── route.ts
+    │   │   │   ├── settings/
+    │   │   │   │   └── route.ts
+    │   │   │   └── transfers/
+    │   │   │       ├── route.ts
+    │   │   │       └── [transferId]/
+    │   │   │           ├── route.ts
+    │   │   │           ├── approve-item/
+    │   │   │           │   └── route.ts
+    │   │   │           ├── cancel-item/
+    │   │   │           │   └── route.ts
+    │   │   │           ├── deliver-item/
+    │   │   │           │   └── route.ts
+    │   │   │           └── prepare-item/
+    │   │   │               └── route.ts
     │   │   ├── arcjet/
     │   │   │   └── route.ts
     │   │   ├── auth/
@@ -206,6 +233,50 @@ Directory structure:
     │   │       ├── ConfirmDialog.tsx
     │   │       ├── SettingsCard.tsx
     │   │       └── SettingsSection.tsx
+    │   ├── TransferManagement/
+    │   │   ├── index.tsx
+    │   │   ├── CreateTransfer/
+    │   │   │   ├── CreateTransferForm.tsx
+    │   │   │   ├── ProductSelectionTable.tsx
+    │   │   │   ├── SelectedItemsSummary.tsx
+    │   │   │   ├── Step1BasicInfo.tsx
+    │   │   │   ├── Step2ProductSelection.tsx
+    │   │   │   └── Step3ReviewSubmit.tsx
+    │   │   ├── ItemActions/
+    │   │   │   ├── ApproveItemDialog.tsx
+    │   │   │   ├── BatchInfoDisplay.tsx
+    │   │   │   ├── BatchSelectionTable.tsx
+    │   │   │   ├── CancelItemDialog.tsx
+    │   │   │   ├── DeliverItemDialog.tsx
+    │   │   │   └── PrepareItemDialog.tsx
+    │   │   ├── shared/
+    │   │   │   ├── DepartmentBadge.tsx
+    │   │   │   ├── DepartmentSelectionDialog.tsx
+    │   │   │   ├── QuantityDisplay.tsx
+    │   │   │   ├── TransferCodeDisplay.tsx
+    │   │   │   ├── TransferPriorityBadge.tsx
+    │   │   │   └── TransferStatusBadge.tsx
+    │   │   ├── TransferDetail/
+    │   │   │   ├── TransferDetailHeader.tsx
+    │   │   │   ├── TransferDetailView.tsx
+    │   │   │   ├── TransferHistoryTab.tsx
+    │   │   │   ├── TransferHistoryTable.tsx
+    │   │   │   ├── TransferItemCard.tsx
+    │   │   │   ├── TransferItemsTab.tsx
+    │   │   │   ├── TransferNotes.tsx
+    │   │   │   └── TransferStatusTimeline.tsx
+    │   │   ├── TransferList/
+    │   │   │   ├── DepartmentTransfersView.tsx
+    │   │   │   ├── TransferEmptyState.tsx
+    │   │   │   ├── TransferFilters.tsx
+    │   │   │   ├── TransferListTabs.tsx
+    │   │   │   ├── TransferTable.tsx
+    │   │   │   ├── TransferTableHeader.tsx
+    │   │   │   └── TransferTableRow.tsx
+    │   │   └── TransferOverview/
+    │   │       ├── OrganizationTransfersView.tsx
+    │   │       ├── OverviewFilters.tsx
+    │   │       └── OverviewStats.tsx
     │   └── ui/
     │       ├── accordion.tsx
     │       ├── alert-dialog.tsx
@@ -274,6 +345,7 @@ Directory structure:
     │   ├── security-logger.ts
     │   ├── slug-validator.ts
     │   ├── stock-helpers.ts
+    │   ├── transfer-helpers.ts
     │   ├── unit-helpers.ts
     │   ├── user-snapshot.ts
     │   └── utils.ts
@@ -286,10 +358,16 @@ Directory structure:
     │   │   ├── organization.prisma
     │   │   ├── product.prisma
     │   │   ├── stock.prisma
+    │   │   ├── transfer.prisma
     │   │   └── user.prisma
     │   └── seeds/
-    │       ├── demo-data.seed.ts
+    │       ├── audit-logs.seed.ts
+    │       ├── departments.seed.ts
     │       ├── organizations.seed.ts
+    │       ├── product-categories.seed.ts
+    │       ├── product-units.seed.ts
+    │       ├── products.seed.ts
+    │       ├── stocks.seed.ts
     │       └── users.seed.ts
     ├── scripts/
     │   ├── merge-schemas.js
@@ -300,4 +378,5 @@ Directory structure:
         ├── product-category.ts
         ├── product-unit.ts
         ├── product.ts
-        └── stock.ts
+        ├── stock.ts
+        └── transfer.ts

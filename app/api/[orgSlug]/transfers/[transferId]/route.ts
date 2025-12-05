@@ -1,9 +1,10 @@
 // app/api/[orgSlug]/transfers/[transferId]/route.ts
-// Transfer Detail API - Get & Cancel - FIXED
+// Transfer Detail API - Get, Cancel & Approve All
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
-import { getTransferWithDetails, cancelTransfer } from '@/lib/transfer-helpers';
+import { getTransferWithDetails, cancelTransfer, approveTransferItem } from '@/lib/transfer-helpers';
+import { prisma } from '@/lib/prisma';
 
 // GET - Get transfer detail
 export async function GET(
@@ -38,7 +39,6 @@ export async function GET(
       );
     }
 
-    // ✅ FIXED: Format response เหมือน API อื่นๆ
     const formattedTransfer = {
       id: transfer.id,
       code: transfer.code,
@@ -62,7 +62,6 @@ export async function GET(
       requestedBySnapshot: transfer.requestedBySnapshot,
       createdAt: transfer.createdAt,
       updatedAt: transfer.updatedAt,
-      // ✅ Include items with proper formatting
       items: transfer.items.map(item => ({
         id: item.id,
         transferId: item.transferId,
@@ -85,7 +84,6 @@ export async function GET(
         preparedAt: item.preparedAt,
         deliveredAt: item.deliveredAt,
         cancelledAt: item.cancelledAt,
-        // ✅ Include batches if exist
         batches: item.batches?.map(batch => ({
           id: batch.id,
           transferItemId: batch.transferItemId,
@@ -98,7 +96,6 @@ export async function GET(
           quantity: batch.quantity,
         })) || [],
       })),
-      // ✅ Include status history
       statusHistory: transfer.statusHistory?.map(history => ({
         id: history.id,
         transferId: history.transferId,
@@ -121,6 +118,74 @@ export async function GET(
     console.error('Get transfer detail failed:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Approve all pending items
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ orgSlug: string; transferId: string }> }
+) {
+  try {
+    const { orgSlug, transferId } = await params;
+
+    const user = getUserFromHeaders(request.headers);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const access = await getUserOrgRole(user.userId, orgSlug);
+    if (!access) {
+      return NextResponse.json(
+        { error: 'No access to organization' },
+        { status: 403 }
+      );
+    }
+
+    // Get all pending items
+    const pendingItems = await prisma.transferItem.findMany({
+      where: {
+        transferId,
+        status: 'PENDING',
+        transfer: {
+          organizationId: access.organizationId,
+        },
+      },
+    });
+
+    if (pendingItems.length === 0) {
+      return NextResponse.json(
+        { error: 'No pending items to approve' },
+        { status: 400 }
+      );
+    }
+
+    // Approve all items with requested quantity
+    const approvedItems = await Promise.all(
+      pendingItems.map((item) =>
+        approveTransferItem({
+          itemId: item.id,
+          approvedQuantity: item.requestedQuantity,
+          notes: 'อนุมัติทั้งหมด',
+          approvedBy: user.userId,
+        })
+      )
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: approvedItems,
+      message: `อนุมัติสำเร็จ ${approvedItems.length} รายการ`,
+    });
+  } catch (error) {
+    console.error('Approve all items failed:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }
@@ -150,7 +215,6 @@ export async function DELETE(
       );
     }
 
-    // Check permissions
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { error: 'Insufficient permissions. ADMIN or OWNER required.' },

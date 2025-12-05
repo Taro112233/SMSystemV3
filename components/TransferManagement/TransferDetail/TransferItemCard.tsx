@@ -1,5 +1,5 @@
 // components/TransferManagement/TransferDetail/TransferItemCard.tsx
-// TransferItemCard - Individual item card with actions - UPDATED: Sort batches by expiry date
+// TransferItemCard - UPDATED: Hide cancel button for approved+ statuses
 
 'use client';
 
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import TransferStatusBadge from '../shared/TransferStatusBadge';
 import QuantityDisplay from '../shared/QuantityDisplay';
-import ApproveItemDialog from '../ItemActions/ApproveItemDialog';
 import PrepareItemDialog from '../ItemActions/PrepareItemDialog';
 import DeliverItemDialog from '../ItemActions/DeliverItemDialog';
 import CancelItemDialog from '../ItemActions/CancelItemDialog';
@@ -49,19 +48,17 @@ export default function TransferItemCard({
   onDeliver,
   onCancelItem,
 }: TransferItemCardProps) {
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [prepareDialogOpen, setPrepareDialogOpen] = useState(false);
   const [deliverDialogOpen, setDeliverDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [loadingBatches, setLoadingBatches] = useState(false);
+  const [approvingItem, setApprovingItem] = useState(false);
   const [batches, setBatches] = useState<StockBatch[]>([]);
 
-  // ✅ Sort batches by expiry date (FIFO - earliest expiry first)
   const sortedBatches = useMemo(() => {
     if (!item.batches || item.batches.length === 0) return [];
     
     return [...item.batches].sort((a, b) => {
-      // Batches without expiry date go to the end
       if (!a.batch.expiryDate && !b.batch.expiryDate) return 0;
       if (!a.batch.expiryDate) return 1;
       if (!b.batch.expiryDate) return -1;
@@ -85,10 +82,10 @@ export default function TransferItemCard({
     userRole === 'requesting' && 
     item.status === 'PREPARED';
 
+  // ✅ UPDATED: Show cancel only for PENDING status
   const showCancelButton = 
     canCancel && 
-    item.status !== 'DELIVERED' && 
-    item.status !== 'CANCELLED';
+    item.status === 'PENDING';
 
   const handlePrepareClick = async () => {
     setLoadingBatches(true);
@@ -156,8 +153,18 @@ export default function TransferItemCard({
     }
   };
 
-  const handleApprove = async (data: ApproveItemData) => {
-    await onApprove(item.id, data);
+  const handleApproveClick = async () => {
+    setApprovingItem(true);
+    try {
+      await onApprove(item.id, {
+        approvedQuantity: item.requestedQuantity,
+        notes: undefined,
+      });
+    } catch (error) {
+      console.error('Error approving item:', error);
+    } finally {
+      setApprovingItem(false);
+    }
   };
 
   const handlePrepare = async (data: PrepareItemData) => {
@@ -186,7 +193,6 @@ export default function TransferItemCard({
       <Card className="border-gray-200">
         <CardContent className="p-6">
           <div className="space-y-6">
-            {/* Header Section */}
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3">
@@ -206,7 +212,6 @@ export default function TransferItemCard({
                   )}
                 </div>
                 
-                {/* Request & Approval Info */}
                 <div className="flex items-center gap-4 mt-3 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600">จำนวนที่ขอ:</span>
@@ -232,15 +237,19 @@ export default function TransferItemCard({
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex items-center gap-2">
                 {showApproveButton && (
                   <Button
-                    onClick={() => setApproveDialogOpen(true)}
+                    onClick={handleApproveClick}
                     size="sm"
                     className="gap-1 bg-blue-600 hover:bg-blue-700"
+                    disabled={approvingItem}
                   >
-                    <CheckCircle className="h-4 w-4" />
+                    {approvingItem ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4" />
+                    )}
                     อนุมัติ
                   </Button>
                 )}
@@ -286,7 +295,6 @@ export default function TransferItemCard({
               </div>
             </div>
 
-            {/* Batch Details Table - UPDATED: Use sortedBatches */}
             {sortedBatches.length > 0 && (
               <div className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
@@ -400,7 +408,6 @@ export default function TransferItemCard({
               </div>
             )}
 
-            {/* Notes Section */}
             {item.notes && (
               <div className="pt-4 border-t border-gray-200">
                 <div className="text-xs text-gray-600 mb-1">หมายเหตุ</div>
@@ -410,7 +417,6 @@ export default function TransferItemCard({
               </div>
             )}
 
-            {/* Cancel Reason */}
             {item.status === 'CANCELLED' && item.cancelReason && (
               <div className="pt-4 border-t border-gray-200">
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -424,14 +430,6 @@ export default function TransferItemCard({
           </div>
         </CardContent>
       </Card>
-
-      {/* Dialogs */}
-      <ApproveItemDialog
-        item={item}
-        open={approveDialogOpen}
-        onOpenChange={setApproveDialogOpen}
-        onApprove={handleApprove}
-      />
 
       <PrepareItemDialog
         item={item}

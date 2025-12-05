@@ -1,15 +1,16 @@
 // components/TransferManagement/TransferDetail/TransferStatusTimeline.tsx
-// TransferStatusTimeline - Visual timeline
+// TransferStatusTimeline - UPDATED: Count on same line as label
 
 'use client';
 
-import { TransferStatus } from '@/types/transfer';
+import { TransferStatus, TransferItem } from '@/types/transfer';
 import { 
   ClipboardList, 
   CheckCircle, 
   Package, 
   CheckCheck,
-  XCircle 
+  XCircle,
+  Clock
 } from 'lucide-react';
 
 interface TransferStatusTimelineProps {
@@ -19,6 +20,7 @@ interface TransferStatusTimelineProps {
   preparedAt?: Date;
   deliveredAt?: Date;
   cancelledAt?: Date;
+  items: TransferItem[];
 }
 
 export default function TransferStatusTimeline({
@@ -28,6 +30,7 @@ export default function TransferStatusTimeline({
   preparedAt,
   deliveredAt,
   cancelledAt,
+  items,
 }: TransferStatusTimelineProps) {
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('th-TH', {
@@ -39,34 +42,109 @@ export default function TransferStatusTimeline({
     });
   };
 
+  // ✅ Calculate item-level progress
+  const approvedItems = items.filter(item => 
+    item.status === 'APPROVED' || 
+    item.status === 'PREPARED' || 
+    item.status === 'DELIVERED'
+  );
+  const preparedItems = items.filter(item => 
+    item.status === 'PREPARED' || 
+    item.status === 'DELIVERED'
+  );
+  const deliveredItems = items.filter(item => item.status === 'DELIVERED');
+
+  const allApproved = approvedItems.length === items.length && items.length > 0;
+  const someApproved = approvedItems.length > 0 && approvedItems.length < items.length;
+  const noneApproved = approvedItems.length === 0;
+
+  const allPrepared = preparedItems.length === items.length && items.length > 0;
+  const somePrepared = preparedItems.length > 0 && preparedItems.length < items.length;
+  const nonePrepared = preparedItems.length === 0;
+
+  const allDelivered = deliveredItems.length === items.length && items.length > 0;
+  const someDelivered = deliveredItems.length > 0 && deliveredItems.length < items.length;
+  const noneDelivered = deliveredItems.length === 0;
+
+  // ✅ Get latest timestamp for partial completion
+  const getLatestApprovedAt = () => {
+    if (approvedItems.length === 0) return null;
+    const dates = approvedItems
+      .map(item => item.approvedAt)
+      .filter((date): date is Date => date !== null && date !== undefined);
+    if (dates.length === 0) return null;
+    return new Date(Math.max(...dates.map(d => new Date(d).getTime())));
+  };
+
+  const getLatestPreparedAt = () => {
+    if (preparedItems.length === 0) return null;
+    const dates = preparedItems
+      .map(item => item.preparedAt)
+      .filter((date): date is Date => date !== null && date !== undefined);
+    if (dates.length === 0) return null;
+    return new Date(Math.max(...dates.map(d => new Date(d).getTime())));
+  };
+
+  const getLatestDeliveredAt = () => {
+    if (deliveredItems.length === 0) return null;
+    const dates = deliveredItems
+      .map(item => item.deliveredAt)
+      .filter((date): date is Date => date !== null && date !== undefined);
+    if (dates.length === 0) return null;
+    return new Date(Math.max(...dates.map(d => new Date(d).getTime())));
+  };
+
+  // ✅ Determine step states
+  const approveStepState = allApproved 
+    ? 'completed' 
+    : someApproved 
+    ? 'partial' 
+    : 'pending';
+
+  const prepareStepState = allPrepared 
+    ? 'completed' 
+    : somePrepared 
+    ? 'partial' 
+    : 'pending';
+
+  const deliverStepState = allDelivered 
+    ? 'completed' 
+    : someDelivered 
+    ? 'partial' 
+    : 'pending';
+
   const steps = [
     {
       label: 'ส่งคำขอ',
       status: 'PENDING',
       icon: ClipboardList,
       date: requestedAt,
-      completed: true,
+      state: 'completed',
+      count: null,
     },
     {
       label: 'อนุมัติ',
       status: 'APPROVED',
-      icon: CheckCircle,
-      date: approvedAt,
-      completed: !!approvedAt,
+      icon: someApproved ? Clock : CheckCircle,
+      date: allApproved ? approvedAt : someApproved ? getLatestApprovedAt() : null,
+      state: approveStepState,
+      count: someApproved ? `${approvedItems.length}/${items.length}` : null,
     },
     {
       label: 'จัดเตรียม',
       status: 'PREPARED',
-      icon: Package,
-      date: preparedAt,
-      completed: !!preparedAt,
+      icon: somePrepared ? Clock : Package,
+      date: allPrepared ? preparedAt : somePrepared ? getLatestPreparedAt() : null,
+      state: prepareStepState,
+      count: somePrepared ? `${preparedItems.length}/${items.length}` : null,
     },
     {
       label: 'รับเข้าแล้ว',
       status: 'DELIVERED',
-      icon: CheckCheck,
-      date: deliveredAt,
-      completed: !!deliveredAt,
+      icon: someDelivered ? Clock : CheckCheck,
+      date: allDelivered ? deliveredAt : someDelivered ? getLatestDeliveredAt() : null,
+      state: deliverStepState,
+      count: someDelivered ? `${deliveredItems.length}/${items.length}` : null,
     },
   ];
 
@@ -91,50 +169,76 @@ export default function TransferStatusTimeline({
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
       <div className="flex items-center relative">
-        {/* ✅ Steps Layer */}
         {steps.map((step, index) => {
           const Icon = step.icon;
           const isActive = status === step.status;
-          const isCompleted = step.completed;
           const isLast = index === steps.length - 1;
+
+          // ✅ Color based on state
+          const getStepColor = () => {
+            if (step.state === 'completed') {
+              return 'bg-green-100 text-green-600';
+            } else if (step.state === 'partial') {
+              return 'bg-yellow-100 text-yellow-600';
+            } else if (isActive) {
+              return 'bg-blue-100 text-blue-600';
+            } else {
+              return 'bg-gray-100 text-gray-400';
+            }
+          };
+
+          const getTextColor = () => {
+            if (step.state === 'completed' || step.state === 'partial') {
+              return 'text-gray-900';
+            } else if (isActive) {
+              return 'text-gray-900';
+            } else {
+              return 'text-gray-500';
+            }
+          };
+
+          const getConnectorColor = () => {
+            if (steps[index + 1]?.state === 'completed') {
+              return 'bg-green-400';
+            } else if (steps[index + 1]?.state === 'partial') {
+              return 'bg-yellow-400';
+            } else {
+              return 'bg-gray-200';
+            }
+          };
 
           return (
             <div key={step.status} className="flex-1 relative">
               <div className="flex flex-col items-center relative z-10">
                 {/* Icon */}
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                    isCompleted
-                      ? 'bg-green-100 text-green-600'
-                      : isActive
-                      ? 'bg-blue-100 text-blue-600'
-                      : 'bg-gray-100 text-gray-400'
-                  }`}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${getStepColor()}`}
                 >
                   <Icon className="w-6 h-6" />
                 </div>
 
-                {/* Label */}
-                <div
-                  className={`text-sm font-medium mt-2 ${
-                    isCompleted || isActive ? 'text-gray-900' : 'text-gray-500'
-                  }`}
-                >
-                  {step.label}
+                {/* ✅ UPDATED: Label + Count on same line */}
+                <div className="flex items-center gap-1 mt-2">
+                  <div className={`text-sm font-medium ${getTextColor()}`}>
+                    {step.label}
+                  </div>
+                  {step.count && (
+                    <div className="text-xs text-yellow-700 font-medium">
+                      ({step.count})
+                    </div>
+                  )}
                 </div>
 
-                {/* Date หรือ "-" */}
+                {/* Date */}
                 <div className="text-xs text-gray-500 mt-1 h-4">
                   {step.date ? formatDate(step.date) : '-'}
                 </div>
               </div>
 
-              {/* ✅ Connector Line - เฉพาะระหว่าง step (ไม่มีก่อน step แรกและหลัง step สุดท้าย) */}
+              {/* Connector Line */}
               {!isLast && (
                 <div
-                  className={`absolute top-6 left-1/2 w-full h-0.5 transition-colors ${
-                    steps[index + 1].completed ? 'bg-green-400' : 'bg-gray-200'
-                  }`}
+                  className={`absolute top-6 left-1/2 w-full h-0.5 transition-colors ${getConnectorColor()}`}
                   style={{ zIndex: 0 }}
                 />
               )}

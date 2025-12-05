@@ -1,5 +1,5 @@
 // components/TransferManagement/TransferDetail/TransferDetailView.tsx
-// TransferDetailView - Main detail container - FIXED: Remove unused imports and add proper types
+// TransferDetailView - FIXED: Use POST on main route instead of /approve-all
 
 'use client';
 
@@ -108,6 +108,36 @@ export default function TransferDetailView({
       console.error('Error cancelling transfer:', error);
       toast.error('เกิดข้อผิดพลาด', {
         description: 'ไม่สามารถยกเลิกใบเบิกได้',
+      });
+    }
+  };
+
+  const handleApproveAll = async () => {
+    try {
+      // ✅ FIXED: Use POST on main transfer route instead of /approve-all
+      const response = await fetch(
+        `/api/${orgSlug}/transfers/${transferId}`,
+        {
+          method: 'POST',
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to approve all items');
+      }
+
+      const data = await response.json();
+
+      toast.success('สำเร็จ', {
+        description: data.message || 'อนุมัติทุกรายการเรียบร้อย',
+      });
+
+      await fetchTransferDetail();
+    } catch (error) {
+      console.error('Error approving all items:', error);
+      toast.error('เกิดข้อผิดพลาด', {
+        description: 'ไม่สามารถอนุมัติได้',
       });
     }
   };
@@ -253,37 +283,25 @@ export default function TransferDetailView({
     );
   }
 
-  // ✅ Determine user role in transfer context
   const userRole = transfer.requestingDepartmentId === userDepartmentId
     ? 'requesting'
     : transfer.supplyingDepartmentId === userDepartmentId
     ? 'supplying'
     : 'other';
 
-  // ✅ Permission checks based on BOTH transfer role AND organization role
   const canApprove = userRole === 'supplying' && organizationRole !== null;
   const canPrepare = userRole === 'supplying' && organizationRole !== null;
   const canReceive = userRole === 'requesting' && organizationRole !== null;
   const canCancel = organizationRole === 'ADMIN' || organizationRole === 'OWNER';
-
-  console.log('🔍 Transfer Detail Permissions:', {
-    userDepartmentId,
-    requestingDeptId: transfer.requestingDepartmentId,
-    supplyingDeptId: transfer.supplyingDepartmentId,
-    userRole,
-    organizationRole,
-    canApprove,
-    canPrepare,
-    canReceive,
-    canCancel,
-  });
 
   return (
     <div className="space-y-6">
       <TransferDetailHeader
         transfer={transfer}
         canCancel={canCancel}
+        canApprove={canApprove}
         onCancel={handleCancelTransfer}
+        onApproveAll={handleApproveAll}
       />
 
       <TransferStatusTimeline
@@ -293,6 +311,7 @@ export default function TransferDetailView({
         preparedAt={transfer.preparedAt}
         deliveredAt={transfer.deliveredAt}
         cancelledAt={transfer.cancelledAt}
+        items={transfer.items}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

@@ -1,5 +1,5 @@
 // components/TransferManagement/TransferDetail/TransferDetailHeader.tsx
-// TransferDetailHeader - Corrected CSS Grid layout
+// TransferDetailHeader - UPDATED with Approve All + conditional Cancel
 
 'use client';
 
@@ -7,7 +7,7 @@ import { Transfer } from '@/types/transfer';
 import TransferStatusBadge from '../shared/TransferStatusBadge';
 import TransferPriorityBadge from '../shared/TransferPriorityBadge';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, XCircle } from 'lucide-react';
+import { ArrowRight, XCircle, CheckCircle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,13 +23,17 @@ import {
 interface TransferDetailHeaderProps {
   transfer: Transfer;
   canCancel: boolean;
+  canApprove: boolean;
   onCancel: () => void;
+  onApproveAll: () => void;
 }
 
 export default function TransferDetailHeader({
   transfer,
   canCancel,
+  canApprove,
   onCancel,
+  onApproveAll,
 }: TransferDetailHeaderProps) {
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('th-TH', {
@@ -41,10 +45,20 @@ export default function TransferDetailHeader({
     });
   };
 
+  // Show cancel only if not approved yet
+  const showCancel = canCancel && 
+                     transfer.status !== 'CANCELLED' && 
+                     transfer.status !== 'COMPLETED' &&
+                     !transfer.approvedAt;
+
+  // Show approve all if there are pending items
+  const hasPendingItems = transfer.items.some(item => item.status === 'PENDING');
+  const showApproveAll = canApprove && hasPendingItems;
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
       <div className="grid grid-cols-3 gap-4">
-        {/* Row 1: เลขที่ | สถานะ | ปุ่มยกเลิก */}
+        {/* Row 1: เลขที่ | สถานะ | ปุ่มดำเนินการ */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-600">เลขที่:</span>
           <span className="font-mono font-semibold text-lg text-blue-600">{transfer.code}</span>
@@ -55,8 +69,31 @@ export default function TransferDetailHeader({
           <TransferStatusBadge status={transfer.status} />
         </div>
 
-        <div className="flex items-center justify-end">
-          {canCancel && transfer.status !== 'CANCELLED' && transfer.status !== 'COMPLETED' && (
+        <div className="flex items-center justify-end gap-2">
+          {showApproveAll && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="default" size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700">
+                  <CheckCircle className="h-4 w-4" />
+                  อนุมัติทั้งหมด
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>ยืนยันอนุมัติทั้งหมด</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    คุณต้องการอนุมัติทุกรายการในใบเบิกนี้ใช่หรือไม่? ระบบจะอนุมัติตามจำนวนที่ขอเบิกทั้งหมด
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                  <AlertDialogAction onClick={onApproveAll}>ยืนยัน</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          
+          {showCancel && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm" className="gap-2">
