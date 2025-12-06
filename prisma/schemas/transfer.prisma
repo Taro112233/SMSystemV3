@@ -113,7 +113,8 @@ model TransferBatch {
   id              String   @id @default(cuid())
   transferItemId  String
   batchId         String
-  quantity        Int
+  quantity        Int      // จำนวนที่จัดเตรียม
+  receivedQuantity Int?    // ✅ NEW: จำนวนที่รับเข้าจริง
   
   // Timestamps
   createdAt       DateTime @default(now())

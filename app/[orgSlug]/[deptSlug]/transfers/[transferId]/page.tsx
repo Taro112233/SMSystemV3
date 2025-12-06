@@ -1,10 +1,10 @@
 // app/[orgSlug]/[deptSlug]/transfers/[transferId]/page.tsx
-// Transfer Detail Page - FIXED with proper props
+// UPDATED: Use TransferDetailView2
 
 'use client';
 
 import { use, useEffect, useState } from 'react';
-import { TransferDetailView } from '@/components/TransferManagement';
+import { TransferDetailView2 } from '@/components/TransferManagement';
 import { Loader2 } from 'lucide-react';
 
 export default function TransferDetailPage({
@@ -77,7 +77,7 @@ export default function TransferDetailPage({
   }
 
   return (
-    <TransferDetailView
+    <TransferDetailView2
       transferId={transferId}
       orgSlug={orgSlug}
       userDepartmentId={departmentId}

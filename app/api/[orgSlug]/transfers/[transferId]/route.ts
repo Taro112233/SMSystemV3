@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/transfers/[transferId]/route.ts
-// Transfer Detail API - UPDATED: No notes for approve all
+// Transfer Detail API - UPDATED: Include receivedQuantity in batches
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
@@ -94,6 +94,7 @@ export async function GET(
             expiryDate: batch.batch.expiryDate,
           },
           quantity: batch.quantity,
+          receivedQuantity: batch.receivedQuantity, // ✅ ADDED: Include receivedQuantity
         })) || [],
       })),
       statusHistory: transfer.statusHistory?.map(history => ({
@@ -147,7 +148,6 @@ export async function POST(
       );
     }
 
-    // Get all pending items
     const pendingItems = await prisma.transferItem.findMany({
       where: {
         transferId,
@@ -165,13 +165,12 @@ export async function POST(
       );
     }
 
-    // ✅ UPDATED: Approve all items without notes
     const approvedItems = await Promise.all(
       pendingItems.map((item) =>
         approveTransferItem({
           itemId: item.id,
           approvedQuantity: item.requestedQuantity,
-          notes: undefined,  // ✅ No notes
+          notes: undefined,
           approvedBy: user.userId,
         })
       )

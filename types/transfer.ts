@@ -88,7 +88,8 @@ export interface TransferBatch {
     lotNumber: string;
     expiryDate?: Date;
   };
-  quantity: number;
+  quantity: number;           // จำนวนที่จัดเตรียม
+  receivedQuantity?: number;  // ✅ NEW: จำนวนที่รับเข้าจริง
 }
 
 export interface TransferFiltersState {

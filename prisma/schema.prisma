@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 // Edit files in prisma/schemas/ directory instead.
-// Last generated: 2025-12-05T18:38:14.540Z
+// Last generated: 2025-12-06T15:51:00.979Z
 // InvenStock - Multi-Tenant Inventory Management System V1.0
 
 generator client {
@@ -718,7 +718,8 @@ model TransferBatch {
   id              String   @id @default(cuid())
   transferItemId  String
   batchId         String
-  quantity        Int
+  quantity        Int      // จำนวนที่จัดเตรียม
+  receivedQuantity Int?    // ✅ NEW: จำนวนที่รับเข้าจริง
   
   // Timestamps
   createdAt       DateTime @default(now())

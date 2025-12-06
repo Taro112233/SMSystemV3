@@ -466,7 +466,6 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
     throw new Error('No batches selected');
   }
 
-  // ✅ Validate batch deliveries
   if (!batchDeliveries || batchDeliveries.length === 0) {
     throw new Error('Batch deliveries are required');
   }
@@ -499,12 +498,20 @@ export async function deliverTransferItem(data: DeliverItemRequest) {
       }
     });
 
-    // ✅ Process each batch delivery
+    // ✅ UPDATED: Update each TransferBatch with receivedQuantity
     for (const bd of batchDeliveries) {
       const transferBatch = item.batches.find(tb => tb.batchId === bd.batchId);
       if (!transferBatch) continue;
 
       const sourceBatch = transferBatch.batch;
+
+      // ✅ Update TransferBatch with received quantity
+      await tx.transferBatch.update({
+        where: { id: transferBatch.id },
+        data: {
+          receivedQuantity: bd.receivedQuantity, // ✅ Save received quantity
+        }
+      });
 
       // Deduct from source batch
       await tx.stockBatch.update({
