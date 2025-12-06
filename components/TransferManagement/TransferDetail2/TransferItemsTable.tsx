@@ -1,5 +1,5 @@
 // components/TransferManagement/TransferDetail2/TransferItemsTable.tsx
-// TransferItemsTable - FIXED: Remove inline comments causing whitespace
+// TransferItemsTable - UPDATED: Move notes to details, add note indicator icon, align status left
 
 'use client';
 
@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { TransferItem, ApproveItemData, PrepareItemData, DeliverItemData, CancelItemData } from '@/types/transfer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Package, Truck, XCircle, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle, Package, Truck, XCircle, Loader2, ChevronDown, ChevronRight, FileText } from 'lucide-react';
 import PrepareItemDialog from '../ItemActions/PrepareItemDialog';
 import DeliverItemDialog from '../ItemActions/DeliverItemDialog';
 import CancelItemDialog from '../ItemActions/CancelItemDialog';
@@ -79,7 +79,8 @@ export default function TransferItemsTable({
     });
   };
 
-  const handleApproveClick = async (item: TransferItem) => {
+  const handleApproveClick = async (item: TransferItem, e: React.MouseEvent) => {
+    e.stopPropagation();
     setLoadingStates(prev => ({ ...prev, [`approve-${item.id}`]: true }));
     try {
       await onApprove(item.id, {
@@ -91,7 +92,8 @@ export default function TransferItemsTable({
     }
   };
 
-  const handlePrepareClick = async (item: TransferItem) => {
+  const handlePrepareClick = async (item: TransferItem, e: React.MouseEvent) => {
+    e.stopPropagation();
     setLoadingStates(prev => ({ ...prev, [`prepare-${item.id}`]: true }));
     
     try {
@@ -172,14 +174,12 @@ export default function TransferItemsTable({
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
                   ชื่อสินค้า
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                {/* [EDIT] ปรับ text-center เป็น text-left */}
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
                   สถานะ
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">
                   ขอเบิก
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">
-                  อนุมัติ
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">
                   จัดเตรียม
@@ -196,6 +196,7 @@ export default function TransferItemsTable({
               {sortedItems.map((item) => {
                 const isExpanded = expandedItems.has(item.id);
                 const hasBatches = item.batches && item.batches.length > 0;
+                const hasNotes = item.notes || (item.status === 'CANCELLED' && item.cancelReason);
                 const showApprove = canApprove && userRole === 'supplying' && item.status === 'PENDING';
                 const showPrepare = canPrepare && userRole === 'supplying' && item.status === 'APPROVED';
                 const showReceive = canReceive && userRole === 'requesting' && item.status === 'PREPARED';
@@ -203,20 +204,23 @@ export default function TransferItemsTable({
 
                 return (
                   <Fragment key={item.id}>
-                    <tr className="hover:bg-gray-50">
+                    <tr 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => toggleExpand(item.id)}
+                    >
                       <td className="px-4 py-3">
-                        {hasBatches && (
-                          <button
-                            onClick={() => toggleExpand(item.id)}
-                            className="text-gray-400 hover:text-gray-600"
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </button>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {/* [EDIT] เอา FileText เดิมออก เหลือแค่ลูกศร */}
+                          {(hasBatches || hasNotes) && (
+                            <div className="text-gray-400">
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-mono text-sm font-medium text-gray-900">
@@ -224,37 +228,36 @@ export default function TransferItemsTable({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          {item.product.name}
-                        </div>
-                        {item.product.genericName && (
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {item.product.genericName}
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {item.product.name}
+                            </div>
+                            {item.product.genericName && (
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                {item.product.genericName}
+                              </div>
+                            )}
                           </div>
-                        )}
+                          {/* [EDIT] เอา FileText เดิมออก */}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge variant="outline" className={`${statusColors[item.status]} text-xs font-medium`}>
-                          {statusLabels[item.status]}
-                        </Badge>
+                      {/* [EDIT] ปรับ column สถานะ: text-left, ใส่ FileText ต่อท้าย Badge */}
+                      <td className="px-4 py-3 text-left">
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className={`${statusColors[item.status]} text-xs font-medium`}>
+                            {statusLabels[item.status]}
+                          </Badge>
+                          {hasNotes && (
+                            <FileText className="h-3.5 w-3.5 text-blue-500" />
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="text-sm font-medium text-gray-900">
                           {item.requestedQuantity.toLocaleString('th-TH')}
                         </div>
                         <div className="text-xs text-gray-500">{item.product.baseUnit}</div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {item.approvedQuantity !== null && item.approvedQuantity !== undefined ? (
-                          <>
-                            <div className="text-sm font-medium text-blue-900">
-                              {item.approvedQuantity.toLocaleString('th-TH')}
-                            </div>
-                            <div className="text-xs text-gray-500">{item.product.baseUnit}</div>
-                          </>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {item.preparedQuantity !== null && item.preparedQuantity !== undefined ? (
@@ -280,12 +283,12 @@ export default function TransferItemsTable({
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1">
                           {showApprove && (
                             <Button
                               size="sm"
-                              onClick={() => handleApproveClick(item)}
+                              onClick={(e) => handleApproveClick(item, e)}
                               disabled={loadingStates[`approve-${item.id}`]}
                               className="h-8 px-2 text-xs"
                             >
@@ -299,7 +302,7 @@ export default function TransferItemsTable({
                           {showPrepare && (
                             <Button
                               size="sm"
-                              onClick={() => handlePrepareClick(item)}
+                              onClick={(e) => handlePrepareClick(item, e)}
                               disabled={loadingStates[`prepare-${item.id}`]}
                               className="h-8 px-2 text-xs bg-purple-600 hover:bg-purple-700"
                             >
@@ -313,7 +316,10 @@ export default function TransferItemsTable({
                           {showReceive && (
                             <Button
                               size="sm"
-                              onClick={() => setDeliverDialogState({ open: true, item })}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeliverDialogState({ open: true, item });
+                              }}
                               className="h-8 px-2 text-xs bg-green-600 hover:bg-green-700"
                             >
                               <Truck className="h-3 w-3" />
@@ -323,7 +329,10 @@ export default function TransferItemsTable({
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => setCancelDialogState({ open: true, item })}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCancelDialogState({ open: true, item });
+                              }}
                               className="h-8 px-2 text-xs"
                             >
                               <XCircle className="h-3 w-3" />
@@ -332,25 +341,11 @@ export default function TransferItemsTable({
                         </div>
                       </td>
                     </tr>
-                    {isExpanded && hasBatches && (
-                      <BatchDetailsRow item={item} batches={item.batches} />
-                    )}
-                    {(item.notes || (item.status === 'CANCELLED' && item.cancelReason)) && (
-                      <tr className="bg-gray-50">
-                        <td colSpan={9} className="px-4 py-3">
-                          {item.status === 'CANCELLED' && item.cancelReason ? (
-                            <div className="text-sm">
-                              <span className="font-medium text-red-700">เหตุผลยกเลิก: </span>
-                              <span className="text-red-900">{item.cancelReason}</span>
-                            </div>
-                          ) : item.notes ? (
-                            <div className="text-sm">
-                              <span className="font-medium text-blue-700">หมายเหตุ: </span>
-                              <span className="text-blue-900">{item.notes}</span>
-                            </div>
-                          ) : null}
-                        </td>
-                      </tr>
+                    {isExpanded && (hasBatches || hasNotes) && (
+                      <BatchDetailsRow 
+                        item={item} 
+                        batches={item.batches || []} 
+                      />
                     )}
                   </Fragment>
                 );
