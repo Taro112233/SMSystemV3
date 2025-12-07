@@ -1,10 +1,10 @@
 // app/[orgSlug]/[deptSlug]/transfers/[transferId]/page.tsx
-// UPDATED: Use TransferDetailView2
+// Transfer Detail Page - UPDATED: Use TransferDetailView (without "2")
 
 'use client';
 
 import { use, useEffect, useState } from 'react';
-import { TransferDetailView2 } from '@/components/TransferManagement';
+import { TransferDetailView } from '@/components/TransferManagement';
 import { Loader2 } from 'lucide-react';
 
 export default function TransferDetailPage({
@@ -24,7 +24,6 @@ export default function TransferDetailPage({
       try {
         setLoading(true);
 
-        // Fetch departments to get the ID
         const response = await fetch(`/api/${orgSlug}`, {
           credentials: 'include',
         });
@@ -77,7 +76,7 @@ export default function TransferDetailPage({
   }
 
   return (
-    <TransferDetailView2
+    <TransferDetailView
       transferId={transferId}
       orgSlug={orgSlug}
       userDepartmentId={departmentId}

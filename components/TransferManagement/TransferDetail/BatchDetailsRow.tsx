@@ -1,4 +1,4 @@
-// components/TransferManagement/TransferDetail2/BatchDetailsRow.tsx
+// components/TransferManagement/TransferDetail/BatchDetailsRow.tsx
 // BatchDetailsRow - UPDATED: Add notes section
 
 'use client';

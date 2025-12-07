@@ -1,4 +1,4 @@
-// components/TransferManagement/TransferDetail2/TransferHeader.tsx
+// components/TransferManagement/TransferDetail/TransferHeader.tsx
 // TransferHeader - Compact header with key info
 
 'use client';

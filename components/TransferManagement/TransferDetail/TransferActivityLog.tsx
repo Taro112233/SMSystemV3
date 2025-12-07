@@ -1,4 +1,4 @@
-// components/TransferManagement/TransferDetail2/TransferActivityLog.tsx
+// components/TransferManagement/TransferDetail/TransferActivityLog.tsx
 // TransferActivityLog - Timeline-style activity feed
 
 'use client';

@@ -1,17 +1,17 @@
 // components/TransferManagement/TransferDetail/TransferDetailView.tsx
-// TransferDetailView - FIXED: Use POST on main route instead of /approve-all
+// TransferDetailView - UPDATED with new table components
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { Transfer, ApproveItemData, PrepareItemData, DeliverItemData, CancelItemData } from '@/types/transfer';
-import TransferDetailHeader from './TransferDetailHeader';
-import TransferStatusTimeline from './TransferStatusTimeline';
-import TransferItemsTab from './TransferItemsTab';
-import TransferHistoryTab from './TransferHistoryTab';
-import TransferNotes from './TransferNotes';
+import TransferHeader from './TransferHeader';
+import TransferTimeline from './TransferTimeline';
+import TransferItemsTable from './TransferItemsTable';
+import TransferActivityLog from './TransferActivityLog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, History, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Package, History, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface TransferDetailViewProps {
@@ -114,7 +114,6 @@ export default function TransferDetailView({
 
   const handleApproveAll = async () => {
     try {
-      // ✅ FIXED: Use POST on main transfer route instead of /approve-all
       const response = await fetch(
         `/api/${orgSlug}/transfers/${transferId}`,
         {
@@ -296,7 +295,8 @@ export default function TransferDetailView({
 
   return (
     <div className="space-y-6">
-      <TransferDetailHeader
+      {/* Header */}
+      <TransferHeader
         transfer={transfer}
         canCancel={canCancel}
         canApprove={canApprove}
@@ -304,7 +304,8 @@ export default function TransferDetailView({
         onApproveAll={handleApproveAll}
       />
 
-      <TransferStatusTimeline
+      {/* Timeline */}
+      <TransferTimeline
         status={transfer.status}
         requestedAt={transfer.requestedAt}
         approvedAt={transfer.approvedAt}
@@ -314,21 +315,24 @@ export default function TransferDetailView({
         items={transfer.items}
       />
 
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="items" className="gap-2">
             <Package className="h-4 w-4" />
             รายการสินค้า ({transfer.items.length})
           </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2">
+          <TabsTrigger value="activity" className="gap-2">
             <History className="h-4 w-4" />
-            ประวัติการเปลี่ยนแปลง
+            ประวัติการดำเนินการ
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="items" className="mt-6">
-          <TransferItemsTab
+          <TransferItemsTable
             items={transfer.items}
+            orgSlug={orgSlug}
+            transferId={transferId}
             userRole={userRole}
             canApprove={canApprove}
             canPrepare={canPrepare}
@@ -341,14 +345,30 @@ export default function TransferDetailView({
           />
         </TabsContent>
 
-        <TabsContent value="history" className="mt-6">
-          <TransferHistoryTab 
+        <TabsContent value="activity" className="mt-6">
+          <TransferActivityLog 
             history={transfer.statusHistory || []} 
-            items={transfer.items} />
+            items={transfer.items}
+          />
         </TabsContent>
       </Tabs>
 
-      <TransferNotes notes={transfer.notes} />
+      {/* Notes Card */}
+      {transfer.notes && (
+        <Card className="border-gray-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <FileText className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-gray-700 mb-1">หมายเหตุเพิ่มเติม</div>
+                <div className="text-sm text-gray-900">{transfer.notes}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

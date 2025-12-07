@@ -1,5 +1,5 @@
-// components/TransferManagement/TransferDetail/TransferStatusTimeline.tsx
-// TransferStatusTimeline - UPDATED: Exclude cancelled items from total count
+// components/TransferManagement/TransferDetail/TransferTimeline.tsx
+// TransferTimeline - Same as before
 
 'use client';
 
@@ -13,7 +13,7 @@ import {
   Clock
 } from 'lucide-react';
 
-interface TransferStatusTimelineProps {
+interface TransferTimelineProps {
   status: TransferStatus;
   requestedAt: Date;
   approvedAt?: Date;
@@ -23,7 +23,7 @@ interface TransferStatusTimelineProps {
   items: TransferItem[];
 }
 
-export default function TransferStatusTimeline({
+export default function TransferTimeline({
   status,
   requestedAt,
   approvedAt,
@@ -31,7 +31,7 @@ export default function TransferStatusTimeline({
   deliveredAt,
   cancelledAt,
   items,
-}: TransferStatusTimelineProps) {
+}: TransferTimelineProps) {
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('th-TH', {
       day: 'numeric',
@@ -42,11 +42,9 @@ export default function TransferStatusTimeline({
     });
   };
 
-  // ✅ UPDATED: Exclude cancelled items from calculations
   const activeItems = items.filter(item => item.status !== 'CANCELLED');
   const totalActiveItems = activeItems.length;
 
-  // ✅ Calculate item-level progress (only active items)
   const approvedItems = activeItems.filter(item => 
     item.status === 'APPROVED' || 
     item.status === 'PREPARED' || 
@@ -67,7 +65,6 @@ export default function TransferStatusTimeline({
   const allDelivered = deliveredItems.length === totalActiveItems && totalActiveItems > 0;
   const someDelivered = deliveredItems.length > 0 && deliveredItems.length < totalActiveItems;
 
-  // ✅ Get latest timestamp for partial completion
   const getLatestApprovedAt = () => {
     if (approvedItems.length === 0) return null;
     const dates = approvedItems
@@ -95,24 +92,9 @@ export default function TransferStatusTimeline({
     return new Date(Math.max(...dates.map(d => new Date(d).getTime())));
   };
 
-  // ✅ Determine step states
-  const approveStepState = allApproved 
-    ? 'completed' 
-    : someApproved 
-    ? 'partial' 
-    : 'pending';
-
-  const prepareStepState = allPrepared 
-    ? 'completed' 
-    : somePrepared 
-    ? 'partial' 
-    : 'pending';
-
-  const deliverStepState = allDelivered 
-    ? 'completed' 
-    : someDelivered 
-    ? 'partial' 
-    : 'pending';
+  const approveStepState = allApproved ? 'completed' : someApproved ? 'partial' : 'pending';
+  const prepareStepState = allPrepared ? 'completed' : somePrepared ? 'partial' : 'pending';
+  const deliverStepState = allDelivered ? 'completed' : someDelivered ? 'partial' : 'pending';
 
   const steps = [
     {
@@ -158,9 +140,7 @@ export default function TransferStatusTimeline({
           </div>
           <div>
             <div className="text-lg font-semibold text-red-900">ใบเบิกถูกยกเลิก</div>
-            <div className="text-sm text-red-700">
-              ยกเลิกเมื่อ {formatDate(cancelledAt)}
-            </div>
+            <div className="text-sm text-red-700">ยกเลิกเมื่อ {formatDate(cancelledAt)}</div>
           </div>
         </div>
       </div>
@@ -175,50 +155,32 @@ export default function TransferStatusTimeline({
           const isActive = status === step.status;
           const isLast = index === steps.length - 1;
 
-          // ✅ Color based on state
           const getStepColor = () => {
-            if (step.state === 'completed') {
-              return 'bg-green-100 text-green-600';
-            } else if (step.state === 'partial') {
-              return 'bg-yellow-100 text-yellow-600';
-            } else if (isActive) {
-              return 'bg-blue-100 text-blue-600';
-            } else {
-              return 'bg-gray-100 text-gray-400';
-            }
+            if (step.state === 'completed') return 'bg-green-100 text-green-600';
+            if (step.state === 'partial') return 'bg-yellow-100 text-yellow-600';
+            if (isActive) return 'bg-blue-100 text-blue-600';
+            return 'bg-gray-100 text-gray-400';
           };
 
           const getTextColor = () => {
-            if (step.state === 'completed' || step.state === 'partial') {
-              return 'text-gray-900';
-            } else if (isActive) {
-              return 'text-gray-900';
-            } else {
-              return 'text-gray-500';
-            }
+            if (step.state === 'completed' || step.state === 'partial') return 'text-gray-900';
+            if (isActive) return 'text-gray-900';
+            return 'text-gray-500';
           };
 
           const getConnectorColor = () => {
-            if (steps[index + 1]?.state === 'completed') {
-              return 'bg-green-400';
-            } else if (steps[index + 1]?.state === 'partial') {
-              return 'bg-yellow-400';
-            } else {
-              return 'bg-gray-200';
-            }
+            if (steps[index + 1]?.state === 'completed') return 'bg-green-400';
+            if (steps[index + 1]?.state === 'partial') return 'bg-yellow-400';
+            return 'bg-gray-200';
           };
 
           return (
             <div key={step.status} className="flex-1 relative">
               <div className="flex flex-col items-center relative z-10">
-                {/* Icon */}
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${getStepColor()}`}
-                >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${getStepColor()}`}>
                   <Icon className="w-6 h-6" />
                 </div>
 
-                {/* Label + Count on same line */}
                 <div className="flex items-center gap-1 mt-2">
                   <div className={`text-sm font-medium ${getTextColor()}`}>
                     {step.label}
@@ -230,13 +192,11 @@ export default function TransferStatusTimeline({
                   )}
                 </div>
 
-                {/* Date */}
                 <div className="text-xs text-gray-500 mt-1 h-4">
                   {step.date ? formatDate(step.date) : '-'}
                 </div>
               </div>
 
-              {/* Connector Line */}
               {!isLast && (
                 <div
                   className={`absolute top-6 left-1/2 w-full h-0.5 transition-colors ${getConnectorColor()}`}

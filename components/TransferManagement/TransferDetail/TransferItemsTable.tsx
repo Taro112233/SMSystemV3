@@ -1,4 +1,4 @@
-// components/TransferManagement/TransferDetail2/TransferItemsTable.tsx
+// components/TransferManagement/TransferDetail/TransferItemsTable.tsx
 // TransferItemsTable - UPDATED: Move notes to details, add note indicator icon, align status left
 
 'use client';
