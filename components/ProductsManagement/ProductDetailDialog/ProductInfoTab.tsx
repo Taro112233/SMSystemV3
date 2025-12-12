@@ -1,10 +1,10 @@
 // components/ProductsManagement/ProductDetailDialog/ProductInfoTab.tsx
-// ProductInfoTab - Product information form with category attributes
+// ProductInfoTab - UPDATED: Add animations and better UX
 
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ProductData } from '@/types/product'; // ✅ Import centralized type
+import { ProductData } from '@/types/product';
 import { CategoryWithOptions } from '@/lib/category-helpers';
 import { ProductUnit } from '@/types/product-unit';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface FormData {
   code: string;
@@ -33,12 +34,12 @@ interface FormData {
 }
 
 interface ProductInfoTabProps {
-  product: ProductData; // ✅ Changed from Product to ProductData
+  product: ProductData;
   categories: CategoryWithOptions[];
   productUnits: ProductUnit[];
   orgSlug: string;
   canManage: boolean;
-  onSaveComplete: (updatedProduct: ProductData) => void; // ✅ Changed from Product to ProductData
+  onSaveComplete: (updatedProduct: ProductData) => void;
 }
 
 export default function ProductInfoTab({
@@ -60,7 +61,6 @@ export default function ProductInfoTab({
     attributes: {},
   });
 
-  // Load product data into form
   useEffect(() => {
     if (product) {
       const attributesMap: { [categoryId: string]: string } = {};
@@ -97,7 +97,6 @@ export default function ProductInfoTab({
   const handleSave = async () => {
     if (!product) return;
 
-    // Validation
     if (!formData.code || !formData.name || !formData.baseUnit) {
       toast.error('ข้อมูลไม่ครบถ้วน', {
         description: 'กรุณากรอกรหัสสินค้า ชื่อสินค้า และหน่วยนับ',
@@ -105,7 +104,6 @@ export default function ProductInfoTab({
       return;
     }
 
-    // Check required categories
     const missingCategories = categories
       .filter((cat) => cat.isRequired && !formData.attributes[cat.id])
       .map((cat) => cat.label);
@@ -120,7 +118,6 @@ export default function ProductInfoTab({
     setLoading(true);
 
     try {
-      // Convert attributes map to array
       const attributesArray = Object.entries(formData.attributes)
         .filter(([, optionId]) => optionId)
         .map(([categoryId, optionId]) => ({ categoryId, optionId }));
@@ -178,9 +175,19 @@ export default function ProductInfoTab({
   };
 
   return (
-    <div className="space-y-4 mt-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-4 mt-4"
+    >
       {/* Basic Info Section */}
-      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="space-y-4 p-4 bg-gray-50 rounded-lg"
+      >
         <h3 className="font-medium text-gray-900">ข้อมูลพื้นฐาน</h3>
 
         <div className="grid grid-cols-2 gap-4">
@@ -234,7 +241,6 @@ export default function ProductInfoTab({
                 </div>
               )
             ) : (
-              // Display mode
               <div className="p-2 bg-white border rounded-md">
                 {formData.baseUnit ? (
                   <div className="flex items-center gap-2 text-sm">
@@ -309,22 +315,32 @@ export default function ProductInfoTab({
             className="data-[state=checked]:bg-green-600"
           />
         </div>
-      </div>
+      </motion.div>
 
       {/* Category Attributes Section */}
       {categories.length > 0 && (
-        <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          className="space-y-4 p-4 bg-blue-50 rounded-lg"
+        >
           <h3 className="font-medium text-gray-900">คุณสมบัติสินค้า</h3>
 
           <div className="grid grid-cols-2 gap-4">
-            {categories.map((category) => (
-              <div key={category.id} className="space-y-2">
+            {categories.map((category, index) => (
+              <motion.div
+                key={category.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: 0.1 * index }}
+                className="space-y-2"
+              >
                 <Label htmlFor={`category-${category.id}`}>
                   {category.label}
                   {category.isRequired && <span className="text-red-500 ml-1">*</span>}
                 </Label>
                 {canManage ? (
-                  // Editable mode - show select dropdown
                   <Select
                     value={formData.attributes[category.id] || ''}
                     onValueChange={(value) => handleAttributeChange(category.id, value)}
@@ -342,22 +358,26 @@ export default function ProductInfoTab({
                     </SelectContent>
                   </Select>
                 ) : (
-                  // Display mode - show the selected value as text
                   <div className="p-2 bg-white border rounded-md text-sm">
                     {formData.attributes[category.id] 
                       ? getCategoryOptionLabel(category.id, formData.attributes[category.id])
                       : '-'}
                   </div>
                 )}
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* Save Button - Show only when user can manage */}
+      {/* Save Button */}
       {canManage && (
-        <div className="flex justify-end pt-4 border-t">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+          className="flex justify-end pt-4 border-t"
+        >
           <Button
             onClick={handleSave}
             disabled={loading}
@@ -372,8 +392,8 @@ export default function ProductInfoTab({
               'บันทึก'
             )}
           </Button>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

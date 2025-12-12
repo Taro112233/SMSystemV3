@@ -1,5 +1,5 @@
 // components/ProductsManagement/ProductForm.tsx
-// ProductForm - Create/Edit form with category support and UNIT SELECTION
+// ProductForm - UPDATED: Add animations
 
 'use client';
 
@@ -22,6 +22,7 @@ import {
 import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 const EMPTY_SELECTION_VALUE = "none";
 
@@ -166,7 +167,12 @@ export default function ProductForm({
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <motion.form
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2 }}
+      onSubmit={handleSubmit}
+    >
       <DialogHeader>
         <DialogTitle>
           {product ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}
@@ -174,7 +180,12 @@ export default function ProductForm({
       </DialogHeader>
 
       <div className="space-y-4 mt-6">
-        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="space-y-4 p-4 bg-gray-50 rounded-lg"
+        >
           <h3 className="font-medium text-gray-900">ข้อมูลพื้นฐาน</h3>
           
           <div className="grid grid-cols-2 gap-4">
@@ -278,15 +289,26 @@ export default function ProductForm({
               className="data-[state=checked]:bg-green-600"
             />
           </div>
-        </div>
+        </motion.div>
 
         {categories.length > 0 && (
-          <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="space-y-4 p-4 bg-blue-50 rounded-lg"
+          >
             <h3 className="font-medium text-gray-900">คุณสมบัติสินค้า</h3>
 
             <div className="grid grid-cols-2 gap-4">
-              {categories.map((category) => (
-                <div key={category.id} className="space-y-2">
+              {categories.map((category, index) => (
+                <motion.div
+                  key={category.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: 0.1 * index }}
+                  className="space-y-2"
+                >
                   <Label htmlFor={`category-${category.id}`}>
                     {category.label}
                     {category.isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -310,14 +332,19 @@ export default function ProductForm({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3, delay: 0.3 }}
+        className="flex items-center justify-end gap-3 mt-6 pt-6 border-t"
+      >
         <Button
           type="button"
           variant="outline"
@@ -336,7 +363,7 @@ export default function ProductForm({
             product ? 'บันทึกการแก้ไข' : 'สร้างสินค้า'
           )}
         </Button>
-      </div>
-    </form>
+      </motion.div>
+    </motion.form>
   );
 }

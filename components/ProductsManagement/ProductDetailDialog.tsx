@@ -1,5 +1,5 @@
 // components/ProductsManagement/ProductDetailDialog.tsx
-// UPDATED: Pass productId and orgSlug to StockSummaryTab
+// ProductDetailDialog - UPDATED: Add animations
 
 'use client';
 
@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, Info } from 'lucide-react';
 import ProductInfoTab from './ProductDetailDialog/ProductInfoTab';
 import StockSummaryTab from './ProductDetailDialog/StockSummaryTab';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ProductDetailDialogProps {
   product: ProductData | null;
@@ -51,44 +52,74 @@ export default function ProductDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            รายละเอียดสินค้า: {product.name}
-          </DialogTitle>
-        </DialogHeader>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={product.id}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                รายละเอียดสินค้า: {product.name}
+              </DialogTitle>
+            </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="stock">
-              <Package className="h-4 w-4 mr-2" />
-              จำนวนคงเหลือ
-            </TabsTrigger>
-            <TabsTrigger value="info">
-              <Info className="h-4 w-4 mr-2" />
-              ข้อมูลสินค้า
-            </TabsTrigger>
-          </TabsList>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="stock">
+                  <Package className="h-4 w-4 mr-2" />
+                  จำนวนคงเหลือ
+                </TabsTrigger>
+                <TabsTrigger value="info">
+                  <Info className="h-4 w-4 mr-2" />
+                  ข้อมูลสินค้า
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="stock">
-            <StockSummaryTab
-              productId={product.id}
-              orgSlug={orgSlug}
-              baseUnit={product.baseUnit}
-            />
-          </TabsContent>
+              <AnimatePresence mode="wait">
+                <TabsContent value="stock" key="stock">
+                  {activeTab === 'stock' && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <StockSummaryTab
+                        productId={product.id}
+                        orgSlug={orgSlug}
+                        baseUnit={product.baseUnit}
+                      />
+                    </motion.div>
+                  )}
+                </TabsContent>
 
-          <TabsContent value="info">
-            <ProductInfoTab
-              product={product}
-              categories={categories}
-              productUnits={productUnits}
-              orgSlug={orgSlug}
-              canManage={canManage}
-              onSaveComplete={handleSaveComplete}
-            />
-          </TabsContent>
-        </Tabs>
+                <TabsContent value="info" key="info">
+                  {activeTab === 'info' && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ProductInfoTab
+                        product={product}
+                        categories={categories}
+                        productUnits={productUnits}
+                        orgSlug={orgSlug}
+                        canManage={canManage}
+                        onSaveComplete={handleSaveComplete}
+                      />
+                    </motion.div>
+                  )}
+                </TabsContent>
+              </AnimatePresence>
+            </Tabs>
+          </motion.div>
+        </AnimatePresence>
       </DialogContent>
     </Dialog>
   );
