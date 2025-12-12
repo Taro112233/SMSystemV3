@@ -1,5 +1,5 @@
 // app/api/[orgSlug]/products/route.ts
-// UPDATED: Add pagination support
+// UPDATED: Support sorting by categories + type-safe
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -23,7 +23,7 @@ interface CreateProductRequest {
   attributes?: ProductAttribute[];
 }
 
-// ===== GET: List all products with pagination =====
+// ===== GET: List all products with attributes =====
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgSlug: string }> }
@@ -54,11 +54,6 @@ export async function GET(
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     
-    // Pagination params
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '20');
-    const skip = (page - 1) * pageSize;
-    
     // Category filters
     const category1 = searchParams.get('category1');
     const category2 = searchParams.get('category2');
@@ -81,16 +76,18 @@ export async function GET(
       where.isActive = isActive === 'true';
     }
 
-    // Category filters
+    // Category filters (will filter after fetching)
     const categoryFilters: string[] = [];
     if (category1) categoryFilters.push(category1);
     if (category2) categoryFilters.push(category2);
     if (category3) categoryFilters.push(category3);
 
-    // Build orderBy
+    // Build orderBy (handle category sorting)
     let orderBy: Prisma.ProductOrderByWithRelationInput = {};
     
+    // Check if sorting by category (category1, category2, category3)
     if (sortBy.startsWith('category')) {
+      // Will sort in-memory after fetching
       orderBy = { createdAt: sortOrder as 'asc' | 'desc' };
     } else {
       orderBy = { [sortBy]: sortOrder as 'asc' | 'desc' };
@@ -110,7 +107,7 @@ export async function GET(
       },
     });
 
-    // Filter by categories
+    // Filter by categories if specified
     if (categoryFilters.length > 0) {
       products = products.filter(product => {
         return categoryFilters.every(optionId => 
@@ -119,11 +116,12 @@ export async function GET(
       });
     }
 
-    // Sort by category if requested
+    // Sort by category if requested (in-memory)
     if (sortBy.startsWith('category')) {
       const categoryIndex = parseInt(sortBy.replace('category', '')) - 1;
       
       products.sort((a, b) => {
+        // Get category value for each product
         const aAttr = a.attributes[categoryIndex];
         const bAttr = b.attributes[categoryIndex];
         
@@ -135,19 +133,9 @@ export async function GET(
       });
     }
 
-    // Apply pagination AFTER filtering/sorting
-    const total = products.length;
-    const paginatedProducts = products.slice(skip, skip + pageSize);
-
     return NextResponse.json({
       success: true,
-      data: paginatedProducts,
-      pagination: {
-        page,
-        pageSize,
-        total,
-        totalPages: Math.ceil(total / pageSize),
-      },
+      data: products,
     });
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -182,6 +170,12 @@ export async function POST(
       );
     }
 
+    console.log('🔍 User role check:', { 
+      userId: user.userId, 
+      role: access.role
+    });
+
+    // Check permissions
     if (!['ADMIN', 'OWNER'].includes(access.role)) {
       return NextResponse.json(
         { 
@@ -203,6 +197,7 @@ export async function POST(
       attributes = [],
     } = body;
 
+    // Validation
     if (!code || !name || !baseUnit) {
       return NextResponse.json(
         { error: 'Code, name, and baseUnit are required' },
@@ -210,6 +205,7 @@ export async function POST(
       );
     }
 
+    // Check duplicate code
     const existingProduct = await prisma.product.findFirst({
       where: {
         organizationId: access.organizationId,
@@ -224,9 +220,12 @@ export async function POST(
       );
     }
 
+    // Create user snapshot
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
 
+    // Create product with attributes using transaction
     const product = await prisma.$transaction(async (tx) => {
+      // Create product
       const newProduct = await tx.product.create({
         data: {
           organizationId: access.organizationId,
@@ -241,6 +240,7 @@ export async function POST(
         },
       });
 
+      // Create attributes if provided
       if (attributes.length > 0) {
         await tx.productAttribute.createMany({
           data: attributes.map((attr) => ({
@@ -254,8 +254,10 @@ export async function POST(
       return newProduct;
     });
 
+    // Get request metadata
     const { ipAddress, userAgent } = getRequestMetadata(request);
 
+    // Create audit log
     await createAuditLog({
       organizationId: access.organizationId,
       userId: user.userId,
@@ -276,6 +278,7 @@ export async function POST(
       userAgent,
     });
 
+    // Fetch complete product with attributes
     const completeProduct = await prisma.product.findUnique({
       where: { id: product.id },
       include: {
