@@ -1,5 +1,5 @@
 // components/ProductsManagement/ProductsFilters.tsx
-// ProductsFilters - Filter panel with category filters and batch save functionality
+// ProductsFilters - Minimal filter panel
 
 'use client';
 
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Filter, X, Save } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 
 interface ProductsFiltersProps {
   filters: ProductFilters;
@@ -22,8 +22,6 @@ interface ProductsFiltersProps {
   categories: CategoryWithOptions[];
   onFilterChange: (filters: Partial<ProductFilters>) => void;
   onCategoryFilterChange: (filters: CategoryFiltersState) => void;
-  onSaveStatusChanges?: () => void;
-  hasPendingChanges?: boolean;
 }
 
 export default function ProductsFilters({
@@ -32,13 +30,11 @@ export default function ProductsFilters({
   categories,
   onFilterChange,
   onCategoryFilterChange,
-  onSaveStatusChanges,
-  hasPendingChanges = false,
 }: ProductsFiltersProps) {
-  const hasActiveFilters = 
+  const hasActiveFilters =
     filters.isActive !== true ||
-    categoryFilters.category1 || 
-    categoryFilters.category2 || 
+    categoryFilters.category1 ||
+    categoryFilters.category2 ||
     categoryFilters.category3;
 
   const handleReset = () => {
@@ -158,19 +154,6 @@ export default function ProductsFilters({
           <X className="h-4 w-4" />
           ล้างตัวกรอง
         </Button>
-      )}
-
-      {hasPendingChanges && onSaveStatusChanges && (
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            onClick={onSaveStatusChanges}
-            size="sm"
-            className="gap-1 bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Save className="h-4 w-4" />
-            บันทึก
-          </Button>
-        </div>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 // components/ProductsManagement/ProductsHeader.tsx
-// ProductsHeader - Header with search and create button
+// ProductsHeader - Minimal header
 
 'use client';
 
@@ -23,35 +23,21 @@ export default function ProductsHeader({
 }: ProductsHeaderProps) {
   const [localSearch, setLocalSearch] = useState(searchValue);
 
-  // Debounce search input
   useEffect(() => {
     if (localSearch === searchValue) return;
-
-    const timer = setTimeout(() => {
-      onSearchChange(localSearch);
-    }, 500);
-
+    const timer = setTimeout(() => onSearchChange(localSearch), 500);
     return () => clearTimeout(timer);
   }, [localSearch, onSearchChange, searchValue]);
 
-  // Sync with parent if searchValue changes externally
   useEffect(() => {
     setLocalSearch(searchValue);
   }, [searchValue]);
 
   return (
-    <div className="flex items-center justify-between gap-4">
-      {/* Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">จัดการสินค้า</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          จัดการข้อมูลสินค้าและยาในองค์กร
-        </p>
-      </div>
+    <div className="flex items-center justify-between">
+      <h1 className="text-2xl font-bold text-gray-900">จัดการสินค้า</h1>
 
-      {/* Actions */}
       <div className="flex items-center gap-3">
-        {/* Search */}
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -63,15 +49,12 @@ export default function ProductsHeader({
           />
         </div>
 
-        {/* Create Button */}
-        <Button 
-          onClick={onCreateClick} 
-          className="gap-2"
-          disabled={!canManage}
-        >
-          <Plus className="h-4 w-4" />
-          เพิ่มรายการสินค้า
-        </Button>
+        {canManage && (
+          <Button onClick={onCreateClick} className="gap-2">
+            <Plus className="h-4 w-4" />
+            เพิ่มสินค้า
+          </Button>
+        )}
       </div>
     </div>
   );

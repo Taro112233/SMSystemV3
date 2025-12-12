@@ -1,5 +1,5 @@
 // components/ProductsManagement/index.tsx
-// ProductsManagement - UPDATED: Pass orgSlug to ProductsTable
+// ProductsManagement - UPDATED: Add pagination
 
 'use client';
 
@@ -21,6 +21,12 @@ interface ProductsManagementProps {
   userRole: string;
 }
 
+interface PaginationState {
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
 export default function ProductsManagement({
   orgSlug,
   userRole,
@@ -35,9 +41,13 @@ export default function ProductsManagement({
     sortBy: 'createdAt',
     sortOrder: 'desc',
   });
+  const [pagination, setPagination] = useState<PaginationState>({
+    page: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
   const [categoryFilters, setCategoryFilters] = useState<CategoryFiltersState>({});
-  const [pendingStatusChanges, setPendingStatusChanges] = useState<Map<string, boolean>>(new Map());
 
   // Dialog states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -48,16 +58,6 @@ export default function ProductsManagement({
   const canManage: boolean = Boolean(
     userRole && ['ADMIN', 'OWNER'].includes(userRole)
   );
-
-  useEffect(() => {
-    console.log('🔍 ProductsManagement - Role Check:', {
-      userRole,
-      canManage,
-      roleType: typeof userRole,
-      isAdmin: userRole === 'ADMIN',
-      isOwner: userRole === 'OWNER',
-    });
-  }, [userRole, canManage]);
 
   // Fetch categories
   const fetchCategories = useCallback(async () => {
@@ -87,7 +87,7 @@ export default function ProductsManagement({
     }
   }, [orgSlug]);
 
-  // Fetch products
+  // Fetch products with pagination
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
@@ -99,6 +99,10 @@ export default function ProductsManagement({
       }
       if (filters.sortBy) params.append('sortBy', filters.sortBy);
       if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+      
+      // Pagination params
+      params.append('page', pagination.page.toString());
+      params.append('pageSize', pagination.pageSize.toString());
 
       if (categoryFilters.category1) params.append('category1', categoryFilters.category1);
       if (categoryFilters.category2) params.append('category2', categoryFilters.category2);
@@ -112,8 +116,10 @@ export default function ProductsManagement({
 
       const data = await response.json();
       setProducts(data.data || []);
-
-      setPendingStatusChanges(new Map());
+      
+      if (data.pagination) {
+        setPagination(prev => ({ ...prev, total: data.pagination.total }));
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('เกิดข้อผิดพลาด', {
@@ -122,7 +128,7 @@ export default function ProductsManagement({
     } finally {
       setLoading(false);
     }
-  }, [orgSlug, filters, categoryFilters]);
+  }, [orgSlug, filters, categoryFilters, pagination.page, pagination.pageSize]);
 
   useEffect(() => {
     fetchCategories();
@@ -135,7 +141,6 @@ export default function ProductsManagement({
 
   // Handlers
   const handleCreateClick = () => {
-    console.log('🔍 Create button clicked:', { canManage, userRole });
     if (!canManage) {
       toast.error('ไม่มีสิทธิ์', {
         description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่สร้างสินค้าได้',
@@ -173,61 +178,6 @@ export default function ProductsManagement({
     setIsDeleteOpen(true);
   };
 
-  const handleToggleStatus = async (product: ProductData, newStatus: boolean) => {
-    console.log('🔍 Toggle status clicked:', { canManage, userRole, newStatus });
-
-    if (!canManage) {
-      toast.error('ไม่มีสิทธิ์', {
-        description: 'เฉพาะ ADMIN และ OWNER เท่านั้นที่เปลี่ยนสถานะได้',
-      });
-      return;
-    }
-
-    setPendingStatusChanges(prev => {
-      const newChanges = new Map(prev);
-      newChanges.set(product.id, newStatus);
-      return newChanges;
-    });
-
-    toast.success('เพิ่มการเปลี่ยนแปลง', {
-      description: 'กรุณากดปุ่ม "บันทึก" เพื่อยืนยัน',
-    });
-  };
-
-  const handleSaveStatusChanges = async () => {
-    if (pendingStatusChanges.size === 0) return;
-
-    try {
-      const updates = Array.from(pendingStatusChanges.entries()).map(([productId, isActive]) => ({
-        productId,
-        isActive,
-      }));
-
-      const response = await fetch(`/api/${orgSlug}/products/batch-update-status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update status');
-      }
-
-      setPendingStatusChanges(new Map());
-      fetchProducts();
-
-      toast.success('สำเร็จ', {
-        description: `บันทึกการเปลี่ยนแปลงสถานะ ${updates.length} รายการเรียบร้อย`,
-      });
-    } catch (error) {
-      console.error('Error saving status changes:', error);
-      toast.error('เกิดข้อผิดพลาด', {
-        description: error instanceof Error ? error.message : 'ไม่สามารถบันทึกการเปลี่ยนแปลงได้',
-      });
-    }
-  };
-
   const handleFormSuccess = () => {
     setIsFormOpen(false);
     setSelectedProduct(null);
@@ -248,10 +198,20 @@ export default function ProductsManagement({
 
   const handleFilterChange = (newFilters: Partial<ProductFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const handleCategoryFilterChange = (filters: CategoryFiltersState) => {
     setCategoryFilters(filters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPagination(prev => ({ ...prev, pageSize: newPageSize, page: 1 }));
   };
 
   const handleFormClose = () => {
@@ -276,15 +236,15 @@ export default function ProductsManagement({
         loading={loading}
         filters={filters}
         categoryFilters={categoryFilters}
+        pagination={pagination}
         onFilterChange={handleFilterChange}
         onCategoryFilterChange={handleCategoryFilterChange}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
         onEditClick={handleEditClick}
         onViewClick={handleViewClick}
         onDeleteClick={handleDeleteClick}
-        onToggleStatus={handleToggleStatus}
         canManage={canManage}
-        pendingStatusChanges={pendingStatusChanges}
-        onSaveStatusChanges={handleSaveStatusChanges}
       />
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

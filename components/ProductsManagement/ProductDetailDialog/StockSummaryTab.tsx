@@ -1,13 +1,13 @@
 // components/ProductsManagement/ProductDetailDialog/StockSummaryTab.tsx
-// StockSummaryTab - UPDATED: Fetch real data from API
+// StockSummaryTab - UPDATED: Add skeleton loading
 
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Package, AlertTriangle, Coins } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Package, AlertTriangle, Coins } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface StockBatch {
   id: string;
@@ -94,7 +95,6 @@ export default function StockSummaryTab({
     return quantity * costPrice;
   };
 
-  // Calculate grand totals
   const grandTotalQuantity = departmentStocks.reduce(
     (sum, dept) => sum + dept.totalQuantity,
     0
@@ -164,13 +164,13 @@ export default function StockSummaryTab({
 
   if (loading) {
     return (
-      <div className="space-y-4 mt-4">
+      <div className="space-y-6 mt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
         </div>
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
@@ -188,10 +188,14 @@ export default function StockSummaryTab({
   }
 
   return (
-    <div className="space-y-6 mt-4">
-      {/* Overall Summary Section */}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6 mt-4"
+    >
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Total Quantity Card */}
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -214,7 +218,6 @@ export default function StockSummaryTab({
           </CardContent>
         </Card>
 
-        {/* Total Value Card */}
         <Card className="border-green-200 bg-green-50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -241,8 +244,8 @@ export default function StockSummaryTab({
         </Card>
       </div>
 
-      {/* Department Cards with Detailed Tables */}
-      {departmentStocks.map((dept) => {
+      {/* Department Cards */}
+      {departmentStocks.map((dept, index) => {
         const deptTotalValue = dept.batches.reduce(
           (sum, batch) => sum + calculateBatchValue(batch.quantity, batch.costPrice),
           0
@@ -252,120 +255,124 @@ export default function StockSummaryTab({
           dept.totalQuantity > 0 ? deptTotalValue / dept.totalQuantity : 0;
 
         return (
-          <Card key={dept.departmentId} className="border-gray-200">
-            <CardContent className="p-0">
-              {/* Department Header */}
-              <div className="p-4 bg-gray-50 border-b flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Package className="w-5 h-5 text-blue-600" />
-                  <h4 className="font-semibold text-gray-900">{dept.departmentName}</h4>
+          <motion.div
+            key={dept.departmentId}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+          >
+            <Card className="border-gray-200">
+              <CardContent className="p-0">
+                <div className="p-4 bg-gray-50 border-b flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-5 h-5 text-blue-600" />
+                    <h4 className="font-semibold text-gray-900">{dept.departmentName}</h4>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      {dept.batches.length} Lot
+                    </Badge>
+                    <span className="text-sm text-gray-600">
+                      รวม {dept.totalQuantity.toLocaleString('th-TH')} {baseUnit}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                    {dept.batches.length} Lot
-                  </Badge>
-                  <span className="text-sm text-gray-600">
-                    รวม {dept.totalQuantity.toLocaleString('th-TH')} {baseUnit}
-                  </span>
-                </div>
-              </div>
 
-              {/* Batch Table */}
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="w-[100px]">Lot</TableHead>
-                    <TableHead className="w-[130px]">Exp</TableHead>
-                    <TableHead className="text-center w-[100px]">สถานะ</TableHead>
-                    <TableHead className="text-right w-[100px]">ราคาต่อ{baseUnit}</TableHead>
-                    <TableHead className="text-right w-[100px]">คงเหลือ</TableHead>
-                    <TableHead className="text-right w-[100px]">ใช้ได้</TableHead>
-                    <TableHead className="text-right w-[120px]">มูลค่า</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dept.batches.map((batch) => {
-                    const { isExpired, isExpiringSoon } = checkExpiryStatus(batch.expiryDate);
-                    const batchValue = calculateBatchValue(batch.quantity, batch.costPrice);
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="w-[100px]">Lot</TableHead>
+                      <TableHead className="w-[130px]">Exp</TableHead>
+                      <TableHead className="text-center w-[100px]">สถานะ</TableHead>
+                      <TableHead className="text-right w-[100px]">ราคาต่อ{baseUnit}</TableHead>
+                      <TableHead className="text-right w-[100px]">คงเหลือ</TableHead>
+                      <TableHead className="text-right w-[100px]">ใช้ได้</TableHead>
+                      <TableHead className="text-right w-[120px]">มูลค่า</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dept.batches.map((batch) => {
+                      const { isExpired, isExpiringSoon } = checkExpiryStatus(batch.expiryDate);
+                      const batchValue = calculateBatchValue(batch.quantity, batch.costPrice);
 
-                    return (
-                      <TableRow
-                        key={batch.id}
-                        className={
-                          isExpired ? 'bg-red-50' : isExpiringSoon ? 'bg-amber-50' : ''
-                        }
-                      >
-                        <TableCell className="font-medium">{batch.lotNumber}</TableCell>
-                        <TableCell>
-                          {batch.expiryDate ? (
-                            <div className="flex items-center gap-1">
-                              <span
-                                className={
-                                  isExpired
-                                    ? 'text-red-600 font-medium text-sm'
-                                    : isExpiringSoon
-                                    ? 'text-amber-600 font-medium text-sm'
-                                    : 'text-sm'
-                                }
-                              >
-                                {formatDate(batch.expiryDate)}
-                              </span>
-                              {isExpired && (
-                                <Badge variant="destructive" className="text-xs ml-1">
-                                  หมดอายุ
-                                </Badge>
-                              )}
-                              {isExpiringSoon && !isExpired && (
-                                <AlertTriangle className="w-3 h-3 text-amber-600 ml-1" />
-                              )}
-                            </div>
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {getStatusBadge(batch.status)}
-                        </TableCell>
-                        <TableCell className="text-right text-gray-600">
-                          {batch.costPrice ? `฿${formatCurrency(batch.costPrice)}` : '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-gray-900">
-                          {batch.quantity.toLocaleString('th-TH')}
-                        </TableCell>
-                        <TableCell className="text-right text-green-700 font-medium">
-                          {batch.availableQuantity.toLocaleString('th-TH')}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold text-green-700">
-                          {batch.costPrice ? `฿${formatCurrency(batchValue)}` : '-'}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                      return (
+                        <TableRow
+                          key={batch.id}
+                          className={
+                            isExpired ? 'bg-red-50' : isExpiringSoon ? 'bg-amber-50' : ''
+                          }
+                        >
+                          <TableCell className="font-medium">{batch.lotNumber}</TableCell>
+                          <TableCell>
+                            {batch.expiryDate ? (
+                              <div className="flex items-center gap-1">
+                                <span
+                                  className={
+                                    isExpired
+                                      ? 'text-red-600 font-medium text-sm'
+                                      : isExpiringSoon
+                                      ? 'text-amber-600 font-medium text-sm'
+                                      : 'text-sm'
+                                  }
+                                >
+                                  {formatDate(batch.expiryDate)}
+                                </span>
+                                {isExpired && (
+                                  <Badge variant="destructive" className="text-xs ml-1">
+                                    หมดอายุ
+                                  </Badge>
+                                )}
+                                {isExpiringSoon && !isExpired && (
+                                  <AlertTriangle className="w-3 h-3 text-amber-600 ml-1" />
+                                )}
+                              </div>
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {getStatusBadge(batch.status)}
+                          </TableCell>
+                          <TableCell className="text-right text-gray-600">
+                            {batch.costPrice ? `฿${formatCurrency(batch.costPrice)}` : '-'}
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-gray-900">
+                            {batch.quantity.toLocaleString('th-TH')}
+                          </TableCell>
+                          <TableCell className="text-right text-green-700 font-medium">
+                            {batch.availableQuantity.toLocaleString('th-TH')}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-green-700">
+                            {batch.costPrice ? `฿${formatCurrency(batchValue)}` : '-'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
 
-                  {/* Department Summary Row */}
-                  <TableRow className="bg-blue-50 font-semibold border-t-2">
-                    <TableCell colSpan={3} className="text-gray-900">
-                      รวม/เฉลี่ย
-                    </TableCell>
-                    <TableCell className="text-right text-blue-700">
-                      ฿{formatCurrency(avgCostPerBaseUnit)}
-                    </TableCell>
-                    <TableCell className="text-right text-blue-700">
-                      {dept.totalQuantity.toLocaleString('th-TH')}
-                    </TableCell>
-                    <TableCell className="text-right text-blue-700">
-                      {dept.availableQuantity.toLocaleString('th-TH')}
-                    </TableCell>
-                    <TableCell className="text-right text-blue-700">
-                      ฿{formatCurrency(deptTotalValue)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                    <TableRow className="bg-blue-50 font-semibold border-t-2">
+                      <TableCell colSpan={3} className="text-gray-900">
+                        รวม/เฉลี่ย
+                      </TableCell>
+                      <TableCell className="text-right text-blue-700">
+                        ฿{formatCurrency(avgCostPerBaseUnit)}
+                      </TableCell>
+                      <TableCell className="text-right text-blue-700">
+                        {dept.totalQuantity.toLocaleString('th-TH')}
+                      </TableCell>
+                      <TableCell className="text-right text-blue-700">
+                        {dept.availableQuantity.toLocaleString('th-TH')}
+                      </TableCell>
+                      <TableCell className="text-right text-blue-700">
+                        ฿{formatCurrency(deptTotalValue)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }

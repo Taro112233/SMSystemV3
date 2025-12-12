@@ -1,6 +1,5 @@
 // components/ProductsManagement/ProductsTableHeader.tsx
 // ProductsTableHeader - Table header with sortable columns
-// ✅ UPDATED: All columns sortable (including categories, stock, value)
 
 'use client';
 
@@ -19,7 +18,7 @@ export default function ProductsTableHeader({
   sortBy,
   sortOrder,
   categories,
-  onSort
+  onSort,
 }: ProductsTableHeaderProps) {
   const SortIcon = ({ field }: { field: string }) => {
     if (sortBy !== field) {
@@ -32,18 +31,20 @@ export default function ProductsTableHeader({
     );
   };
 
-  const HeaderCell = ({ 
-    field, 
-    label, 
+  const HeaderCell = ({
+    field,
+    label,
     sortable = true,
-  }: { 
-    field?: string; 
-    label: string; 
+    width,
+  }: {
+    field?: string;
+    label: string;
     sortable?: boolean;
+    width?: string;
   }) => {
     return (
       <th
-        className={`px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider ${
+        className={`px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider ${width || ''} ${
           sortable && field ? 'cursor-pointer hover:bg-gray-50 select-none' : ''
         }`}
         onClick={() => sortable && field && onSort(field)}
@@ -59,35 +60,23 @@ export default function ProductsTableHeader({
   return (
     <thead className="bg-gray-50">
       <tr>
-        <HeaderCell field="code" label="รหัสสินค้า" />
-        <HeaderCell field="name" label="ชื่อสินค้า" />
+        <HeaderCell field="code" label="รหัสสินค้า" width="w-32" />
+        <HeaderCell field="name" label="ชื่อสินค้า" width="w-64" />
+        <HeaderCell label="ชื่อสามัญ" sortable={false} width="w-48" />
+        <HeaderCell label="หน่วย" sortable={false} width="w-24" />
         
-        {/* ✅ Dynamic Category Columns - NOW SORTABLE */}
         {categories.map((category, index) => (
-          <HeaderCell 
-            key={category.id} 
+          <HeaderCell
+            key={category.id}
             label={category.label}
-            field={`category${index + 1}`} // ✅ category1, category2, category3
-            sortable={true} // ✅ Enable sort
+            field={`category${index + 1}`}
+            width="w-40"
           />
         ))}
         
-        {/* ✅ จำนวนคงเหลือ - NOW SORTABLE */}
-        <HeaderCell 
-          label="จำนวนคงเหลือ" 
-          field="stock_quantity" // ✅ Custom sort field
-          sortable={true} 
-        />
-        
-        {/* ✅ มูลค่า - NOW SORTABLE */}
-        <HeaderCell 
-          label="มูลค่า" 
-          field="stock_value" // ✅ Custom sort field
-          sortable={true} 
-        />
-        
-        {/* สถานะ */}
-        <HeaderCell label="สถานะ" field="isActive" />
+        <HeaderCell label="คงเหลือ" sortable={false} width="w-32" />
+        <HeaderCell label="มูลค่า" sortable={false} width="w-32" />
+        <HeaderCell label="สถานะ" field="isActive" width="w-28" />
       </tr>
     </thead>
   );

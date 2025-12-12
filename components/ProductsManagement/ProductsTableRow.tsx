@@ -1,5 +1,5 @@
 // components/ProductsManagement/ProductsTableRow.tsx
-// UPDATED: Fix lint errors
+// ProductsTableRow - Return table cells only (tr is in parent)
 
 'use client';
 
@@ -8,14 +8,14 @@ import { getCategoryValue } from '@/lib/category-helpers';
 import { CategoryWithOptions } from '@/lib/category-helpers';
 import { ProductUnit } from '@/types/product-unit';
 import { ProductData } from '@/types/product';
-import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Loader2 } from 'lucide-react';
 
 interface StockSummary {
   totalQuantity: number;
@@ -40,18 +40,13 @@ interface ProductsTableRowProps {
   onEditClick: (product: ProductData) => void;
   onViewClick: (product: ProductData) => void;
   onDeleteClick: (product: ProductData) => void;
-  onToggleStatus: (product: ProductData, newStatus: boolean) => void;
   canManage: boolean;
-  pendingStatusChanges?: Map<string, boolean>;
 }
 
 export default function ProductsTableRow({
   product,
   categories,
   orgSlug,
-  onViewClick,
-  onToggleStatus,
-  pendingStatusChanges,
 }: ProductsTableRowProps) {
   const [stockSummary, setStockSummary] = useState<StockSummary | null>(null);
   const [loadingStock, setLoadingStock] = useState(false);
@@ -70,7 +65,6 @@ export default function ProductsTableRow({
         const data = await response.json();
         const departments: DepartmentStockData[] = data.data.departments || [];
 
-        // Calculate totals
         let totalQuantity = 0;
         let totalValue = 0;
 
@@ -103,10 +97,6 @@ export default function ProductsTableRow({
     fetchStockSummary();
   }, [product.id, orgSlug]);
 
-  const pendingStatusChange = pendingStatusChanges?.get(product.id);
-  const currentStatus = pendingStatusChange !== undefined ? pendingStatusChange : product.isActive;
-  const hasPendingChange = pendingStatusChange !== undefined;
-
   const TruncatedCell = ({ text, maxLength = 30 }: { text: string; maxLength?: number }) => {
     const shouldTruncate = text && text.length > maxLength;
 
@@ -118,7 +108,7 @@ export default function ProductsTableRow({
       <TooltipProvider delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="text-sm text-gray-900 truncate block max-w-[200px] cursor-help">
+            <span className="text-sm text-gray-900 truncate block cursor-help" style={{ maxWidth: '200px' }}>
               {text}
             </span>
           </TooltipTrigger>
@@ -131,10 +121,7 @@ export default function ProductsTableRow({
   };
 
   return (
-    <tr
-      className="hover:bg-gray-50 transition-colors cursor-pointer"
-      onClick={() => onViewClick(product)}
-    >
+    <>
       <td className="px-4 py-3">
         <div className="text-sm font-medium text-blue-600">
           {product.code}
@@ -142,14 +129,15 @@ export default function ProductsTableRow({
       </td>
 
       <td className="px-4 py-3">
-        <div className="space-y-0.5">
-          <TruncatedCell text={product.name} maxLength={40} />
-          {product.genericName && (
-            <div className="text-xs text-gray-500">
-              <TruncatedCell text={`(${product.genericName})`} maxLength={40} />
-            </div>
-          )}
-        </div>
+        <TruncatedCell text={product.name} maxLength={40} />
+      </td>
+
+      <td className="px-4 py-3">
+        <TruncatedCell text={product.genericName || '-'} maxLength={30} />
+      </td>
+
+      <td className="px-4 py-3">
+        <span className="text-sm text-gray-600">{product.baseUnit}</span>
       </td>
 
       {categories.map((category) => {
@@ -163,21 +151,11 @@ export default function ProductsTableRow({
 
       <td className="px-4 py-3">
         {loadingStock ? (
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
-            <span className="text-xs text-gray-500">กำลังโหลด...</span>
-          </div>
+          <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
         ) : stockSummary ? (
-          <div className="space-y-0.5">
-            <div className="text-sm font-medium text-gray-900">
-              {stockSummary.totalQuantity.toLocaleString('th-TH')} {product.baseUnit}
-            </div>
-            {stockSummary.departmentCount > 0 && (
-              <div className="text-xs text-gray-500">
-                {stockSummary.departmentCount} หน่วยงาน
-              </div>
-            )}
-          </div>
+          <span className="text-sm font-medium text-gray-900">
+            {stockSummary.totalQuantity.toLocaleString('th-TH')}
+          </span>
         ) : (
           <span className="text-sm text-gray-500">-</span>
         )}
@@ -185,40 +163,31 @@ export default function ProductsTableRow({
 
       <td className="px-4 py-3">
         {loadingStock ? (
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
-          </div>
-        ) : stockSummary ? (
-          <div className="text-sm text-gray-900">
-            {stockSummary.totalValue > 0 ? (
-              `฿${stockSummary.totalValue.toLocaleString('th-TH', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}`
-            ) : (
-              '-'
-            )}
-          </div>
+          <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+        ) : stockSummary && stockSummary.totalValue > 0 ? (
+          <span className="text-sm text-gray-900">
+            ฿{stockSummary.totalValue.toLocaleString('th-TH', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0,
+            })}
+          </span>
         ) : (
           <span className="text-sm text-gray-500">-</span>
         )}
       </td>
 
-      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={currentStatus}
-            onCheckedChange={(checked) => onToggleStatus(product, checked)}
-          />
-          <span
-            className={`text-xs ${
-              hasPendingChange ? 'text-green-600 font-semibold' : 'text-gray-500'
-            }`}
-          >
-            {currentStatus ? 'เปิด' : 'ปิด'}
-          </span>
-        </div>
+      <td className="px-4 py-3">
+        <Badge
+          variant="outline"
+          className={
+            product.isActive
+              ? 'bg-green-50 text-green-700 border-green-200'
+              : 'bg-gray-50 text-gray-600 border-gray-200'
+          }
+        >
+          {product.isActive ? 'ใช้งาน' : 'ปิด'}
+        </Badge>
       </td>
-    </tr>
+    </>
   );
 }
