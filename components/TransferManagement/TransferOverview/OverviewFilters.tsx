@@ -106,8 +106,8 @@ export default function OverviewFilters({
           onClick={handleReset}
           className="gap-1 text-gray-600"
         >
-          <X className="h-4 w-4" />
-          ล้างตัวกรอง
+          <X className="h-4 w-4 text-red-500" />
+          <p className='text-red-500'>ล้างตัวกรอง</p>
         </Button>
       )}
     </div>

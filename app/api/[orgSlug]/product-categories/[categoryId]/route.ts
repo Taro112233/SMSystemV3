@@ -7,6 +7,7 @@ import { getUserFromHeaders, getUserOrgRole } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog, getRequestMetadata } from '@/lib/audit-logger';
 import { createUserSnapshot } from '@/lib/user-snapshot';
+import { Prisma } from '@prisma/client';
 
 // GET - Get specific category with options
 export async function GET(
@@ -115,7 +116,17 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { key, label, options } = body;
+    
+    // ✅ รับข้อมูลทั้งหมดที่ส่งมา
+    const { 
+      key, 
+      label, 
+      description,
+      displayOrder,
+      isRequired,
+      isActive,
+      options 
+    } = body;
 
     if (!label) {
       return NextResponse.json(
@@ -131,7 +142,7 @@ export async function PATCH(
       );
     }
 
-    // Check key conflict
+    // Check key conflict (only if key changed)
     if (key && key !== existingCategory.key) {
       if (!/^[a-z0-9_]+$/.test(key)) {
         return NextResponse.json(
@@ -159,15 +170,23 @@ export async function PATCH(
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
 
     // ✅ SAFE UPDATE: Update category and options
-    const updatedCategory = await prisma.$transaction(async (tx) => {
-      // Update category basic info (only key and label)
+    const updatedCategory = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // ✅ FIXED: Parse displayOrder to number
+      const parsedDisplayOrder = displayOrder !== undefined 
+        ? (typeof displayOrder === 'string' ? parseInt(displayOrder, 10) : displayOrder)
+        : existingCategory.displayOrder;
+
       await tx.productAttributeCategory.update({
         where: { id: categoryId },
         data: {
           key: key || existingCategory.key,
           label,
+          description: description !== undefined ? description : existingCategory.description,
+          displayOrder: parsedDisplayOrder,  // ✅ Use parsed number
+          isRequired: isRequired !== undefined ? isRequired : existingCategory.isRequired,
+          isActive: isActive !== undefined ? isActive : existingCategory.isActive,
           updatedBy: user.userId,
-          updatedBySnapshot: userSnapshot,
+          updatedBySnapshot: userSnapshot as Prisma.InputJsonValue,
         },
       });
 
@@ -182,18 +201,18 @@ export async function PATCH(
           const existingOption = existingOptions[i];
 
           if (existingOption) {
-            // ✅ Update existing option (สินค้าที่ใช้งานจะยังอ้างอิงถูกต้อง)
+            // ✅ Update existing option
             await tx.productAttributeOption.update({
               where: { id: existingOption.id },
               data: {
                 value: newValue,
-                label: newValue, // sync label with value
+                label: newValue,
                 sortOrder: i,
                 isActive: true,
               },
             });
           } else {
-            // ✅ Create new option (ถ้ามี options เพิ่มมากกว่าเดิม)
+            // ✅ Create new option
             await tx.productAttributeOption.create({
               data: {
                 categoryId,
@@ -206,13 +225,12 @@ export async function PATCH(
           }
         }
 
-        // ✅ Soft delete unused options (ถ้า options ใหม่น้อยกว่าเดิม)
+        // ✅ Soft delete unused options
         if (newOptions.length < existingOptions.length) {
           const unusedOptionIds = existingOptions
             .slice(newOptions.length)
-            .map(opt => opt.id);
+            .map((opt: { id: string }) => opt.id);
 
-          // Check if any unused options are being used by products
           const usedOptions = await tx.productAttribute.findMany({
             where: {
               optionId: { in: unusedOptionIds }
@@ -220,10 +238,8 @@ export async function PATCH(
             select: { optionId: true }
           });
 
-          const usedOptionIds = new Set(usedOptions.map(pa => pa.optionId));
-
-          // Soft delete unused options that are NOT being used
-          const safeToDeleteIds = unusedOptionIds.filter(id => !usedOptionIds.has(id));
+          const usedOptionIds = new Set(usedOptions.map((pa: { optionId: string }) => pa.optionId));
+          const safeToDeleteIds = unusedOptionIds.filter((id: string) => !usedOptionIds.has(id));
           
           if (safeToDeleteIds.length > 0) {
             await tx.productAttributeOption.updateMany({
@@ -231,13 +247,9 @@ export async function PATCH(
               data: { isActive: false },
             });
           }
-
-          // If some options are still being used, keep them active
-          // (สินค้าที่ใช้ options เหล่านี้จะยังใช้งานได้ตามปกติ)
         }
       }
 
-      // Return with updated options
       return await tx.productAttributeCategory.findUnique({
         where: { id: categoryId },
         include: { 
@@ -249,7 +261,7 @@ export async function PATCH(
       });
     });
 
-    // Audit log
+    // ✅ Audit log with all changes
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
     await createAuditLog({
@@ -266,16 +278,22 @@ export async function PATCH(
         before: {
           label: existingCategory.label,
           key: existingCategory.key,
-          optionsCount: existingCategory.options.length,
+          description: existingCategory.description,
+          displayOrder: existingCategory.displayOrder,
+          isRequired: existingCategory.isRequired,
           isActive: existingCategory.isActive,
+          optionsCount: existingCategory.options.length,
         },
         after: {
           label: updatedCategory!.label,
           key: updatedCategory!.key,
-          optionsCount: updatedCategory!.options.length,
+          description: updatedCategory!.description,
+          displayOrder: updatedCategory!.displayOrder,
+          isRequired: updatedCategory!.isRequired,
           isActive: updatedCategory!.isActive,
+          optionsCount: updatedCategory!.options.length,
         },
-      },
+      } as Prisma.InputJsonValue,
       ipAddress,
       userAgent,
     });
@@ -333,7 +351,7 @@ export async function DELETE(
       include: {
         options: true,
         productAttributes: {
-          take: 1, // ✅ Check if any products use this category
+          take: 1,
         }
       }
     });
@@ -345,7 +363,6 @@ export async function DELETE(
       );
     }
 
-    // ✅ CRITICAL: ห้ามลบถ้ามีสินค้าใช้งาน
     if (category.productAttributes.length > 0) {
       return NextResponse.json(
         { 
@@ -359,12 +376,10 @@ export async function DELETE(
 
     const userSnapshot = await createUserSnapshot(user.userId, access.organizationId);
 
-    // ✅ Safe to delete (options will cascade automatically)
     await prisma.productAttributeCategory.delete({
       where: { id: categoryId },
     });
 
-    // Audit log
     const { ipAddress, userAgent } = getRequestMetadata(request);
     
     await createAuditLog({
@@ -381,7 +396,7 @@ export async function DELETE(
         categoryKey: category.key,
         categoryLabel: category.label,
         optionsCount: category.options.length,
-      },
+      } as Prisma.InputJsonValue,
       ipAddress,
       userAgent,
     });

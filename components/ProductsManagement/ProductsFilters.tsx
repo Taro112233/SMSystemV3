@@ -1,5 +1,5 @@
 // components/ProductsManagement/ProductsFilters.tsx
-// ProductsFilters - Minimal filter panel
+// ProductsFilters - Minimal filter panel with dynamic placeholder
 
 'use client';
 
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Filter, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface ProductsFiltersProps {
   filters: ProductFilters;
@@ -42,117 +42,85 @@ export default function ProductsFilters({
     onCategoryFilterChange({});
   };
 
-  const handleCategoryChange = (categoryIndex: number, value: string) => {
-    const key = `category${categoryIndex}` as keyof CategoryFiltersState;
+  const handleCategoryChange = (index: number, value: string) => {
+    const key = `category${index}` as keyof CategoryFiltersState;
     onCategoryFilterChange({
       ...categoryFilters,
       [key]: value === 'all' ? undefined : value,
     });
   };
 
+  const getCategoryDisplayValue = (categoryId: string, categoryLabel: string): string => {
+    if (!categoryId) return categoryLabel;
+    
+    const category = categories.find(c => c.id === categoryFilters[`category${categories.indexOf(categories.find(cat => cat.id === categoryId)!) + 1}` as keyof CategoryFiltersState]);
+    if (!category) return categoryLabel;
+    
+    const selectedValue = categoryFilters[`category${categories.indexOf(category) + 1}` as keyof CategoryFiltersState];
+    if (!selectedValue) return categoryLabel;
+    
+    const option = category.options.find(opt => opt.id === selectedValue);
+    return option ? (option.label || option.value) : categoryLabel;
+  };
+
   return (
-    <div className="flex items-center gap-3 pb-4 border-b border-gray-200 flex-wrap">
-      <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-        <Filter className="h-4 w-4" />
-        <span>กรองข้อมูล:</span>
-      </div>
+    <div className="flex items-center gap-2 flex-wrap pb-4 border-b border-gray-200">
+      {/* Status Filter */}
+      <Select
+        value={filters.isActive === null ? 'all' : filters.isActive ? 'active' : 'inactive'}
+        onValueChange={(value) => {
+          const isActive = value === 'all' ? null : value === 'active';
+          onFilterChange({ isActive });
+        }}
+      >
+        <SelectTrigger className="w-28 h-8">
+          <SelectValue placeholder="สถานะ" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">สถานะ</SelectItem>
+          <SelectItem value="active">ใช้งาน</SelectItem>
+          <SelectItem value="inactive">ปิด</SelectItem>
+        </SelectContent>
+      </Select>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-600">สถานะ:</span>
-        <Select
-          value={filters.isActive === null ? 'all' : filters.isActive ? 'active' : 'inactive'}
-          onValueChange={(value) => {
-            const isActive =
-              value === 'all' ? null : value === 'active' ? true : false;
-            onFilterChange({ isActive });
-          }}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="z-50">
-            <SelectItem value="all">ทั้งหมด</SelectItem>
-            <SelectItem value="active">ใช้งาน</SelectItem>
-            <SelectItem value="inactive">ไม่ใช้งาน</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Category Filters */}
+      {categories.map((cat, idx) => {
+        const categoryKey = `category${idx + 1}` as keyof CategoryFiltersState;
+        const selectedValue = categoryFilters[categoryKey] || 'all';
+        const displayValue = selectedValue === 'all' 
+          ? cat.label 
+          : cat.options.find(opt => opt.id === selectedValue)?.label || 
+            cat.options.find(opt => opt.id === selectedValue)?.value || 
+            cat.label;
 
-      {categories[0] && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">{categories[0].label}:</span>
+        return (
           <Select
-            value={categoryFilters.category1 || 'all'}
-            onValueChange={(value) => handleCategoryChange(1, value)}
+            key={cat.id}
+            value={selectedValue}
+            onValueChange={(value) => handleCategoryChange(idx + 1, value)}
           >
-            <SelectTrigger className="w-40">
-              <SelectValue />
+            <SelectTrigger className="w-32 h-8">
+              <SelectValue>
+                {displayValue}
+              </SelectValue>
             </SelectTrigger>
-            <SelectContent className="z-50">
-              <SelectItem value="all">ทั้งหมด</SelectItem>
-              {categories[0].options.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label || option.value}
+            <SelectContent>
+              <SelectItem value="all">{cat.label}</SelectItem>
+              {cat.options.map((opt) => (
+                <SelectItem key={opt.id} value={opt.id}>
+                  {opt.label || opt.value}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
-      )}
+        );
+      })}
 
-      {categories[1] && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">{categories[1].label}:</span>
-          <Select
-            value={categoryFilters.category2 || 'all'}
-            onValueChange={(value) => handleCategoryChange(2, value)}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="z-50">
-              <SelectItem value="all">ทั้งหมด</SelectItem>
-              {categories[1].options.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label || option.value}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {categories[2] && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">{categories[2].label}:</span>
-          <Select
-            value={categoryFilters.category3 || 'all'}
-            onValueChange={(value) => handleCategoryChange(3, value)}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="z-50">
-              <SelectItem value="all">ทั้งหมด</SelectItem>
-              {categories[2].options.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label || option.value}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
+      {/* Reset Button */}
       {hasActiveFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleReset}
-          className="gap-1 text-gray-600"
-        >
-          <X className="h-4 w-4" />
-          ล้างตัวกรอง
+        <Button variant="ghost" size="sm" onClick={handleReset} className="h-8 gap-1">
+          <X className="h-4 w-4 text-red-500" />
+          <p className='text-red-500'>ล้างตัวกรอง</p>
         </Button>
       )}
     </div>
