@@ -12,6 +12,7 @@ export const APP_ROUTES = [
   'login',
   'register',
   'not-found',
+  'showcase',
 ] as const;
 
 /**
