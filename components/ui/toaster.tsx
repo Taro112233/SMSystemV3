@@ -1,4 +1,4 @@
-// 📄 File: components/ui/toaster.tsx
+// components/ui/toaster.tsx
 'use client'
 
 import * as React from 'react'

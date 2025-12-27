@@ -1,3 +1,4 @@
+// components/ui/input-group.tsx
 "use client"
 
 import * as React from "react"
@@ -133,10 +134,10 @@ function InputGroupInput({
   ...props
 }: React.ComponentProps<"input">) {
   return (
-    <Input
+    <input
       data-slot="input-group-control"
       className={cn(
-        "flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent",
+        "flex h-9 w-full flex-1 rounded-none border-0 bg-transparent px-3 py-1 text-sm shadow-none transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-transparent",
         className
       )}
       {...props}
@@ -149,10 +150,10 @@ function InputGroupTextarea({
   ...props
 }: React.ComponentProps<"textarea">) {
   return (
-    <Textarea
+    <textarea
       data-slot="input-group-control"
       className={cn(
-        "flex-1 resize-none rounded-none border-0 bg-transparent py-3 shadow-none focus-visible:ring-0 dark:bg-transparent",
+        "flex min-h-[60px] w-full flex-1 resize-none rounded-none border-0 bg-transparent px-3 py-3 text-sm shadow-none placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-transparent",
         className
       )}
       {...props}
