@@ -2,10 +2,11 @@
 "use client"
 
 import * as React from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 // Import all showcase components
 import { AccordionShowcase } from "@/components/ShowcaseComponent/AccordionShowcase"
@@ -146,14 +147,26 @@ export default function ShowcasePage() {
     return components
   }, [search, activeCategory])
 
+  // Handle smooth scroll navigation
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault()
+    const element = document.getElementById(id)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }
+
   return (
     <div className="container mx-auto py-8 px-4">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">UI Component Showcase</h1>
-        <p className="text-lg text-muted-foreground">
-          A comprehensive collection of {allComponents.length} UI components built with Radix UI, Tailwind CSS, and Framer Motion.
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">UI Component Showcase</h1>
+          <p className="text-lg text-muted-foreground">
+            A comprehensive collection of {allComponents.length} UI components built with Radix UI, Tailwind CSS, and Framer Motion.
+          </p>
+        </div>
+        <ThemeToggle />
       </div>
 
       {/* Search and Filter */}
@@ -196,7 +209,7 @@ export default function ShowcasePage() {
               <section 
                 key={componentName} 
                 id={componentName.toLowerCase()}
-                className="border rounded-lg p-6 bg-card"
+                className="border rounded-lg p-6 bg-card scroll-mt-8"
               >
                 <ShowcaseComponent />
               </section>
@@ -215,6 +228,7 @@ export default function ShowcasePage() {
                 <a
                   key={name}
                   href={`#${name.toLowerCase()}`}
+                  onClick={(e) => handleNavClick(e, name.toLowerCase())}
                   className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
                 >
                   {name}
